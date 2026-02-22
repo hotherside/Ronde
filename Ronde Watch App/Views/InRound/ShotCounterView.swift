@@ -1,9 +1,12 @@
 import SwiftUI
+import SwiftData
 import WatchKit
 
 struct ShotCounterView: View {
+    @Environment(\.modelContext) private var modelContext
     @Bindable var round: Round
     let onEndRound: () -> Void
+    let onDiscard: () -> Void
 
     @State private var showingHoleTransition = false
     @State private var showingEndConfirmation = false
@@ -12,13 +15,12 @@ struct ShotCounterView: View {
         round.currentHole
     }
 
-    private var backgroundColor: Color {
-        guard let hole = currentHole else { return .clear }
+    private var backgroundTint: Color {
+        guard let hole = currentHole, hole.shots > 0 else { return .clear }
         let diff = hole.shots - hole.par
-        if hole.shots == 0 { return .clear }
-        if diff <= 0 { return .green.opacity(0.15) }
-        if diff <= 2 { return .yellow.opacity(0.15) }
-        return .red.opacity(0.15)
+        if diff <= 0 { return .green.opacity(0.12) }
+        if diff <= 2 { return .yellow.opacity(0.12) }
+        return .red.opacity(0.12)
     }
 
     var body: some View {
@@ -39,25 +41,28 @@ struct ShotCounterView: View {
             }
         }
         .task {
-            // Start a HealthKit golf workout session to keep the app alive
-            // and the display on for the duration of the round.
             await WorkoutManager.shared.startWorkout()
         }
     }
 
-    /// Ends the HealthKit workout session then hands off to the parent
-    /// to show the summary screen.
     private func finishRound() {
         Task { await WorkoutManager.shared.endWorkout() }
         onEndRound()
     }
 
+    private func discardRound() {
+        Task { await WorkoutManager.shared.endWorkout() }
+        modelContext.delete(round)
+        onDiscard()
+    }
+
     private func shotCounterContent(hole: HoleScore) -> some View {
         VStack(spacing: 4) {
             // Hole info
-            Text("Hole \(hole.holeNumber) of \(round.numberOfHoles)")
+            Text("Hole \(hole.holeNumber) / \(round.numberOfHoles)")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
+                .accessibilityLabel("Hole \(hole.holeNumber) of \(round.numberOfHoles)")
 
             Text("Par \(hole.par)")
                 .font(.caption)
@@ -65,18 +70,17 @@ struct ShotCounterView: View {
 
             Spacer()
 
-            // Shot count — the primary element
-            Text("\(hole.shots)")
+            // Shot count — primary element
+            Text(hole.shots > 0 ? "\(hole.shots)" : "–")
                 .font(.system(size: 64, weight: .bold, design: .rounded))
                 .monospacedDigit()
                 .contentTransition(.numericText())
-                .animation(.snappy(duration: 0.2), value: hole.shots)
+                .animation(.snappy(duration: 0.15), value: hole.shots)
+                .accessibilityLabel(hole.shots > 0 ? "\(hole.shots) shots" : "No shots yet")
 
-            // Score to par (only once shots have been logged)
+            // Score-to-par badge (only after first shot)
             if hole.shots > 0 {
-                Text(hole.scoreLabel)
-                    .font(.caption.bold())
-                    .foregroundStyle(scoreColor(for: hole))
+                scoreToParBadge(for: hole)
             }
 
             Spacer()
@@ -88,23 +92,13 @@ struct ShotCounterView: View {
                     hole.decrementShot()
                     WKInterfaceDevice.current().play(.retry)
                 } label: {
-                    Image(systemName: "minus.circle")
-                        .font(.title3)
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(hole.shots > 0 ? .red : .gray)
-                .disabled(hole.shots == 0)
-
-                // Add shot (screen alternative to Action Button)
-                Button {
-                    hole.incrementShot()
-                    WKInterfaceDevice.current().play(.start)
-                } label: {
-                    Image(systemName: "plus.circle.fill")
+                    Image(systemName: "minus.circle.fill")
                         .font(.title2)
+                        .foregroundStyle(hole.shots > 0 ? .red : Color.secondary.opacity(0.3))
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(.green)
+                .disabled(hole.shots == 0)
+                .accessibilityLabel("Undo shot")
 
                 // Finish hole
                 Button {
@@ -112,14 +106,31 @@ struct ShotCounterView: View {
                     WKInterfaceDevice.current().play(.success)
                 } label: {
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.title3)
+                        .font(.title)
+                        .foregroundStyle(.blue)
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(.blue)
+                .accessibilityLabel(
+                    round.currentHoleIndex >= round.numberOfHoles - 1
+                        ? "Finish round"
+                        : "Finish hole"
+                )
+
+                // Add shot (on-screen fallback for Action Button)
+                Button {
+                    hole.incrementShot()
+                    WKInterfaceDevice.current().play(.click)
+                } label: {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(.green)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Add shot")
             }
         }
         .padding()
-        .background(backgroundColor)
+        .background(backgroundTint)
         .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
@@ -128,6 +139,7 @@ struct ShotCounterView: View {
                 } label: {
                     Image(systemName: "xmark")
                 }
+                .accessibilityLabel("End or discard round")
             }
         }
         .confirmationDialog(
@@ -135,18 +147,42 @@ struct ShotCounterView: View {
             isPresented: $showingEndConfirmation,
             titleVisibility: .visible
         ) {
-            Button("End & Save", role: .destructive) {
+            Button("Save & Exit") {
                 round.isComplete = true
                 finishRound()
+            }
+            Button("Discard Round", role: .destructive) {
+                discardRound()
             }
             Button("Cancel", role: .cancel) {}
         }
     }
 
-    private func scoreColor(for hole: HoleScore) -> Color {
+    @ViewBuilder
+    private func scoreToParBadge(for hole: HoleScore) -> some View {
         let diff = hole.scoreToPar
-        if diff <= 0 { return .green }
-        if diff <= 2 { return .yellow }
-        return .red
+        let (text, color): (String, Color) = {
+            switch diff {
+            case ...(-2): return (hole.scoreLabel, .yellow)
+            case -1:      return ("-1", .green)
+            case 0:       return ("E", Color(white: 0.55))
+            case 1:       return ("+1", .orange)
+            default:      return (hole.scoreLabel, .red)
+            }
+        }()
+        Text(text)
+            .font(.caption.bold())
+            .foregroundStyle(color)
+            .accessibilityLabel(accessibilityScoreLabel(diff: diff, shots: hole.shots))
+    }
+
+    private func accessibilityScoreLabel(diff: Int, shots: Int) -> String {
+        switch diff {
+        case ...(-2): return "\(abs(diff)) under par"
+        case -1:      return "1 under par, birdie"
+        case 0:       return "Even par"
+        case 1:       return "1 over par, bogey"
+        default:      return "\(diff) over par"
+        }
     }
 }

@@ -1,4 +1,5 @@
 import SwiftUI
+import WatchKit
 
 struct ParSetupView: View {
     let courseName: String?
@@ -28,6 +29,9 @@ struct ParSetupView: View {
                         .font(.headline)
                         .foregroundStyle(.secondary)
                 }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Total par: \(totalPar)")
+
                 DatePicker("Date", selection: $date, displayedComponents: .date)
             }
 
@@ -48,6 +52,7 @@ struct ParSetupView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(.green)
+                .accessibilityLabel("Start round with \(numberOfHoles) holes, total par \(totalPar)")
             }
         }
         .navigationTitle(courseName != nil ? "Adjust Par" : "\(numberOfHoles) Holes")
@@ -74,10 +79,12 @@ private struct HoleParRow: View {
             }
             .buttonStyle(.plain)
             .disabled(par <= 3)
+            .accessibilityLabel("Decrease par for hole \(holeNumber)")
 
             Text("\(par)")
                 .font(.body.monospacedDigit().bold())
                 .frame(width: 24, alignment: .center)
+                .accessibilityLabel("Par \(par)")
 
             Button {
                 if par < 5 { par += 1 }
@@ -88,6 +95,8 @@ private struct HoleParRow: View {
             }
             .buttonStyle(.plain)
             .disabled(par >= 5)
+            .accessibilityLabel("Increase par for hole \(holeNumber)")
         }
+        .accessibilityElement(children: .contain)
     }
 }

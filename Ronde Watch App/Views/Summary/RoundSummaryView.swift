@@ -15,41 +15,31 @@ struct RoundSummaryView: View {
         List {
             // Header: course, date, totals
             Section {
-                VStack(spacing: 4) {
+                VStack(spacing: 6) {
                     Text(round.courseName ?? "Custom Round")
                         .font(.headline)
+                        .multilineTextAlignment(.center)
+                        .accessibilityAddTraits(.isHeader)
+
                     Text(round.date, style: .date)
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
-                    HStack(spacing: 16) {
-                        VStack {
-                            Text("\(round.totalShots)")
-                                .font(.title2.bold())
-                            Text("Shots")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
-
-                        VStack {
-                            Text("\(round.totalPar)")
-                                .font(.title2.bold())
-                                .foregroundStyle(.secondary)
-                            Text("Par")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
-
-                        VStack {
-                            Text(scoreText)
-                                .font(.title2.bold())
-                                .foregroundStyle(scoreColor)
-                            Text("Score")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
+                    // Totals row
+                    HStack(spacing: 0) {
+                        statCell(value: "\(round.totalShots)", label: "Shots")
+                        Divider().frame(height: 32)
+                        statCell(value: "\(round.totalPar)", label: "Par",
+                                 valueColor: .secondary)
+                        Divider().frame(height: 32)
+                        statCell(value: scoreText, label: "Score",
+                                 valueColor: scoreColor)
                     }
-                    .padding(.top, 4)
+                    .padding(.top, 2)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel(
+                        "\(round.totalShots) shots, par \(round.totalPar), \(accessibilityScoreText)"
+                    )
                 }
                 .frame(maxWidth: .infinity)
             }
@@ -80,6 +70,7 @@ struct RoundSummaryView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(.green)
+                    .accessibilityLabel("Save round and return to history")
 
                     Button(role: .destructive) {
                         showingDiscardConfirmation = true
@@ -87,6 +78,7 @@ struct RoundSummaryView: View {
                         Text("Discard")
                             .frame(maxWidth: .infinity)
                     }
+                    .accessibilityLabel("Discard this round")
                 }
             }
         }
@@ -106,15 +98,38 @@ struct RoundSummaryView: View {
 
     // MARK: - Header helpers
 
+    private func statCell(
+        value: String,
+        label: String,
+        valueColor: Color = .primary
+    ) -> some View {
+        VStack(spacing: 1) {
+            Text(value)
+                .font(.title3.bold().monospacedDigit())
+                .foregroundStyle(valueColor)
+            Text(label)
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
     private var scoreText: String {
-        guard round.totalShots > 0 else { return "—" }
+        guard round.totalShots > 0 else { return "–" }
         let score = round.scoreToPar
         if score == 0 { return "E" }
         return score > 0 ? "+\(score)" : "\(score)"
     }
 
+    private var accessibilityScoreText: String {
+        guard round.totalShots > 0 else { return "no shots recorded" }
+        let score = round.scoreToPar
+        if score == 0 { return "even par" }
+        return score > 0 ? "\(score) over par" : "\(abs(score)) under par"
+    }
+
     private var scoreColor: Color {
-        guard round.totalShots > 0 else { return .gray }
+        guard round.totalShots > 0 else { return .secondary }
         let score = round.scoreToPar
         if score <= 0 { return .green }
         if score <= 5 { return .yellow }
@@ -128,37 +143,77 @@ private struct HoleScoreRow: View {
     let hole: HoleScore
 
     var body: some View {
-        HStack {
+        HStack(spacing: 6) {
+            // Hole number
             Text("\(hole.holeNumber)")
-                .font(.caption.monospacedDigit())
+                .font(.caption2.monospacedDigit())
                 .foregroundStyle(.secondary)
-                .frame(width: 20, alignment: .leading)
+                .frame(width: 18, alignment: .leading)
 
+            // Par
             Text("P\(hole.par)")
-                .font(.caption)
+                .font(.caption2)
                 .foregroundStyle(.secondary)
 
             Spacer()
 
-            Text(hole.shots > 0 ? "\(hole.shots)" : "—")
+            // Shot count
+            Text(hole.shots > 0 ? "\(hole.shots)" : "–")
                 .font(.body.monospacedDigit().bold())
 
-            Text(hole.scoreLabel)
-                .font(.caption.bold())
-                .foregroundStyle(scoreColor)
-                .frame(width: 32, alignment: .trailing)
+            // Score badge (pill)
+            if hole.shots > 0 {
+                Text(hole.scoreLabel)
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(badgeTextColor)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(
+                        Capsule().fill(badgeColor.opacity(0.25))
+                    )
+                    .overlay(
+                        Capsule().stroke(badgeColor.opacity(0.5), lineWidth: 0.5)
+                    )
+                    .accessibilityLabel(hole.scoreLabel == "E" ? "Par" : hole.scoreLabel)
+            } else {
+                Text("–")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.tertiary)
+                    .frame(width: 28, alignment: .center)
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(holeAccessibilityLabel)
+    }
+
+    private var holeAccessibilityLabel: String {
+        guard hole.shots > 0 else {
+            return "Hole \(hole.holeNumber), par \(hole.par), no shots"
+        }
+        let scoreDesc: String
+        switch hole.scoreToPar {
+        case ...(-2): return "Hole \(hole.holeNumber), eagle or better, \(hole.shots) shots"
+        case -1:      scoreDesc = "birdie"
+        case 0:       scoreDesc = "par"
+        case 1:       scoreDesc = "bogey"
+        default:      scoreDesc = "\(hole.scoreToPar) over par"
+        }
+        return "Hole \(hole.holeNumber), \(scoreDesc), \(hole.shots) shots"
+    }
+
+    private var badgeColor: Color {
+        switch hole.scoreToPar {
+        case ...(-2): return .yellow
+        case -1:      return .green
+        case 0:       return Color(white: 0.5)
+        case 1:       return .orange
+        default:      return .red
         }
     }
 
-    private var scoreColor: Color {
-        guard hole.shots > 0 else { return .gray }
-        switch hole.scoreToPar {
-        case ...(-2): return .yellow   // Eagle or better
-        case -1:      return .green    // Birdie
-        case 0:       return .gray     // Par
-        case 1:       return .orange   // Bogey
-        default:      return .red      // Double bogey or worse
-        }
+    private var badgeTextColor: Color {
+        // Slightly brighter than the badge fill for legibility
+        badgeColor
     }
 }
 
@@ -168,7 +223,7 @@ private struct ScoreLegend: View {
     private let items: [(label: String, color: Color)] = [
         ("Egl", .yellow),
         ("Bird", .green),
-        ("Par", .gray),
+        ("Par", Color(white: 0.5)),
         ("Bog", .orange),
         ("Dbl+", .red),
     ]
@@ -187,5 +242,7 @@ private struct ScoreLegend: View {
                 .frame(maxWidth: .infinity)
             }
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Score legend: Eagle yellow, Birdie green, Par gray, Bogey orange, Double bogey or worse red")
     }
 }

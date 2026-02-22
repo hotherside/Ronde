@@ -63,9 +63,9 @@ struct ShotCountIntent: AppIntent {
         let shots = hole.shots
         let holeNumber = hole.holeNumber
 
-        // Trigger haptic on the main thread
+        // Trigger haptic on the main thread (crisp click matches the on-screen + button)
         await MainActor.run {
-            WKInterfaceDevice.current().play(.start)
+            WKInterfaceDevice.current().play(.click)
         }
 
         log.debug("Shot \(shots) logged on hole \(holeNumber)")

@@ -120,6 +120,7 @@ struct CourseDetectView: View {
                         }
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("\(course.name), \(course.numberOfHoles) holes, par \(course.totalPar)")
                 }
             }
 
@@ -148,5 +149,6 @@ struct CourseDetectView: View {
     private var manualButton: some View {
         Button("Enter manually", action: onManual)
             .buttonStyle(.bordered)
+            .accessibilityLabel("Set up round manually without GPS")
     }
 }

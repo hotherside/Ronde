@@ -18,11 +18,17 @@ struct ContentView: View {
                     activeRound = nil
                 }
             } else if let round = activeRound, !round.isComplete {
-                ShotCounterView(round: round) {
-                    // Round ended (last hole completed or early save).
-                    // Show the post-round summary before returning to history.
-                    showingSummaryForRound = activeRound
-                }
+                ShotCounterView(
+                    round: round,
+                    onEndRound: {
+                        // Round finished normally — show post-round summary.
+                        showingSummaryForRound = activeRound
+                    },
+                    onDiscard: {
+                        // Round was discarded — return straight to history list.
+                        activeRound = nil
+                    }
+                )
             } else {
                 roundsList
             }
@@ -47,6 +53,7 @@ struct ContentView: View {
                 } label: {
                     Label("New Round", systemImage: "plus.circle.fill")
                 }
+                .accessibilityLabel("Start a new round")
             }
 
             if !completedRounds.isEmpty {
@@ -97,11 +104,23 @@ private struct RoundRowView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Spacer()
-                Text("\(round.totalShots)")
+                Text("\(round.totalShots) shots")
                     .font(.caption.monospacedDigit())
+                    .foregroundStyle(.secondary)
                 scoreLabel
             }
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(rowAccessibilityLabel)
+    }
+
+    private var rowAccessibilityLabel: String {
+        let course = round.courseName ?? "Custom Round"
+        let score = round.scoreToPar
+        let scoreDesc = score == 0 ? "even par"
+            : score > 0 ? "\(score) over par"
+            : "\(abs(score)) under par"
+        return "\(course), \(round.numberOfHoles) holes, \(round.totalShots) shots, \(scoreDesc)"
     }
 
     private var scoreLabel: some View {

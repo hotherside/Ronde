@@ -6,47 +6,45 @@ struct HoleTransitionView: View {
     let onContinue: () -> Void
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 10) {
             Text("Hole \(hole.holeNumber)")
-                .font(.headline)
+                .font(.caption)
+                .foregroundStyle(.secondary)
 
-            HStack(spacing: 16) {
-                VStack {
-                    Text("\(hole.shots)")
-                        .font(.title.bold())
-                    Text("Shots")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
+            // Large shot count
+            Text(hole.shots > 0 ? "\(hole.shots)" : "–")
+                .font(.system(size: 56, weight: .bold, design: .rounded))
+                .monospacedDigit()
 
-                VStack {
-                    Text("\(hole.par)")
-                        .font(.title.bold())
-                        .foregroundStyle(.secondary)
-                    Text("Par")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-
-                VStack {
-                    Text(hole.scoreLabel)
-                        .font(.title.bold())
-                        .foregroundStyle(scoreColor)
-                    Text("Score")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
+            // Score name + badge
+            VStack(spacing: 2) {
+                Text(scoreName)
+                    .font(.caption.bold())
+                    .foregroundStyle(scoreColor)
+                // Par reference line
+                Text("Par \(hole.par)")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.tertiary)
             }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(
+                hole.shots > 0
+                    ? "\(hole.shots) shots, \(scoreName) on par \(hole.par)"
+                    : "No shots recorded"
+            )
+
+            Spacer(minLength: 4)
 
             Button(isLastHole ? "Finish Round" : "Next Hole", action: onContinue)
                 .buttonStyle(.borderedProminent)
                 .tint(isLastHole ? .green : .blue)
-                .padding(.top, 4)
+                .accessibilityLabel(isLastHole ? "Finish round" : "Advance to next hole")
         }
         .padding()
         .navigationBarBackButtonHidden(true)
         .task {
-            try? await Task.sleep(for: .seconds(3))
+            // Auto-advance after 4 seconds so the user can glance and move on.
+            try? await Task.sleep(for: .seconds(4))
             if !Task.isCancelled {
                 onContinue()
             }
@@ -54,9 +52,26 @@ struct HoleTransitionView: View {
     }
 
     private var scoreColor: Color {
-        let diff = hole.scoreToPar
-        if diff <= 0 { return .green }
-        if diff <= 2 { return .yellow }
-        return .red
+        guard hole.shots > 0 else { return .secondary }
+        switch hole.scoreToPar {
+        case ...(-2): return .yellow
+        case -1:      return .green
+        case 0:       return Color(white: 0.55)
+        case 1:       return .orange
+        default:      return .red
+        }
+    }
+
+    private var scoreName: String {
+        guard hole.shots > 0 else { return "–" }
+        switch hole.scoreToPar {
+        case ...(-3): return "Albatross"
+        case -2:      return "Eagle"
+        case -1:      return "Birdie"
+        case 0:       return "Par"
+        case 1:       return "Bogey"
+        case 2:       return "Double"
+        default:      return "+\(hole.scoreToPar)"
+        }
     }
 }
