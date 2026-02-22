@@ -22,20 +22,34 @@ struct ShotCounterView: View {
     }
 
     var body: some View {
-        if showingHoleTransition, let hole = currentHole {
-            HoleTransitionView(
-                hole: hole,
-                isLastHole: round.currentHoleIndex >= round.numberOfHoles - 1
-            ) {
-                showingHoleTransition = false
-                round.advanceToNextHole()
-                if round.isComplete {
-                    onEndRound()
+        Group {
+            if showingHoleTransition, let hole = currentHole {
+                HoleTransitionView(
+                    hole: hole,
+                    isLastHole: round.currentHoleIndex >= round.numberOfHoles - 1
+                ) {
+                    showingHoleTransition = false
+                    round.advanceToNextHole()
+                    if round.isComplete {
+                        finishRound()
+                    }
                 }
+            } else if let hole = currentHole {
+                shotCounterContent(hole: hole)
             }
-        } else if let hole = currentHole {
-            shotCounterContent(hole: hole)
         }
+        .task {
+            // Start a HealthKit golf workout session to keep the app alive
+            // and the display on for the duration of the round.
+            await WorkoutManager.shared.startWorkout()
+        }
+    }
+
+    /// Ends the HealthKit workout session then hands off to the parent
+    /// to show the summary screen.
+    private func finishRound() {
+        Task { await WorkoutManager.shared.endWorkout() }
+        onEndRound()
     }
 
     private func shotCounterContent(hole: HoleScore) -> some View {
@@ -51,14 +65,14 @@ struct ShotCounterView: View {
 
             Spacer()
 
-            // Shot count - the main element
+            // Shot count — the primary element
             Text("\(hole.shots)")
                 .font(.system(size: 64, weight: .bold, design: .rounded))
                 .monospacedDigit()
                 .contentTransition(.numericText())
                 .animation(.snappy(duration: 0.2), value: hole.shots)
 
-            // Score to par (only when shots > 0)
+            // Score to par (only once shots have been logged)
             if hole.shots > 0 {
                 Text(hole.scoreLabel)
                     .font(.caption.bold())
@@ -69,7 +83,7 @@ struct ShotCounterView: View {
 
             // Controls
             HStack(spacing: 20) {
-                // Undo button
+                // Undo
                 Button {
                     hole.decrementShot()
                     WKInterfaceDevice.current().play(.retry)
@@ -81,7 +95,7 @@ struct ShotCounterView: View {
                 .foregroundStyle(hole.shots > 0 ? .red : .gray)
                 .disabled(hole.shots == 0)
 
-                // Add shot button (screen alternative to Action Button)
+                // Add shot (screen alternative to Action Button)
                 Button {
                     hole.incrementShot()
                     WKInterfaceDevice.current().play(.start)
@@ -92,7 +106,7 @@ struct ShotCounterView: View {
                 .buttonStyle(.plain)
                 .foregroundStyle(.green)
 
-                // Done with hole
+                // Finish hole
                 Button {
                     showingHoleTransition = true
                     WKInterfaceDevice.current().play(.success)
@@ -123,7 +137,7 @@ struct ShotCounterView: View {
         ) {
             Button("End & Save", role: .destructive) {
                 round.isComplete = true
-                onEndRound()
+                finishRound()
             }
             Button("Cancel", role: .cancel) {}
         }

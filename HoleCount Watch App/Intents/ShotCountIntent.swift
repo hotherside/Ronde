@@ -1,28 +1,80 @@
 import AppIntents
+import SwiftData
+import WatchKit
+import os.log
 
-/// App Intent for logging a golf shot via Action Button or Shortcuts.
+private let log = Logger(subsystem: "com.ronde.HoleCount", category: "ShotCountIntent")
+
+/// Logs a golf shot for the active round's current hole.
 ///
-/// Users can assign this to:
-/// - Apple Watch Ultra Action Button (via Shortcuts in watchOS 11+)
+/// Triggered by:
+/// - Apple Watch Ultra Action Button (via Shortcuts → assign this action)
 /// - Siri: "Log a shot in HoleCount"
-///
-/// TODO: Session 3 - Connect to active round's current hole
-/// and increment the shot count. For now this is a scaffold.
+/// - Shortcuts app
 struct ShotCountIntent: AppIntent {
-    static var title: LocalizedStringResource = "Log Golf Shot"
-    static var description = IntentDescription("Increment the shot count for the current hole.")
-    static var openAppWhenRun: Bool = true
+    static let title: LocalizedStringResource = "Log Golf Shot"
+    static let description = IntentDescription("Increment the shot count for the current hole.")
+    static let openAppWhenRun: Bool = true
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        // TODO: Session 3 - Access shared model container,
-        // find active round, increment current hole shots,
-        // trigger haptic feedback
-        return .result(dialog: "Shot logged!")
+        // Build a ModelContainer with the same schema and default store location
+        // as the main app so we write to the same persistent store on disk.
+        let schema = Schema([Round.self, HoleScore.self])
+        let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+
+        let container: ModelContainer
+        do {
+            container = try ModelContainer(for: schema, configurations: [config])
+        } catch {
+            log.error("ModelContainer init failed: \(error.localizedDescription)")
+            return .result(dialog: "Unable to access round data")
+        }
+
+        let context = ModelContext(container)
+
+        // Fetch the most recent incomplete round
+        var descriptor = FetchDescriptor<Round>(
+            predicate: #Predicate { $0.isComplete == false },
+            sortBy: [SortDescriptor(\Round.date, order: .reverse)]
+        )
+        descriptor.fetchLimit = 1
+
+        let activeRounds: [Round]
+        do {
+            activeRounds = try context.fetch(descriptor)
+        } catch {
+            log.error("Fetch failed: \(error.localizedDescription)")
+            return .result(dialog: "Unable to find active round")
+        }
+
+        guard let round = activeRounds.first, let hole = round.currentHole else {
+            log.info("No active round")
+            return .result(dialog: "No active round")
+        }
+
+        hole.incrementShot()
+
+        do {
+            try context.save()
+        } catch {
+            log.error("Save failed: \(error.localizedDescription)")
+        }
+
+        let shots = hole.shots
+        let holeNumber = hole.holeNumber
+
+        // Trigger haptic on the main thread
+        await MainActor.run {
+            WKInterfaceDevice.current().play(.start)
+        }
+
+        log.debug("Shot \(shots) logged on hole \(holeNumber)")
+        return .result(dialog: "Shot \(shots) on hole \(holeNumber)")
     }
 }
 
-/// Registers the app's shortcuts so they appear in the Shortcuts app
-/// and can be assigned to the Action Button.
+/// Registers shortcuts so this action appears in the Shortcuts app
+/// and can be assigned to the Apple Watch Ultra Action Button.
 struct HoleCountShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(

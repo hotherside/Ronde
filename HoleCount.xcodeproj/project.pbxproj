@@ -19,6 +19,7 @@
 		B32F3FD8C62D348922F9B3C8 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 68EBF8D6FFE2D6E0AC09B42B /* Preview Assets.xcassets */; };
 		C0631BE18B86C69C2C49EEDB /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 721BC8FAFD93AB43D1F65FE7 /* Assets.xcassets */; };
 		DCB4726DCAA8F798A59BE0A4 /* CourseDetectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0BC0A3D5BA39EFA6B4E8C3C /* CourseDetectView.swift */; };
+		DE63D0F1763F33139AFEAEEA /* WorkoutManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0F7FF53F4103C5C995CD7F /* WorkoutManager.swift */; };
 		E683DD6C571DB6740B27473F /* ParSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1ECE372CFBC926E95D74338E /* ParSetupView.swift */; };
 		E8120FF3C8563680D828C097 /* LocationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3CC2CD6D75B6863F05926CB /* LocationService.swift */; };
 		F4A77876D18C8D99FF6DD877 /* ReviewStartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 915D63C2CA2AC1E29D843C11 /* ReviewStartView.swift */; };
@@ -46,6 +47,7 @@
 		D55329465A1B14608E39BE14 /* Round.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Round.swift; sourceTree = "<group>"; };
 		EEC3B19E5A66580C9C203544 /* HoleTransitionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleTransitionView.swift; sourceTree = "<group>"; };
 		FE3C127EC9D33EA6F37933A5 /* CourseAPIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseAPIService.swift; sourceTree = "<group>"; };
+		FF0F7FF53F4103C5C995CD7F /* WorkoutManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -106,6 +108,7 @@
 			children = (
 				FE3C127EC9D33EA6F37933A5 /* CourseAPIService.swift */,
 				A3CC2CD6D75B6863F05926CB /* LocationService.swift */,
+				FF0F7FF53F4103C5C995CD7F /* WorkoutManager.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -240,6 +243,7 @@
 				AD6444DF1EB3F61A4B2662F6 /* ShotCountIntent.swift in Sources */,
 				04E1FB6D41D94868E4D198E7 /* ShotCounterView.swift in Sources */,
 				F9EEE83F7BF0D56ED31E3BE5 /* StartView.swift in Sources */,
+				DE63D0F1763F33139AFEAEEA /* WorkoutManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -254,6 +258,8 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "HoleCount reads your workout data from the Health app.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "HoleCount saves your golf rounds as workouts in the Health app.";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = "";
 				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = YES;
 				MARKETING_VERSION = 1.0.0;
@@ -275,6 +281,8 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "HoleCount reads your workout data from the Health app.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "HoleCount saves your golf rounds as workouts in the Health app.";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = "";
 				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = YES;
 				MARKETING_VERSION = 1.0.0;
