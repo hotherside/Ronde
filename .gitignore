@@ -1,0 +1,26 @@
+# Xcode
+build/
+DerivedData/
+*.xcuserdata
+*.xcworkspace/xcuserdata/
+xcuserdata/
+
+# Swift Package Manager
+.build/
+Packages/
+
+# CocoaPods (if ever used)
+Pods/
+
+# Secrets / API keys
+.env
+Secrets.swift
+
+# OS files
+.DS_Store
+*.swp
+*~
+
+# Xcode project state (user-specific)
+*.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
+*.xcodeproj/xcuserdata/
