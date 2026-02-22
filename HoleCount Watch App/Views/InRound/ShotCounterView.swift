@@ -23,13 +23,14 @@ struct ShotCounterView: View {
 
     var body: some View {
         if showingHoleTransition, let hole = currentHole {
-            HoleTransitionView(hole: hole) {
+            HoleTransitionView(
+                hole: hole,
+                isLastHole: round.currentHoleIndex >= round.numberOfHoles - 1
+            ) {
                 showingHoleTransition = false
-                if round.currentHoleIndex >= round.numberOfHoles - 1 {
-                    round.advanceToNextHole()
+                round.advanceToNextHole()
+                if round.isComplete {
                     onEndRound()
-                } else {
-                    round.advanceToNextHole()
                 }
             }
         } else if let hole = currentHole {

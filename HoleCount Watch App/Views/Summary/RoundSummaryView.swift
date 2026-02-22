@@ -1,8 +1,15 @@
 import SwiftUI
+import SwiftData
 
 struct RoundSummaryView: View {
+    @Environment(\.modelContext) private var modelContext
     let round: Round
-    let isPostRound: Bool
+    /// Non-nil when shown post-round; nil when viewed from history (read-only).
+    let onDone: (() -> Void)?
+
+    @State private var showingDiscardConfirmation = false
+
+    private var isPostRound: Bool { onDone != nil }
 
     var body: some View {
         List {
@@ -72,8 +79,41 @@ struct RoundSummaryView: View {
                     }
                 }
             }
+
+            // Post-round actions
+            if isPostRound {
+                Section {
+                    Button {
+                        onDone?()
+                    } label: {
+                        Text("Save Round")
+                            .frame(maxWidth: .infinity)
+                            .fontWeight(.semibold)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.green)
+
+                    Button(role: .destructive) {
+                        showingDiscardConfirmation = true
+                    } label: {
+                        Text("Discard")
+                            .frame(maxWidth: .infinity)
+                    }
+                }
+            }
         }
         .navigationTitle(isPostRound ? "Round Complete" : "Round Details")
+        .confirmationDialog(
+            "Discard this round?",
+            isPresented: $showingDiscardConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Discard", role: .destructive) {
+                modelContext.delete(round)
+                onDone?()
+            }
+            Button("Cancel", role: .cancel) {}
+        }
     }
 
     private var scoreText: String {

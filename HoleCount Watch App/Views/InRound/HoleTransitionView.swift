@@ -2,9 +2,8 @@ import SwiftUI
 
 struct HoleTransitionView: View {
     let hole: HoleScore
+    let isLastHole: Bool
     let onContinue: () -> Void
-
-    @State private var autoAdvance = false
 
     var body: some View {
         VStack(spacing: 8) {
@@ -39,9 +38,9 @@ struct HoleTransitionView: View {
                 }
             }
 
-            Button("Next Hole", action: onContinue)
+            Button(isLastHole ? "Finish Round" : "Next Hole", action: onContinue)
                 .buttonStyle(.borderedProminent)
-                .tint(.blue)
+                .tint(isLastHole ? .green : .blue)
                 .padding(.top, 4)
         }
         .padding()
@@ -56,8 +55,7 @@ struct HoleTransitionView: View {
 
     private var scoreColor: Color {
         let diff = hole.scoreToPar
-        if diff < 0 { return .green }
-        if diff == 0 { return .green }
+        if diff <= 0 { return .green }
         if diff <= 2 { return .yellow }
         return .red
     }

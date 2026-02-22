@@ -6,17 +6,37 @@ struct ContentView: View {
     @Query(sort: \Round.date, order: .reverse) private var rounds: [Round]
     @State private var showingSetup = false
     @State private var activeRound: Round?
+    /// Set after a round ends so we can show the post-round summary before
+    /// returning to the history list. Cleared when the user saves or discards.
+    @State private var showingSummaryForRound: Round?
 
     var body: some View {
         NavigationStack {
-            if let round = activeRound, !round.isComplete {
-                ShotCounterView(round: round) {
+            if let round = showingSummaryForRound {
+                RoundSummaryView(round: round) {
+                    showingSummaryForRound = nil
                     activeRound = nil
+                }
+            } else if let round = activeRound, !round.isComplete {
+                ShotCounterView(round: round) {
+                    // Round ended (last hole completed or early save).
+                    // Show the post-round summary before returning to history.
+                    showingSummaryForRound = activeRound
                 }
             } else {
                 roundsList
             }
         }
+        .onAppear {
+            // Resume any round that was active when the app was last closed.
+            if activeRound == nil, showingSummaryForRound == nil {
+                activeRound = rounds.first { !$0.isComplete }
+            }
+        }
+    }
+
+    private var completedRounds: [Round] {
+        rounds.filter(\.isComplete)
     }
 
     private var roundsList: some View {
@@ -29,11 +49,11 @@ struct ContentView: View {
                 }
             }
 
-            if !rounds.isEmpty {
+            if !completedRounds.isEmpty {
                 Section("Past Rounds") {
-                    ForEach(rounds) { round in
+                    ForEach(completedRounds) { round in
                         NavigationLink {
-                            RoundSummaryView(round: round, isPostRound: false)
+                            RoundSummaryView(round: round, onDone: nil)
                         } label: {
                             RoundRowView(round: round)
                         }
@@ -53,7 +73,7 @@ struct ContentView: View {
 
     private func deleteRounds(at offsets: IndexSet) {
         for index in offsets {
-            modelContext.delete(rounds[index])
+            modelContext.delete(completedRounds[index])
         }
     }
 }
