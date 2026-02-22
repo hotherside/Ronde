@@ -2,7 +2,7 @@ import Foundation
 import HealthKit
 import os.log
 
-private let log = Logger(subsystem: "com.ronde.HoleCount", category: "WorkoutManager")
+private let log = Logger(subsystem: "com.ronde.Ronde", category: "WorkoutManager")
 
 /// Manages an HKWorkoutSession (golf) that keeps the app alive
 /// and the display on during a 4-5 hour round.

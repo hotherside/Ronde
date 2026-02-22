@@ -1,4 +1,4 @@
-name: HoleCount
+name: Ronde
 options:
   bundleIdPrefix: com.ronde
   deploymentTarget:
@@ -6,15 +6,15 @@ options:
   xcodeVersion: "16.0"
 
 targets:
-  HoleCount Watch App:
+  Ronde Watch App:
     type: application
     platform: watchOS
     sources:
-      - path: HoleCount Watch App
+      - path: Ronde Watch App
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.ronde.HoleCount
-        PRODUCT_NAME: HoleCount
+        PRODUCT_BUNDLE_IDENTIFIER: com.ronde.Ronde
+        PRODUCT_NAME: Ronde
         MARKETING_VERSION: "1.0.0"
         CURRENT_PROJECT_VERSION: "1"
         WATCHOS_DEPLOYMENT_TARGET: "10.0"
@@ -22,11 +22,11 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp: YES
         INFOPLIST_KEY_WKCompanionAppBundleIdentifier: ""
-        INFOPLIST_KEY_NSHealthShareUsageDescription: "HoleCount reads your workout data from the Health app."
-        INFOPLIST_KEY_NSHealthUpdateUsageDescription: "HoleCount saves your golf rounds as workouts in the Health app."
+        INFOPLIST_KEY_NSHealthShareUsageDescription: "Ronde reads your workout data from the Health app."
+        INFOPLIST_KEY_NSHealthUpdateUsageDescription: "Ronde saves your golf rounds as workouts in the Health app."
         DEVELOPMENT_TEAM: ""
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     entitlements:
-      path: HoleCount Watch App/HoleCount.entitlements
+      path: Ronde Watch App/Ronde.entitlements
       properties:
         com.apple.developer.healthkit: true

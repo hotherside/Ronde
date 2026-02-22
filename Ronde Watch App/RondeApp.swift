@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 
 @main
-struct HoleCountApp: App {
+struct RondeApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Round.self,

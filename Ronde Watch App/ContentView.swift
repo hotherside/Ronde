@@ -62,7 +62,7 @@ struct ContentView: View {
                 }
             }
         }
-        .navigationTitle("HoleCount")
+        .navigationTitle("Ronde")
         .sheet(isPresented: $showingSetup) {
             StartView { round in
                 activeRound = round

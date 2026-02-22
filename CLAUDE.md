@@ -1,4 +1,4 @@
-# HoleCount
+# Ronde
 
 Golf shot counter for Apple Watch. Tap the Action Button to count shots per hole,
 see score vs par in real-time, review rounds after completion.
@@ -6,8 +6,8 @@ see score vs par in real-time, review rounds after completion.
 ## Tech Stack
 - watchOS 10+ / SwiftUI / SwiftData
 - `WKRunsIndependentlyOfCompanionApp = YES` (standalone watch, future iPhone companion)
-- Bundle ID: com.ronde.HoleCount
-- Action Button: App Intents framework (StartWorkoutIntent + AppShortcutsProvider)
+- Bundle ID: com.ronde.Ronde
+- Action Button: App Intents framework (ShotCountIntent + AppShortcutsProvider)
 - HealthKit: HKWorkoutActivityType.golf (keeps app alive during round)
 - Course data: GolfCourseAPI.com (free tier, 300 req/day) — stubbed with mock data initially
 
@@ -18,10 +18,10 @@ see score vs par in real-time, review rounds after completion.
 - Workout session keeps app foregrounded for 4-5 hour rounds
 
 ## Key Paths
-- Models: HoleCount Watch App/Models/ (Round.swift, HoleScore.swift, CourseData.swift)
-- Views: HoleCount Watch App/Views/ (SetupFlow/, InRound/, Summary/)
-- Services: HoleCount Watch App/Services/ (LocationService, CourseAPIService)
-- Intents: HoleCount Watch App/Intents/ (ShotCountIntent — Action Button)
+- Models: Ronde Watch App/Models/ (Round.swift, HoleScore.swift, CourseData.swift)
+- Views: Ronde Watch App/Views/ (SetupFlow/, InRound/, Summary/)
+- Services: Ronde Watch App/Services/ (LocationService, CourseAPIService)
+- Intents: Ronde Watch App/Intents/ (ShotCountIntent — Action Button)
 
 ## Data Model
 - Round: id, date, courseName?, numberOfHoles, totalPar, isComplete, currentHoleIndex

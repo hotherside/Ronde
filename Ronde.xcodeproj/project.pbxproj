@@ -1,0 +1,442 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		1038683561CF1C47DCEE65DE /* WorkoutManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C3DA62630410A61FBC055EC /* WorkoutManager.swift */; };
+		159100B732F02F600A34E3BF /* LocationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E45D61C32F937D85FE79428F /* LocationService.swift */; };
+		17F39D54E2F0B75B4EE74786 /* ReviewStartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A834121926EE3AEFB888A6F5 /* ReviewStartView.swift */; };
+		1911323E1B257074EFD0B3F9 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4DBDE7FEBF4BC187761D9AA6 /* Preview Assets.xcassets */; };
+		2F0BA0F2B959D68F703CB1A9 /* ShotCountIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = F64D15FB7F7003989F11E89E /* ShotCountIntent.swift */; };
+		3065F4CD5A2388B6D20373D5 /* HoleTransitionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12D53C04BF6C0BE0B04EA0BD /* HoleTransitionView.swift */; };
+		31FF903189B8F1E659AD4F2C /* RondeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68F39E29A8553B2503F0DB42 /* RondeApp.swift */; };
+		33010098A0E221C1E69E4FFB /* CourseDetectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09A5C9310E44B604F305E12A /* CourseDetectView.swift */; };
+		4D80DFB282075D1EE3D8367E /* RoundSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363796FB0A12F80183A0AC3A /* RoundSummaryView.swift */; };
+		4F000FF48E866D8680A3FFDC /* CourseData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4ED8D963FBF1F472838BBCAB /* CourseData.swift */; };
+		6558A9618114EF5EEC5E8381 /* Round.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5F04A6E1CB927F3C0518A3A /* Round.swift */; };
+		742B7CDAF636C0A1CACAEE46 /* ParSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB48D06217DC2F209A427B31 /* ParSetupView.swift */; };
+		7FAA8CFF844DD20339EB7B94 /* ShotCounterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8764C37704E9AA04FE48354 /* ShotCounterView.swift */; };
+		8569F4657A0B1AFC418FCC28 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 91CCFA754A74F1F2D7B0207C /* Assets.xcassets */; };
+		96CAC2B7776DEF0F726B3B05 /* StartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45D9D2A748520C4A8F3F6288 /* StartView.swift */; };
+		BBE2CA27DE4C1B3227213C17 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B797484472D0173569100EB /* ContentView.swift */; };
+		CBD6099CF6FE7126D35641BF /* HoleScore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25B36E8588FDD130C83288BC /* HoleScore.swift */; };
+		E39F0F6B1609359C545D4CD1 /* CourseAPIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 194545FBFC534599C73A8B4C /* CourseAPIService.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		09A5C9310E44B604F305E12A /* CourseDetectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseDetectView.swift; sourceTree = "<group>"; };
+		12D53C04BF6C0BE0B04EA0BD /* HoleTransitionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleTransitionView.swift; sourceTree = "<group>"; };
+		194545FBFC534599C73A8B4C /* CourseAPIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseAPIService.swift; sourceTree = "<group>"; };
+		25B36E8588FDD130C83288BC /* HoleScore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleScore.swift; sourceTree = "<group>"; };
+		318F2DBD4700980E50CC60CE /* Ronde.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Ronde.entitlements; sourceTree = "<group>"; };
+		363796FB0A12F80183A0AC3A /* RoundSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundSummaryView.swift; sourceTree = "<group>"; };
+		45D9D2A748520C4A8F3F6288 /* StartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartView.swift; sourceTree = "<group>"; };
+		4DBDE7FEBF4BC187761D9AA6 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		4ED8D963FBF1F472838BBCAB /* CourseData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseData.swift; sourceTree = "<group>"; };
+		68F39E29A8553B2503F0DB42 /* RondeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RondeApp.swift; sourceTree = "<group>"; };
+		6C3DA62630410A61FBC055EC /* WorkoutManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutManager.swift; sourceTree = "<group>"; };
+		8B797484472D0173569100EB /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		8E2821514E11B5B3FB939581 /* Ronde Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Ronde Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		91CCFA754A74F1F2D7B0207C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A834121926EE3AEFB888A6F5 /* ReviewStartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewStartView.swift; sourceTree = "<group>"; };
+		BB48D06217DC2F209A427B31 /* ParSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParSetupView.swift; sourceTree = "<group>"; };
+		E45D61C32F937D85FE79428F /* LocationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationService.swift; sourceTree = "<group>"; };
+		E5F04A6E1CB927F3C0518A3A /* Round.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Round.swift; sourceTree = "<group>"; };
+		E8764C37704E9AA04FE48354 /* ShotCounterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShotCounterView.swift; sourceTree = "<group>"; };
+		F64D15FB7F7003989F11E89E /* ShotCountIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShotCountIntent.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		12BF184128484D41650568FA /* Intents */ = {
+			isa = PBXGroup;
+			children = (
+				F64D15FB7F7003989F11E89E /* ShotCountIntent.swift */,
+			);
+			path = Intents;
+			sourceTree = "<group>";
+		};
+		36A76A54612B0ABC872D16D9 = {
+			isa = PBXGroup;
+			children = (
+				C722551ECEE5289495ACA5F4 /* Ronde Watch App */,
+				6A1CE76B3C907F3F51E6E483 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		4F4F20BB716C75EFFBAEAE67 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				5795DF7F5DB78A88B78EB169 /* InRound */,
+				6BDD631008F1941DB2E855DB /* SetupFlow */,
+				5A66830F9DAD68A71B9521B4 /* Summary */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		5795DF7F5DB78A88B78EB169 /* InRound */ = {
+			isa = PBXGroup;
+			children = (
+				12D53C04BF6C0BE0B04EA0BD /* HoleTransitionView.swift */,
+				E8764C37704E9AA04FE48354 /* ShotCounterView.swift */,
+			);
+			path = InRound;
+			sourceTree = "<group>";
+		};
+		5A66830F9DAD68A71B9521B4 /* Summary */ = {
+			isa = PBXGroup;
+			children = (
+				363796FB0A12F80183A0AC3A /* RoundSummaryView.swift */,
+			);
+			path = Summary;
+			sourceTree = "<group>";
+		};
+		5AAA1CB352EC493F0DBBE0CB /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				4ED8D963FBF1F472838BBCAB /* CourseData.swift */,
+				25B36E8588FDD130C83288BC /* HoleScore.swift */,
+				E5F04A6E1CB927F3C0518A3A /* Round.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		6A1CE76B3C907F3F51E6E483 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				8E2821514E11B5B3FB939581 /* Ronde Watch App.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		6BDD631008F1941DB2E855DB /* SetupFlow */ = {
+			isa = PBXGroup;
+			children = (
+				09A5C9310E44B604F305E12A /* CourseDetectView.swift */,
+				BB48D06217DC2F209A427B31 /* ParSetupView.swift */,
+				A834121926EE3AEFB888A6F5 /* ReviewStartView.swift */,
+				45D9D2A748520C4A8F3F6288 /* StartView.swift */,
+			);
+			path = SetupFlow;
+			sourceTree = "<group>";
+		};
+		8BE93B1FA8DDBB28CA508E92 /* Preview Content */ = {
+			isa = PBXGroup;
+			children = (
+				4DBDE7FEBF4BC187761D9AA6 /* Preview Assets.xcassets */,
+			);
+			path = "Preview Content";
+			sourceTree = "<group>";
+		};
+		A9CB3A699F993B4A38FEFDC7 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				194545FBFC534599C73A8B4C /* CourseAPIService.swift */,
+				E45D61C32F937D85FE79428F /* LocationService.swift */,
+				6C3DA62630410A61FBC055EC /* WorkoutManager.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		C722551ECEE5289495ACA5F4 /* Ronde Watch App */ = {
+			isa = PBXGroup;
+			children = (
+				91CCFA754A74F1F2D7B0207C /* Assets.xcassets */,
+				8B797484472D0173569100EB /* ContentView.swift */,
+				318F2DBD4700980E50CC60CE /* Ronde.entitlements */,
+				68F39E29A8553B2503F0DB42 /* RondeApp.swift */,
+				12BF184128484D41650568FA /* Intents */,
+				5AAA1CB352EC493F0DBBE0CB /* Models */,
+				8BE93B1FA8DDBB28CA508E92 /* Preview Content */,
+				A9CB3A699F993B4A38FEFDC7 /* Services */,
+				4F4F20BB716C75EFFBAEAE67 /* Views */,
+			);
+			path = "Ronde Watch App";
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		7F83580DD076A35409B7E380 /* Ronde Watch App */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 373388E9923B79914BF2A5F6 /* Build configuration list for PBXNativeTarget "Ronde Watch App" */;
+			buildPhases = (
+				DB01EE09481A3E124CA6B6C5 /* Sources */,
+				0BE7E375381D5C016E624315 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "Ronde Watch App";
+			packageProductDependencies = (
+			);
+			productName = "Ronde Watch App";
+			productReference = 8E2821514E11B5B3FB939581 /* Ronde Watch App.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		3ADFB5A07FC5D95634EAF8D9 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					7F83580DD076A35409B7E380 = {
+						DevelopmentTeam = "";
+					};
+				};
+			};
+			buildConfigurationList = FCC0CFAF1E5E6984F1950FEC /* Build configuration list for PBXProject "Ronde" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 36A76A54612B0ABC872D16D9;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				7F83580DD076A35409B7E380 /* Ronde Watch App */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		0BE7E375381D5C016E624315 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8569F4657A0B1AFC418FCC28 /* Assets.xcassets in Resources */,
+				1911323E1B257074EFD0B3F9 /* Preview Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		DB01EE09481A3E124CA6B6C5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BBE2CA27DE4C1B3227213C17 /* ContentView.swift in Sources */,
+				E39F0F6B1609359C545D4CD1 /* CourseAPIService.swift in Sources */,
+				4F000FF48E866D8680A3FFDC /* CourseData.swift in Sources */,
+				33010098A0E221C1E69E4FFB /* CourseDetectView.swift in Sources */,
+				CBD6099CF6FE7126D35641BF /* HoleScore.swift in Sources */,
+				3065F4CD5A2388B6D20373D5 /* HoleTransitionView.swift in Sources */,
+				159100B732F02F600A34E3BF /* LocationService.swift in Sources */,
+				742B7CDAF636C0A1CACAEE46 /* ParSetupView.swift in Sources */,
+				17F39D54E2F0B75B4EE74786 /* ReviewStartView.swift in Sources */,
+				31FF903189B8F1E659AD4F2C /* RondeApp.swift in Sources */,
+				6558A9618114EF5EEC5E8381 /* Round.swift in Sources */,
+				4D80DFB282075D1EE3D8367E /* RoundSummaryView.swift in Sources */,
+				2F0BA0F2B959D68F703CB1A9 /* ShotCountIntent.swift in Sources */,
+				7FAA8CFF844DD20339EB7B94 /* ShotCounterView.swift in Sources */,
+				96CAC2B7776DEF0F726B3B05 /* StartView.swift in Sources */,
+				1038683561CF1C47DCEE65DE /* WorkoutManager.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		7EA06E564A7DEA4DFEE06B59 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = "Ronde Watch App/Ronde.entitlements";
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Ronde reads your workout data from the Health app.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Ronde saves your golf rounds as workouts in the Health app.";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = "";
+				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = YES;
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ronde.Ronde;
+				PRODUCT_NAME = Ronde;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Debug;
+		};
+		954C438E1708C8A90AE73BB0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = "Ronde Watch App/Ronde.entitlements";
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Ronde reads your workout data from the Health app.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Ronde saves your golf rounds as workouts in the Health app.";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = "";
+				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = YES;
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ronde.Ronde;
+				PRODUCT_NAME = Ronde;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Release;
+		};
+		A54CE2E53227956EA9EE43AA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Release;
+		};
+		A878366814D367F90C91A531 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		373388E9923B79914BF2A5F6 /* Build configuration list for PBXNativeTarget "Ronde Watch App" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7EA06E564A7DEA4DFEE06B59 /* Debug */,
+				954C438E1708C8A90AE73BB0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		FCC0CFAF1E5E6984F1950FEC /* Build configuration list for PBXProject "Ronde" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A878366814D367F90C91A531 /* Debug */,
+				A54CE2E53227956EA9EE43AA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 3ADFB5A07FC5D95634EAF8D9 /* Project object */;
+}

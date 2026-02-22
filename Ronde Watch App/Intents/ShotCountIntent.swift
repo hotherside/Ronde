@@ -3,13 +3,13 @@ import SwiftData
 import WatchKit
 import os.log
 
-private let log = Logger(subsystem: "com.ronde.HoleCount", category: "ShotCountIntent")
+private let log = Logger(subsystem: "com.ronde.Ronde", category: "ShotCountIntent")
 
 /// Logs a golf shot for the active round's current hole.
 ///
 /// Triggered by:
 /// - Apple Watch Ultra Action Button (via Shortcuts → assign this action)
-/// - Siri: "Log a shot in HoleCount"
+/// - Siri: "Log a shot in Ronde"
 /// - Shortcuts app
 struct ShotCountIntent: AppIntent {
     static let title: LocalizedStringResource = "Log Golf Shot"
@@ -75,7 +75,7 @@ struct ShotCountIntent: AppIntent {
 
 /// Registers shortcuts so this action appears in the Shortcuts app
 /// and can be assigned to the Apple Watch Ultra Action Button.
-struct HoleCountShortcuts: AppShortcutsProvider {
+struct RondeShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(
             intent: ShotCountIntent(),
