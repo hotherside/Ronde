@@ -85,13 +85,20 @@ private struct RoundRowView: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(round.courseName ?? "Custom Round")
                 .font(.headline)
-            HStack {
+                .lineLimit(1)
+            HStack(spacing: 4) {
                 Text(round.date, style: .date)
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Spacer()
-                Text("\(round.totalShots) shots")
+                Text("·")
                     .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text("\(round.numberOfHoles)H")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text("\(round.totalShots)")
+                    .font(.caption.monospacedDigit())
                 scoreLabel
             }
         }

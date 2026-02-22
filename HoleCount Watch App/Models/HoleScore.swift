@@ -15,6 +15,7 @@ final class HoleScore {
     }
 
     var scoreLabel: String {
+        if shots == 0 { return "—" }
         let diff = scoreToPar
         if diff == 0 { return "E" }
         return diff > 0 ? "+\(diff)" : "\(diff)"
