@@ -3,9 +3,32 @@ options:
   bundleIdPrefix: com.ronde
   deploymentTarget:
     watchOS: "10.0"
+    iOS: "17.0"
   xcodeVersion: "16.0"
 
 targets:
+  # Minimal iOS companion required so Xcode accepts the watch app bundle ID.
+  # Bundle ID prefix rule: watch (com.ronde.Ronde) must start with iOS (com.ronde) + "."
+  # The watch app runs fully independently (WKRunsIndependentlyOfCompanionApp = YES).
+  Ronde iOS:
+    type: application
+    platform: iOS
+    sources:
+      - path: Ronde iOS App
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.ronde
+        PRODUCT_NAME: Ronde
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+        IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+        SWIFT_VERSION: "6.0"
+        GENERATE_INFOPLIST_FILE: YES
+        TARGETED_DEVICE_FAMILY: "1,2"
+        DEVELOPMENT_TEAM: ""
+    dependencies:
+      - target: Ronde Watch App
+
   Ronde Watch App:
     type: application
     platform: watchOS
@@ -21,7 +44,7 @@ targets:
         SWIFT_VERSION: "6.0"
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp: YES
-        INFOPLIST_KEY_WKCompanionAppBundleIdentifier: ""
+        INFOPLIST_KEY_WKCompanionAppBundleIdentifier: "com.ronde"
         INFOPLIST_KEY_NSHealthShareUsageDescription: "Ronde reads your workout data from the Health app."
         INFOPLIST_KEY_NSHealthUpdateUsageDescription: "Ronde saves your golf rounds as workouts in the Health app."
         INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription: "Ronde uses your location to find nearby golf courses."

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0C5894C5F0464F14E40D2314 /* RondeCompanion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76E520658DB75C1BBF690FE6 /* RondeCompanion.swift */; };
 		1038683561CF1C47DCEE65DE /* WorkoutManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C3DA62630410A61FBC055EC /* WorkoutManager.swift */; };
 		159100B732F02F600A34E3BF /* LocationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E45D61C32F937D85FE79428F /* LocationService.swift */; };
 		17F39D54E2F0B75B4EE74786 /* ReviewStartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A834121926EE3AEFB888A6F5 /* ReviewStartView.swift */; };
@@ -25,7 +26,32 @@
 		BBE2CA27DE4C1B3227213C17 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B797484472D0173569100EB /* ContentView.swift */; };
 		CBD6099CF6FE7126D35641BF /* HoleScore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25B36E8588FDD130C83288BC /* HoleScore.swift */; };
 		E39F0F6B1609359C545D4CD1 /* CourseAPIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 194545FBFC534599C73A8B4C /* CourseAPIService.swift */; };
+		EDE75816CAD0E7DEA4954E4F /* Ronde Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 8E2821514E11B5B3FB939581 /* Ronde Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		138175E74DF069966C99971D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3ADFB5A07FC5D95634EAF8D9 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 7F83580DD076A35409B7E380;
+			remoteInfo = "Ronde Watch App";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		7674EFE65304823D785FA7BF /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				EDE75816CAD0E7DEA4954E4F /* Ronde Watch App.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		09A5C9310E44B604F305E12A /* CourseDetectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseDetectView.swift; sourceTree = "<group>"; };
@@ -34,11 +60,13 @@
 		25B36E8588FDD130C83288BC /* HoleScore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleScore.swift; sourceTree = "<group>"; };
 		318F2DBD4700980E50CC60CE /* Ronde.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Ronde.entitlements; sourceTree = "<group>"; };
 		363796FB0A12F80183A0AC3A /* RoundSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundSummaryView.swift; sourceTree = "<group>"; };
+		4458E392505D5ED0228C69A5 /* Ronde iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "Ronde iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		45D9D2A748520C4A8F3F6288 /* StartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartView.swift; sourceTree = "<group>"; };
 		4DBDE7FEBF4BC187761D9AA6 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		4ED8D963FBF1F472838BBCAB /* CourseData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseData.swift; sourceTree = "<group>"; };
 		68F39E29A8553B2503F0DB42 /* RondeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RondeApp.swift; sourceTree = "<group>"; };
 		6C3DA62630410A61FBC055EC /* WorkoutManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutManager.swift; sourceTree = "<group>"; };
+		76E520658DB75C1BBF690FE6 /* RondeCompanion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RondeCompanion.swift; sourceTree = "<group>"; };
 		8B797484472D0173569100EB /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		8E2821514E11B5B3FB939581 /* Ronde Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Ronde Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		91CCFA754A74F1F2D7B0207C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -62,6 +90,7 @@
 		36A76A54612B0ABC872D16D9 = {
 			isa = PBXGroup;
 			children = (
+				6D761B2077684925A944F7C7 /* Ronde iOS App */,
 				C722551ECEE5289495ACA5F4 /* Ronde Watch App */,
 				6A1CE76B3C907F3F51E6E483 /* Products */,
 			);
@@ -107,6 +136,7 @@
 		6A1CE76B3C907F3F51E6E483 /* Products */ = {
 			isa = PBXGroup;
 			children = (
+				4458E392505D5ED0228C69A5 /* Ronde iOS.app */,
 				8E2821514E11B5B3FB939581 /* Ronde Watch App.app */,
 			);
 			name = Products;
@@ -121,6 +151,14 @@
 				45D9D2A748520C4A8F3F6288 /* StartView.swift */,
 			);
 			path = SetupFlow;
+			sourceTree = "<group>";
+		};
+		6D761B2077684925A944F7C7 /* Ronde iOS App */ = {
+			isa = PBXGroup;
+			children = (
+				76E520658DB75C1BBF690FE6 /* RondeCompanion.swift */,
+			);
+			path = "Ronde iOS App";
 			sourceTree = "<group>";
 		};
 		8BE93B1FA8DDBB28CA508E92 /* Preview Content */ = {
@@ -178,6 +216,25 @@
 			productReference = 8E2821514E11B5B3FB939581 /* Ronde Watch App.app */;
 			productType = "com.apple.product-type.application";
 		};
+		9ADBAF909A8CFAF1C869059C /* Ronde iOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 522A200B4572B27A84A669AE /* Build configuration list for PBXNativeTarget "Ronde iOS" */;
+			buildPhases = (
+				38C37F86E7CB5A52CE599F78 /* Sources */,
+				7674EFE65304823D785FA7BF /* Embed Watch Content */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				FC93FAB9E799A526B6F3A5F9 /* PBXTargetDependency */,
+			);
+			name = "Ronde iOS";
+			packageProductDependencies = (
+			);
+			productName = "Ronde iOS";
+			productReference = 4458E392505D5ED0228C69A5 /* Ronde iOS.app */;
+			productType = "com.apple.product-type.application";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -188,6 +245,9 @@
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
 					7F83580DD076A35409B7E380 = {
+						DevelopmentTeam = "";
+					};
+					9ADBAF909A8CFAF1C869059C = {
 						DevelopmentTeam = "";
 					};
 				};
@@ -207,6 +267,7 @@
 			projectRoot = "";
 			targets = (
 				7F83580DD076A35409B7E380 /* Ronde Watch App */,
+				9ADBAF909A8CFAF1C869059C /* Ronde iOS */,
 			);
 		};
 /* End PBXProject section */
@@ -224,6 +285,14 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		38C37F86E7CB5A52CE599F78 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0C5894C5F0464F14E40D2314 /* RondeCompanion.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		DB01EE09481A3E124CA6B6C5 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -249,6 +318,14 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		FC93FAB9E799A526B6F3A5F9 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 7F83580DD076A35409B7E380 /* Ronde Watch App */;
+			targetProxy = 138175E74DF069966C99971D /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
 		7EA06E564A7DEA4DFEE06B59 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -262,7 +339,7 @@
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Ronde saves your golf rounds as workouts in the Health app.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Ronde uses your location to find nearby golf courses.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Ronde uses your location to find nearby golf courses.";
-				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = "";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.ronde;
 				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = YES;
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ronde.Ronde;
@@ -287,7 +364,7 @@
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Ronde saves your golf rounds as workouts in the Health app.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Ronde uses your location to find nearby golf courses.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Ronde uses your location to find nearby golf courses.";
-				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = "";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.ronde;
 				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = YES;
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ronde.Ronde;
@@ -345,10 +422,10 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = watchos;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
@@ -407,15 +484,59 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = watchos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Debug;
+		};
+		B5094C5C7B7FF62F3D4E6A19 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ronde;
+				PRODUCT_NAME = Ronde;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		DC7E725BAD9CD9AEDC386FAE /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ronde;
+				PRODUCT_NAME = Ronde;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
@@ -427,6 +548,15 @@
 			buildConfigurations = (
 				7EA06E564A7DEA4DFEE06B59 /* Debug */,
 				954C438E1708C8A90AE73BB0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		522A200B4572B27A84A669AE /* Build configuration list for PBXNativeTarget "Ronde iOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DC7E725BAD9CD9AEDC386FAE /* Debug */,
+				B5094C5C7B7FF62F3D4E6A19 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
