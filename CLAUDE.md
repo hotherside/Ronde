@@ -52,3 +52,7 @@ see score vs par in real-time, review rounds after completion.
 
 ## Session Plan
 Detailed implementation plan: .claude/plans/mellow-knitting-owl.md
+
+## Session Conventions
+- Git remote: https://github.com/hotherside/Ronde.git (push all changes at end of each session)
+- End every session by outputting the ready-to-paste prompt for the next session
