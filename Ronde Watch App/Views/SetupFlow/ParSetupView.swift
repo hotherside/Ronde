@@ -1,11 +1,11 @@
 import SwiftUI
 
 struct ParSetupView: View {
+    let courseName: String?
     let numberOfHoles: Int
     @Binding var date: Date
     @Binding var pars: [Int]
     let onStart: () -> Void
-    let onBack: () -> Void
 
     private var totalPar: Int {
         pars.reduce(0, +)
@@ -13,7 +13,13 @@ struct ParSetupView: View {
 
     var body: some View {
         List {
+            // Course + summary header
             Section {
+                if let name = courseName {
+                    Text(name)
+                        .font(.headline)
+                        .lineLimit(1)
+                }
                 HStack {
                     Text("Total Par")
                         .font(.headline)
@@ -22,6 +28,7 @@ struct ParSetupView: View {
                         .font(.headline)
                         .foregroundStyle(.secondary)
                 }
+                DatePicker("Date", selection: $date, displayedComponents: .date)
             }
 
             Section("Set Par Per Hole") {
@@ -43,12 +50,7 @@ struct ParSetupView: View {
                 .tint(.green)
             }
         }
-        .navigationTitle("\(numberOfHoles) Holes")
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Back", action: onBack)
-            }
-        }
+        .navigationTitle(courseName != nil ? "Adjust Par" : "\(numberOfHoles) Holes")
     }
 }
 
