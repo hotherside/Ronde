@@ -6,15 +6,14 @@ struct StartView: View {
     // Navigation
     @State private var path = NavigationPath()
 
-    // Round config accumulated across steps
+    // Round config accumulated across steps.
+    // numberOfHoles is always pars.count — there is no separate state for it.
     @State private var date = Date.now
-    @State private var numberOfHoles: Int = 18
     @State private var pars: [Int] = Array(repeating: 4, count: 18)
     @State private var courseName: String?
 
     let onStartRound: (Round) -> Void
 
-    // Typed destinations for the navigation stack.
     private enum Dest: Hashable {
         case manualHoleSelect
         case parSetup
@@ -26,7 +25,6 @@ struct StartView: View {
             CourseDetectView(
                 onCourseSelected: { course in
                     courseName = course.name
-                    numberOfHoles = course.numberOfHoles
                     pars = course.pars
                     path.append(Dest.parSetup)
                 },
@@ -42,7 +40,6 @@ struct StartView: View {
                 case .parSetup:
                     ParSetupView(
                         courseName: courseName,
-                        numberOfHoles: numberOfHoles,
                         date: $date,
                         pars: $pars,
                         onStart: startRound
@@ -60,7 +57,6 @@ struct StartView: View {
                 .font(.headline)
 
             Button {
-                numberOfHoles = 9
                 pars = Array(repeating: 4, count: 9)
                 path.append(Dest.parSetup)
             } label: {
@@ -70,7 +66,6 @@ struct StartView: View {
             .buttonStyle(.borderedProminent)
 
             Button {
-                numberOfHoles = 18
                 pars = Array(repeating: 4, count: 18)
                 path.append(Dest.parSetup)
             } label: {
@@ -89,7 +84,7 @@ struct StartView: View {
         let round = Round(
             date: date,
             courseName: courseName,
-            numberOfHoles: numberOfHoles,
+            numberOfHoles: pars.count,
             pars: pars
         )
         modelContext.insert(round)

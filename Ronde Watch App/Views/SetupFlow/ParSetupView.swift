@@ -3,10 +3,12 @@ import WatchKit
 
 struct ParSetupView: View {
     let courseName: String?
-    let numberOfHoles: Int
     @Binding var date: Date
     @Binding var pars: [Int]
     let onStart: () -> Void
+
+    // Derived from the binding — can never diverge from pars.count.
+    private var numberOfHoles: Int { pars.count }
 
     private var totalPar: Int {
         pars.reduce(0, +)
@@ -36,7 +38,8 @@ struct ParSetupView: View {
             }
 
             Section("Set Par Per Hole") {
-                ForEach(0..<numberOfHoles, id: \.self) { index in
+                // Use pars.indices so the subscript is always in bounds.
+                ForEach(pars.indices, id: \.self) { index in
                     HoleParRow(
                         holeNumber: index + 1,
                         par: $pars[index]
