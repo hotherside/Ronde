@@ -51,8 +51,15 @@ struct ContentView: View {
                 Button {
                     showingSetup = true
                 } label: {
-                    Label("New Round", systemImage: "plus.circle.fill")
+                    HStack {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 22))
+                            .foregroundStyle(.green)
+                        Text("New Round")
+                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                    }
                 }
+                .buttonStyle(.plain)
                 .accessibilityLabel("Start a new round")
             }
 
@@ -89,26 +96,36 @@ private struct RoundRowView: View {
     let round: Round
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(round.courseName ?? "Custom Round")
-                .font(.headline)
-                .lineLimit(1)
-            HStack(spacing: 4) {
-                Text(round.date, format: .dateTime.month(.abbreviated).day())
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Text("·")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Text("\(round.numberOfHoles)H")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Text("\(round.totalShots) shots")
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(.secondary)
-                scoreLabel
+        HStack(spacing: 8) {
+            // Score indicator — colored circle on the left
+            ZStack {
+                Circle()
+                    .fill(scoreCircleColor.opacity(0.15))
+                    .frame(width: 32, height: 32)
+                Text(scoreShortText)
+                    .font(.system(size: 12, weight: .heavy, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(scoreCircleColor)
             }
+
+            // Course + details
+            VStack(alignment: .leading, spacing: 2) {
+                Text(round.courseName ?? "Custom Round")
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .lineLimit(1)
+                HStack(spacing: 4) {
+                    Text(round.date, format: .dateTime.month(.abbreviated).day())
+                    Text("·")
+                    Text("\(round.numberOfHoles)H")
+                    Text("·")
+                    Text("\(round.totalShots)")
+                        .monospacedDigit()
+                }
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(.white.opacity(0.4))
+            }
+
+            Spacer()
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(rowAccessibilityLabel)
@@ -123,13 +140,17 @@ private struct RoundRowView: View {
         return "\(course), \(round.numberOfHoles) holes, \(round.totalShots) shots, \(scoreDesc)"
     }
 
-    private var scoreLabel: some View {
+    private var scoreShortText: String {
         let score = round.scoreToPar
-        let text = score == 0 ? "E" : (score > 0 ? "+\(score)" : "\(score)")
-        let color: Color = score <= 0 ? .green : (score <= 5 ? .yellow : .red)
-        return Text(text)
-            .font(.caption.bold())
-            .foregroundStyle(color)
+        if score == 0 { return "E" }
+        return score > 0 ? "+\(score)" : "\(score)"
+    }
+
+    private var scoreCircleColor: Color {
+        let score = round.scoreToPar
+        if score <= 0 { return .green }
+        if score <= 5 { return .orange }
+        return .red
     }
 }
 

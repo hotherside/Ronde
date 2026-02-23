@@ -13,27 +13,51 @@ struct RoundSummaryView: View {
 
     var body: some View {
         List {
-            // Header: course, date, totals
+            // ── Hero header: course + score grid ──
             Section {
-                VStack(spacing: 6) {
+                VStack(spacing: 8) {
                     Text(round.courseName ?? "Custom Round")
-                        .font(.headline)
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
                         .multilineTextAlignment(.center)
+                        .lineLimit(1)
                         .accessibilityAddTraits(.isHeader)
 
-                    Text(round.date, style: .date)
-                        .font(.caption)
+                    Text(round.date, format: .dateTime.month(.abbreviated).day())
+                        .font(.system(size: 10, weight: .medium))
                         .foregroundStyle(.secondary)
 
-                    // Totals row
+                    // ── 3-column stat grid ──
                     HStack(spacing: 0) {
-                        statCell(value: "\(round.totalShots)", label: "Shots")
-                        Divider().frame(height: 32)
-                        statCell(value: "\(round.totalPar)", label: "Par",
-                                 valueColor: .secondary)
-                        Divider().frame(height: 32)
-                        statCell(value: scoreText, label: "Score",
-                                 valueColor: scoreColor)
+                        statColumn(
+                            value: "\(round.totalShots)",
+                            label: "SHOTS",
+                            valueColor: .white,
+                            valueSize: 28
+                        )
+
+                        // Divider
+                        Rectangle()
+                            .fill(.white.opacity(0.12))
+                            .frame(width: 1, height: 38)
+
+                        statColumn(
+                            value: "\(round.totalPar)",
+                            label: "PAR",
+                            valueColor: .white.opacity(0.45),
+                            valueSize: 28
+                        )
+
+                        // Divider
+                        Rectangle()
+                            .fill(.white.opacity(0.12))
+                            .frame(width: 1, height: 38)
+
+                        statColumn(
+                            value: scoreText,
+                            label: "SCORE",
+                            valueColor: scoreColor,
+                            valueSize: 28
+                        )
                     }
                     .padding(.top, 2)
                     .accessibilityElement(children: .combine)
@@ -41,17 +65,20 @@ struct RoundSummaryView: View {
                         "\(round.totalShots) shots, par \(round.totalPar), \(accessibilityScoreText)"
                     )
 
-                    // Steps + distance (only for rounds that tracked it)
+                    // ── Steps + distance row ──
                     if round.totalSteps > 0 {
                         HStack(spacing: 4) {
                             Image(systemName: "figure.walk")
-                                .font(.caption2)
-                            Text("\(round.totalSteps.formatted()) steps")
+                                .font(.system(size: 9))
+                            Text("\(round.totalSteps.formatted())")
+                                .font(.system(size: 10, weight: .bold, design: .rounded))
+                                .monospacedDigit()
                             Text("·")
                             Text("\(String(format: "%.1f", round.totalDistanceKm)) km")
+                                .font(.system(size: 10, weight: .bold, design: .rounded))
                         }
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .font(.system(size: 10))
+                        .foregroundStyle(.white.opacity(0.35))
                         .accessibilityElement(children: .combine)
                         .accessibilityLabel(
                             "\(round.totalSteps) steps walked, \(String(format: "%.1f", round.totalDistanceKm)) kilometers"
@@ -116,23 +143,28 @@ struct RoundSummaryView: View {
         }
     }
 
-    // MARK: - Header helpers
+    // MARK: - Stat Column
 
-    private func statCell(
+    private func statColumn(
         value: String,
         label: String,
-        valueColor: Color = .primary
+        valueColor: Color,
+        valueSize: CGFloat
     ) -> some View {
         VStack(spacing: 1) {
             Text(value)
-                .font(.title3.bold().monospacedDigit())
+                .font(.system(size: valueSize, weight: .heavy, design: .rounded))
+                .monospacedDigit()
                 .foregroundStyle(valueColor)
             Text(label)
-                .font(.system(size: 9, weight: .medium))
-                .foregroundStyle(.secondary)
+                .font(.system(size: 8, weight: .bold, design: .rounded))
+                .foregroundStyle(.white.opacity(0.35))
+                .tracking(0.8)
         }
         .frame(maxWidth: .infinity)
     }
+
+    // MARK: - Helpers
 
     private var scoreText: String {
         guard round.totalShots > 0 else { return "–" }
@@ -163,37 +195,44 @@ private struct HoleScoreRow: View {
     let hole: HoleScore
 
     var body: some View {
-        HStack(spacing: 6) {
-            // Hole number
-            Text("\(hole.holeNumber)")
-                .font(.caption2.monospacedDigit())
-                .foregroundStyle(.secondary)
-                .frame(width: 18, alignment: .leading)
+        HStack(spacing: 0) {
+            // Hole number — left aligned with color dot
+            HStack(spacing: 4) {
+                Circle()
+                    .fill(badgeColor)
+                    .frame(width: 6, height: 6)
+                Text("\(hole.holeNumber)")
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(.white.opacity(0.6))
+            }
+            .frame(width: 30, alignment: .leading)
+
+            Spacer()
 
             // Par
             Text("P\(hole.par)")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+                .font(.system(size: 10, weight: .medium, design: .rounded))
+                .foregroundStyle(.white.opacity(0.3))
 
             Spacer()
 
             // Shot count
             Text(hole.shots > 0 ? "\(hole.shots)" : "–")
-                .font(.body.monospacedDigit().bold())
+                .font(.system(size: 16, weight: .heavy, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(.white)
 
-            // Score badge (pill)
+            Spacer()
+
+            // Score badge
             if hole.shots > 0 {
                 Text(hole.scoreLabel)
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(badgeTextColor)
-                    .padding(.horizontal, 5)
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .foregroundStyle(badgeColor)
+                    .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(
-                        Capsule().fill(badgeColor.opacity(0.25))
-                    )
-                    .overlay(
-                        Capsule().stroke(badgeColor.opacity(0.5), lineWidth: 0.5)
-                    )
+                    .background(Capsule().fill(badgeColor.opacity(0.15)))
                     .accessibilityLabel(hole.scoreLabel == "E" ? "Par" : hole.scoreLabel)
             } else {
                 Text("–")
@@ -229,11 +268,6 @@ private struct HoleScoreRow: View {
         case 1:       return .orange
         default:      return .red
         }
-    }
-
-    private var badgeTextColor: Color {
-        // Slightly brighter than the badge fill for legibility
-        badgeColor
     }
 }
 
