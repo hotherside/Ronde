@@ -22,9 +22,11 @@
 		742B7CDAF636C0A1CACAEE46 /* ParSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB48D06217DC2F209A427B31 /* ParSetupView.swift */; };
 		7FAA8CFF844DD20339EB7B94 /* ShotCounterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8764C37704E9AA04FE48354 /* ShotCounterView.swift */; };
 		8569F4657A0B1AFC418FCC28 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 91CCFA754A74F1F2D7B0207C /* Assets.xcassets */; };
+		8A7AF25187FB24142F987C91 /* SwingDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A7CAE89D0C9657A288BD4DF /* SwingDetector.swift */; };
 		96CAC2B7776DEF0F726B3B05 /* StartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45D9D2A748520C4A8F3F6288 /* StartView.swift */; };
 		BBE2CA27DE4C1B3227213C17 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B797484472D0173569100EB /* ContentView.swift */; };
 		CBD6099CF6FE7126D35641BF /* HoleScore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25B36E8588FDD130C83288BC /* HoleScore.swift */; };
+		E211EA86872A63046B4FEE10 /* PedometerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7D70D0ECCA83D8F27B122AA /* PedometerService.swift */; };
 		E39F0F6B1609359C545D4CD1 /* CourseAPIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 194545FBFC534599C73A8B4C /* CourseAPIService.swift */; };
 		EDE75816CAD0E7DEA4954E4F /* Ronde Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 8E2821514E11B5B3FB939581 /* Ronde Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
@@ -55,6 +57,7 @@
 
 /* Begin PBXFileReference section */
 		09A5C9310E44B604F305E12A /* CourseDetectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseDetectView.swift; sourceTree = "<group>"; };
+		0A7CAE89D0C9657A288BD4DF /* SwingDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwingDetector.swift; sourceTree = "<group>"; };
 		12D53C04BF6C0BE0B04EA0BD /* HoleTransitionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleTransitionView.swift; sourceTree = "<group>"; };
 		194545FBFC534599C73A8B4C /* CourseAPIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseAPIService.swift; sourceTree = "<group>"; };
 		25B36E8588FDD130C83288BC /* HoleScore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleScore.swift; sourceTree = "<group>"; };
@@ -71,6 +74,7 @@
 		8E2821514E11B5B3FB939581 /* Ronde Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Ronde Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		91CCFA754A74F1F2D7B0207C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A834121926EE3AEFB888A6F5 /* ReviewStartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewStartView.swift; sourceTree = "<group>"; };
+		B7D70D0ECCA83D8F27B122AA /* PedometerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PedometerService.swift; sourceTree = "<group>"; };
 		BB48D06217DC2F209A427B31 /* ParSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParSetupView.swift; sourceTree = "<group>"; };
 		E45D61C32F937D85FE79428F /* LocationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationService.swift; sourceTree = "<group>"; };
 		E5F04A6E1CB927F3C0518A3A /* Round.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Round.swift; sourceTree = "<group>"; };
@@ -174,6 +178,8 @@
 			children = (
 				194545FBFC534599C73A8B4C /* CourseAPIService.swift */,
 				E45D61C32F937D85FE79428F /* LocationService.swift */,
+				B7D70D0ECCA83D8F27B122AA /* PedometerService.swift */,
+				0A7CAE89D0C9657A288BD4DF /* SwingDetector.swift */,
 				6C3DA62630410A61FBC055EC /* WorkoutManager.swift */,
 			);
 			path = Services;
@@ -305,6 +311,7 @@
 				3065F4CD5A2388B6D20373D5 /* HoleTransitionView.swift in Sources */,
 				159100B732F02F600A34E3BF /* LocationService.swift in Sources */,
 				742B7CDAF636C0A1CACAEE46 /* ParSetupView.swift in Sources */,
+				E211EA86872A63046B4FEE10 /* PedometerService.swift in Sources */,
 				17F39D54E2F0B75B4EE74786 /* ReviewStartView.swift in Sources */,
 				31FF903189B8F1E659AD4F2C /* RondeApp.swift in Sources */,
 				6558A9618114EF5EEC5E8381 /* Round.swift in Sources */,
@@ -312,6 +319,7 @@
 				2F0BA0F2B959D68F703CB1A9 /* ShotCountIntent.swift in Sources */,
 				7FAA8CFF844DD20339EB7B94 /* ShotCounterView.swift in Sources */,
 				96CAC2B7776DEF0F726B3B05 /* StartView.swift in Sources */,
+				8A7AF25187FB24142F987C91 /* SwingDetector.swift in Sources */,
 				1038683561CF1C47DCEE65DE /* WorkoutManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -339,6 +347,7 @@
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Ronde saves your golf rounds as workouts in the Health app.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Ronde uses your location to find nearby golf courses.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Ronde uses your location to find nearby golf courses.";
+				INFOPLIST_KEY_NSMotionUsageDescription = "Ronde uses motion sensors to automatically detect golf swings and track your steps during a round.";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.ronde;
 				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = YES;
 				MARKETING_VERSION = 1.0.0;
@@ -364,6 +373,7 @@
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Ronde saves your golf rounds as workouts in the Health app.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Ronde uses your location to find nearby golf courses.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Ronde uses your location to find nearby golf courses.";
+				INFOPLIST_KEY_NSMotionUsageDescription = "Ronde uses motion sensors to automatically detect golf swings and track your steps during a round.";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.ronde;
 				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = YES;
 				MARKETING_VERSION = 1.0.0;

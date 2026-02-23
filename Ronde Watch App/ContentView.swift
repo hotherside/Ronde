@@ -94,7 +94,7 @@ private struct RoundRowView: View {
                 .font(.headline)
                 .lineLimit(1)
             HStack(spacing: 4) {
-                Text(round.date, style: .date)
+                Text(round.date, format: .dateTime.month(.abbreviated).day())
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Text("·")

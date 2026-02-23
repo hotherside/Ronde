@@ -40,6 +40,23 @@ struct RoundSummaryView: View {
                     .accessibilityLabel(
                         "\(round.totalShots) shots, par \(round.totalPar), \(accessibilityScoreText)"
                     )
+
+                    // Steps + distance (only for rounds that tracked it)
+                    if round.totalSteps > 0 {
+                        HStack(spacing: 4) {
+                            Image(systemName: "figure.walk")
+                                .font(.caption2)
+                            Text("\(round.totalSteps.formatted()) steps")
+                            Text("·")
+                            Text("\(String(format: "%.1f", round.totalDistanceKm)) km")
+                        }
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel(
+                            "\(round.totalSteps) steps walked, \(String(format: "%.1f", round.totalDistanceKm)) kilometers"
+                        )
+                    }
                 }
                 .frame(maxWidth: .infinity)
             }
@@ -71,6 +88,7 @@ struct RoundSummaryView: View {
                     .buttonStyle(.borderedProminent)
                     .tint(.green)
                     .accessibilityLabel("Save round and return to history")
+                    .listRowBackground(Color.clear)
 
                     Button(role: .destructive) {
                         showingDiscardConfirmation = true

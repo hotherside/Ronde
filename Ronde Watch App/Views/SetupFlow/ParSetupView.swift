@@ -56,6 +56,7 @@ struct ParSetupView: View {
                 .buttonStyle(.borderedProminent)
                 .tint(.green)
                 .accessibilityLabel("Start round with \(numberOfHoles) holes, total par \(totalPar)")
+                .listRowBackground(Color.clear)
             }
         }
         .navigationTitle(courseName != nil ? "Adjust Par" : "\(numberOfHoles) Holes")

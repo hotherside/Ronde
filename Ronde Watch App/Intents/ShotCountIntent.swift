@@ -52,6 +52,20 @@ struct ShotCountIntent: AppIntent {
             return .result(dialog: "No active round")
         }
 
+        // Dedup: skip if swing was auto-detected within the last 2 seconds
+        let swingRecent = await MainActor.run {
+            SwingDetector.shared.wasSwingDetectedWithin(seconds: 2.0)
+        }
+        if swingRecent {
+            let shots = hole.shots
+            let holeNumber = hole.holeNumber
+            log.debug("Action Button skipped — swing already detected for hole \(holeNumber)")
+            await MainActor.run {
+                WKInterfaceDevice.current().play(.click)
+            }
+            return .result(dialog: "Shot \(shots) on hole \(holeNumber)")
+        }
+
         hole.incrementShot()
 
         do {

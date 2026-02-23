@@ -11,6 +11,17 @@ struct ShotCounterView: View {
     @State private var showingHoleTransition = false
     @State private var showingEndConfirmation = false
 
+    // MARK: - Motion Services
+
+    @StateObject private var pedometer = PedometerService.shared
+    @StateObject private var swingDetector = SwingDetector.shared
+
+    /// Brief toast when a swing is auto-detected.
+    @State private var showSwingToast = false
+
+    /// Timestamp of last manual increment (+ button), for dedup with swing detection.
+    @State private var lastManualIncrementTime: Date = .distantPast
+
     private var currentHole: HoleScore? {
         round.currentHole
     }
@@ -42,19 +53,57 @@ struct ShotCounterView: View {
         }
         .task {
             await WorkoutManager.shared.startWorkout()
+            PedometerService.shared.startTracking()
+            SwingDetector.shared.startDetecting()
+        }
+        .onChange(of: swingDetector.swingCount) { oldValue, newValue in
+            guard newValue > oldValue else { return }
+            guard let hole = currentHole else { return }
+
+            // Dedup: skip if user manually tapped within last 2 seconds
+            if Date().timeIntervalSince(lastManualIncrementTime) < 2.0 {
+                return
+            }
+
+            hole.incrementShot()
+
+            // Distinct haptic for auto-detected swing
+            WKInterfaceDevice.current().play(.start)
+
+            // Brief toast
+            showSwingToast = true
+            Task {
+                try? await Task.sleep(for: .seconds(1.5))
+                showSwingToast = false
+            }
         }
     }
 
+    // MARK: - Actions
+
     private func finishRound() {
+        // Save pedometer totals
+        let result = PedometerService.shared.stopTracking()
+        round.totalSteps = result.steps
+        round.totalDistanceMeters = result.distanceMeters
+
+        SwingDetector.shared.stopDetecting()
+
         Task { await WorkoutManager.shared.endWorkout() }
         onEndRound()
     }
 
     private func discardRound() {
+        // Stop services without saving
+        _ = PedometerService.shared.stopTracking()
+        SwingDetector.shared.stopDetecting()
+
         Task { await WorkoutManager.shared.endWorkout() }
         modelContext.delete(round)
         onDiscard()
     }
+
+    // MARK: - Main Content
 
     private func shotCounterContent(hole: HoleScore) -> some View {
         VStack(spacing: 4) {
@@ -68,15 +117,45 @@ struct ShotCounterView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
+            // Steps + distance — always visible
+            HStack(spacing: 4) {
+                Image(systemName: "figure.walk")
+                    .font(.system(size: 9))
+                Text("\(pedometer.totalSteps.formatted())")
+                Text("·")
+                Text("\(String(format: "%.1f", pedometer.totalDistanceMeters / 1000.0)) km")
+            }
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(
+                "\(pedometer.totalSteps) steps, \(String(format: "%.1f", pedometer.totalDistanceMeters / 1000.0)) kilometers"
+            )
+
             Spacer()
 
             // Shot count — primary element
-            Text(hole.shots > 0 ? "\(hole.shots)" : "–")
-                .font(.system(size: 64, weight: .bold, design: .rounded))
-                .monospacedDigit()
-                .contentTransition(.numericText())
-                .animation(.snappy(duration: 0.15), value: hole.shots)
-                .accessibilityLabel(hole.shots > 0 ? "\(hole.shots) shots" : "No shots yet")
+            ZStack {
+                Text(hole.shots > 0 ? "\(hole.shots)" : "–")
+                    .font(.system(size: 64, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .contentTransition(.numericText())
+                    .animation(.snappy(duration: 0.15), value: hole.shots)
+                    .accessibilityLabel(hole.shots > 0 ? "\(hole.shots) shots" : "No shots yet")
+
+                // Swing auto-detect toast
+                if showSwingToast {
+                    Text("Swing!")
+                        .font(.caption.bold())
+                        .foregroundStyle(.green)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Capsule().fill(.green.opacity(0.2)))
+                        .transition(.opacity.combined(with: .scale))
+                        .offset(y: -44)
+                }
+            }
+            .animation(.easeOut(duration: 0.3), value: showSwingToast)
 
             // Score-to-par badge (only after first shot)
             if hole.shots > 0 {
@@ -118,7 +197,12 @@ struct ShotCounterView: View {
 
                 // Add shot (on-screen fallback for Action Button)
                 Button {
+                    // Dedup: skip if swing was auto-detected within last 2 seconds
+                    if swingDetector.wasSwingDetectedWithin(seconds: 2.0) {
+                        return
+                    }
                     hole.incrementShot()
+                    lastManualIncrementTime = .now
                     WKInterfaceDevice.current().play(.click)
                 } label: {
                     Image(systemName: "plus.circle.fill")
@@ -130,7 +214,8 @@ struct ShotCounterView: View {
             }
         }
         .padding()
-        .background(backgroundTint)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(backgroundTint.ignoresSafeArea())
         .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
@@ -157,6 +242,8 @@ struct ShotCounterView: View {
             Button("Cancel", role: .cancel) {}
         }
     }
+
+    // MARK: - Score Badge
 
     @ViewBuilder
     private func scoreToParBadge(for hole: HoleScore) -> some View {

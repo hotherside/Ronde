@@ -9,6 +9,8 @@ final class Round {
     var numberOfHoles: Int
     var isComplete: Bool
     var currentHoleIndex: Int
+    var totalSteps: Int
+    var totalDistanceMeters: Double
 
     @Relationship(deleteRule: .cascade, inverse: \HoleScore.round)
     var holeScores: [HoleScore]
@@ -23,6 +25,10 @@ final class Round {
 
     var scoreToPar: Int {
         totalShots - totalPar
+    }
+
+    var totalDistanceKm: Double {
+        totalDistanceMeters / 1000.0
     }
 
     var currentHole: HoleScore? {
@@ -47,6 +53,8 @@ final class Round {
         self.numberOfHoles = numberOfHoles
         self.isComplete = false
         self.currentHoleIndex = 0
+        self.totalSteps = 0
+        self.totalDistanceMeters = 0.0
         self.holeScores = pars.enumerated().map { index, par in
             HoleScore(holeNumber: index + 1, par: par)
         }
