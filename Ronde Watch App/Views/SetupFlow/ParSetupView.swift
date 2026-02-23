@@ -50,11 +50,13 @@ struct ParSetupView: View {
             Section {
                 Button(action: onStart) {
                     Text("Start Round")
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
-                        .fontWeight(.semibold)
+                        .padding(.vertical, 12)
+                        .background(Capsule().fill(.green))
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(.green)
+                .buttonStyle(.plain)
                 .accessibilityLabel("Start round with \(numberOfHoles) holes, total par \(totalPar)")
                 .listRowBackground(Color.clear)
             }

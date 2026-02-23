@@ -15,7 +15,7 @@ struct ReviewStartView: View {
     var body: some View {
         VStack(spacing: 8) {
             Text(courseName ?? "Custom Round")
-                .font(.headline)
+                .font(.system(size: 16, weight: .bold, design: .rounded))
 
             HStack {
                 Label("\(numberOfHoles) holes", systemImage: "flag.fill")
@@ -25,13 +25,19 @@ struct ReviewStartView: View {
             .font(.caption)
             .foregroundStyle(.secondary)
 
-            Text(date, style: .date)
+            Text(date, format: .dateTime.month(.abbreviated).day())
                 .font(.caption2)
                 .foregroundStyle(.secondary)
 
-            Button("Start Round", action: onStart)
-                .buttonStyle(.borderedProminent)
-                .tint(.green)
+            Button(action: onStart) {
+                Text("Start Round")
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Capsule().fill(.green))
+            }
+            .buttonStyle(.plain)
         }
         .padding()
     }

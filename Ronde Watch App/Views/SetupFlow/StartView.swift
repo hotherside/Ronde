@@ -52,29 +52,38 @@ struct StartView: View {
     // MARK: - Manual hole-count selection
 
     private var manualHoleSelectView: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: 16) {
             Text("How many holes?")
-                .font(.headline)
+                .font(.system(size: 16, weight: .bold, design: .rounded))
+                .foregroundStyle(.white.opacity(0.7))
 
             Button {
                 pars = Array(repeating: 4, count: 9)
                 path.append(Dest.parSetup)
             } label: {
                 Text("9 Holes")
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Capsule().fill(.blue))
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.plain)
 
             Button {
                 pars = Array(repeating: 4, count: 18)
                 path.append(Dest.parSetup)
             } label: {
                 Text("18 Holes")
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Capsule().fill(.blue))
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.plain)
         }
-        .padding()
+        .padding(.horizontal, 12)
         .navigationTitle("Manual Setup")
     }
 

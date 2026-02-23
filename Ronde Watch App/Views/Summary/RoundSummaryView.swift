@@ -82,11 +82,13 @@ struct RoundSummaryView: View {
                         onDone?()
                     } label: {
                         Text("Save & Done")
+                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
-                            .fontWeight(.semibold)
+                            .padding(.vertical, 12)
+                            .background(Capsule().fill(.green))
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.green)
+                    .buttonStyle(.plain)
                     .accessibilityLabel("Save round and return to history")
                     .listRowBackground(Color.clear)
 
