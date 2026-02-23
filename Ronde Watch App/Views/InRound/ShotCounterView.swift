@@ -135,12 +135,7 @@ struct ShotCounterView: View {
     // MARK: - Main Content — Spatial Dashboard
 
     private func shotCounterContent(hole: HoleScore) -> some View {
-        ZStack {
-            // ── Full-screen tap target ──
-            Color.clear
-                .contentShape(Rectangle())
-                .onTapGesture { addShot(hole) }
-
+        VStack(spacing: 0) {
             // ── Top corners: hole info + par ──
             HStack(alignment: .top) {
                 // Left: hole number
@@ -150,7 +145,7 @@ struct ShotCounterView: View {
                         .foregroundStyle(.white.opacity(0.35))
                         .tracking(1)
                     Text("\(hole.holeNumber)")
-                        .font(.system(size: 26, weight: .heavy, design: .rounded))
+                        .font(.system(size: 24, weight: .heavy, design: .rounded))
                         .monospacedDigit()
                         .foregroundStyle(.white)
                 }
@@ -164,16 +159,16 @@ struct ShotCounterView: View {
                         .foregroundStyle(.white.opacity(0.35))
                         .tracking(1)
                     Text("\(hole.par)")
-                        .font(.system(size: 26, weight: .heavy, design: .rounded))
+                        .font(.system(size: 24, weight: .heavy, design: .rounded))
                         .monospacedDigit()
                         .foregroundStyle(.white.opacity(0.45))
                 }
             }
             .padding(.horizontal, 10)
-            .padding(.top, 2)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
-            // ── Center: hero shot count ──
+            Spacer(minLength: 0)
+
+            // ── Center: hero shot count — tap to add ──
             VStack(spacing: 2) {
                 // Swing toast
                 if showSwingToast {
@@ -185,8 +180,8 @@ struct ShotCounterView: View {
                 }
 
                 // Shot count — massive
-                Text(hole.shots > 0 ? "\(hole.shots)" : "–")
-                    .font(.system(size: 88, weight: .heavy, design: .rounded))
+                Text(hole.shots > 0 ? "\(hole.shots)" : "0")
+                    .font(.system(size: 80, weight: .heavy, design: .rounded))
                     .monospacedDigit()
                     .foregroundStyle(.white)
                     .contentTransition(.numericText())
@@ -207,9 +202,16 @@ struct ShotCounterView: View {
                         .tracking(1.5)
                 }
             }
-            .padding(.top, 10) // offset slightly down to account for top corners
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
+            .onTapGesture { addShot(hole) }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(hole.shots > 0 ? "\(hole.shots) shots" : "No shots yet")
+            .accessibilityHint("Tap to add a shot")
             .animation(.easeOut(duration: 0.25), value: showSwingToast)
             .animation(.easeOut(duration: 0.2), value: hole.shots)
+
+            Spacer(minLength: 0)
 
             // ── Bottom: icon toolbar ──
             HStack(spacing: 0) {
@@ -227,16 +229,17 @@ struct ShotCounterView: View {
 
                 Spacer()
 
-                // Steps + distance — center column
-                VStack(spacing: 0) {
+                // Steps + distance — compact center
+                HStack(spacing: 3) {
+                    Image(systemName: "figure.walk")
+                        .font(.system(size: 8))
                     Text("\(pedometer.totalSteps.formatted())")
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
                         .monospacedDigit()
-                    HStack(spacing: 2) {
-                        Image(systemName: "figure.walk")
-                        Text("\(String(format: "%.1f", pedometer.totalDistanceMeters / 1000.0))km")
-                    }
-                    .font(.system(size: 8, weight: .medium))
+                    Text("·")
+                        .font(.system(size: 8))
+                    Text("\(String(format: "%.1f", pedometer.totalDistanceMeters / 1000.0))km")
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
                 }
                 .foregroundStyle(.white.opacity(0.3))
                 .accessibilityElement(children: .combine)
@@ -264,9 +267,9 @@ struct ShotCounterView: View {
                 )
             }
             .padding(.horizontal, 10)
-            .padding(.bottom, 4)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+            .padding(.bottom, 2)
         }
+        .padding(.top, 2)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background { Rectangle().fill(backgroundGradient(for: hole)).ignoresSafeArea() }
         .animation(.easeInOut(duration: 0.5), value: hole.shots)
