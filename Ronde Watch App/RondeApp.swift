@@ -3,7 +3,7 @@ import SwiftData
 
 @main
 struct RondeApp: App {
-    static let sharedModelContainer: ModelContainer = {
+    nonisolated(unsafe) static let sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Round.self,
             HoleScore.self,
