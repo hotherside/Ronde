@@ -3,7 +3,7 @@ import SwiftData
 
 @main
 struct RondeApp: App {
-    var sharedModelContainer: ModelContainer = {
+    static let sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Round.self,
             HoleScore.self,
@@ -27,6 +27,6 @@ struct RondeApp: App {
         WindowGroup {
             ContentView()
         }
-        .modelContainer(sharedModelContainer)
+        .modelContainer(RondeApp.sharedModelContainer)
     }
 }

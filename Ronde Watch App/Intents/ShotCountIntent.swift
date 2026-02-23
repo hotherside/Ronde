@@ -17,20 +17,11 @@ struct ShotCountIntent: AppIntent {
     static let openAppWhenRun: Bool = true
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        // Build a ModelContainer with the same schema and default store location
-        // as the main app so we write to the same persistent store on disk.
-        let schema = Schema([Round.self, HoleScore.self])
-        let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-
-        let container: ModelContainer
-        do {
-            container = try ModelContainer(for: schema, configurations: [config])
-        } catch {
-            log.error("ModelContainer init failed: \(error.localizedDescription)")
-            return .result(dialog: "Unable to access round data")
-        }
-
-        let context = ModelContext(container)
+        // Reuse the app's shared ModelContainer so the intent context and the
+        // app's main context share the same NSPersistentStoreCoordinator.
+        // Saves from here trigger NSManagedObjectContextDidSave on the main
+        // context, keeping @Bindable / @Query up-to-date without extra glue.
+        let context = ModelContext(RondeApp.sharedModelContainer)
 
         // Fetch the most recent incomplete round
         var descriptor = FetchDescriptor<Round>(

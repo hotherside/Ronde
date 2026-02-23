@@ -78,6 +78,10 @@ final class WorkoutManager: NSObject {
             log.info("Golf workout session started")
         } catch {
             log.error("Failed to create/start workout session: \(error.localizedDescription)")
+            // End any partially-started session to avoid HKLiveWorkoutBuilder state machine errors.
+            session?.end()
+            session = nil
+            builder = nil
         }
     }
 

@@ -47,7 +47,11 @@ struct ShotCounterView: View {
         .task {
             await WorkoutManager.shared.startWorkout()
             PedometerService.shared.startTracking()
-            SwingDetector.shared.startDetecting()
+            // CMBatchedSensorManager requires an active HKWorkoutSession.
+            // Only start swing detection if the workout session is running.
+            if WorkoutManager.shared.isActive {
+                SwingDetector.shared.startDetecting()
+            }
         }
         .onChange(of: swingDetector.swingCount) { oldValue, newValue in
             guard newValue > oldValue else { return }
