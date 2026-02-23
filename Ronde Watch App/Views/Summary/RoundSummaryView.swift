@@ -95,6 +95,69 @@ struct RoundSummaryView: View {
                 }
             }
 
+            // Swing analysis
+            if round.totalSwingsDetected > 0 {
+                Section("Swing Analysis") {
+                    // Stat grid: avg speed | fastest
+                    HStack(spacing: 0) {
+                        statColumn(
+                            value: String(format: "%.0f", round.roundAverageSpeedKMH),
+                            label: "AVG KM/H",
+                            valueColor: .cyan,
+                            valueSize: 22
+                        )
+
+                        Rectangle()
+                            .fill(.white.opacity(0.12))
+                            .frame(width: 1, height: 30)
+
+                        statColumn(
+                            value: String(format: "%.0f", round.roundFastestSpeedKMH),
+                            label: "BEST KM/H",
+                            valueColor: .green,
+                            valueSize: 22
+                        )
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel(
+                        "Average swing speed \(String(format: "%.0f", round.roundAverageSpeedKMH)) kilometres per hour, "
+                        + "fastest \(String(format: "%.0f", round.roundFastestSpeedKMH)) kilometres per hour"
+                    )
+
+                    // Detail rows
+                    HStack {
+                        Text("Swings detected")
+                            .font(.system(size: 11, weight: .medium, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.6))
+                        Spacer()
+                        Text("\(round.totalSwingsDetected)")
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .monospacedDigit()
+                    }
+
+                    if let holeNum = round.fastestSwingHole {
+                        HStack {
+                            Text("Fastest on")
+                                .font(.system(size: 11, weight: .medium, design: .rounded))
+                                .foregroundStyle(.white.opacity(0.6))
+                            Spacer()
+                            Text("Hole \(holeNum)")
+                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                        }
+                    }
+
+                    HStack {
+                        Text("Avg tempo")
+                            .font(.system(size: 11, weight: .medium, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.6))
+                        Spacer()
+                        Text(String(format: "%.0fms", round.roundAverageTempoSeconds * 1000))
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .monospacedDigit()
+                    }
+                }
+            }
+
             // Score legend
             Section {
                 ScoreLegend()
@@ -239,6 +302,15 @@ private struct HoleScoreRow: View {
                     .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(.tertiary)
                     .frame(width: 28, alignment: .center)
+            }
+
+            // Fastest swing speed for this hole
+            if hole.swingCount > 0 {
+                Text(String(format: "%.0f", hole.fastestSpeedKMH))
+                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(.cyan.opacity(0.6))
+                    .frame(width: 24, alignment: .trailing)
             }
         }
         .accessibilityElement(children: .combine)

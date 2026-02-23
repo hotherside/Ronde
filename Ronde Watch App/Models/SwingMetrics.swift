@@ -2,9 +2,9 @@ import Foundation
 
 /// Per-swing metrics derived from accelerometer data during the swing window.
 ///
-/// Ephemeral — displayed for ~3.5 seconds per swing, then discarded.
-/// Not persisted in SwiftData (future enhancement could store on HoleScore).
-struct SwingMetrics: Sendable, Identifiable {
+/// Persisted on `HoleScore.swingData` as a Codable array.
+/// The `accelerationProfile` is excluded from encoding (only used for the live arc overlay).
+struct SwingMetrics: Sendable, Identifiable, Codable {
     let id: UUID
     let timestamp: Date
 
@@ -22,8 +22,40 @@ struct SwingMetrics: Sendable, Identifiable {
     let tempoSeconds: Double
 
     /// Sampled acceleration magnitudes over the swing window.
-    /// Downsampled to ~60 points for arc profile rendering.
-    let accelerationProfile: [Double]
+    /// Only used for the live SwingArcView overlay — excluded from Codable encoding.
+    var accelerationProfile: [Double]
+
+    // MARK: - Codable (exclude accelerationProfile)
+
+    private enum CodingKeys: String, CodingKey {
+        case id, timestamp, peakG, estimatedSpeedMPS, tempoSeconds
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        timestamp = try container.decode(Date.self, forKey: .timestamp)
+        peakG = try container.decode(Double.self, forKey: .peakG)
+        estimatedSpeedMPS = try container.decode(Double.self, forKey: .estimatedSpeedMPS)
+        tempoSeconds = try container.decode(Double.self, forKey: .tempoSeconds)
+        accelerationProfile = []
+    }
+
+    init(
+        id: UUID,
+        timestamp: Date,
+        peakG: Double,
+        estimatedSpeedMPS: Double,
+        tempoSeconds: Double,
+        accelerationProfile: [Double]
+    ) {
+        self.id = id
+        self.timestamp = timestamp
+        self.peakG = peakG
+        self.estimatedSpeedMPS = estimatedSpeedMPS
+        self.tempoSeconds = tempoSeconds
+        self.accelerationProfile = accelerationProfile
+    }
 
     // MARK: - Derived Display Values
 

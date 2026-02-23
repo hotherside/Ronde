@@ -89,6 +89,22 @@ struct HoleTransitionView: View {
                         .background(Capsule().fill(scoreColor.opacity(0.12)))
                         .opacity(statsAppear ? 1.0 : 0.0)
                 }
+
+                // Swing metrics summary
+                if !hole.swingData.isEmpty {
+                    HStack(spacing: 4) {
+                        Image(systemName: "bolt.fill")
+                            .font(.system(size: 8))
+                        Text("\(String(format: "%.0f", hole.fastestSpeedKMH)) km/h best")
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                        Text("·")
+                            .font(.system(size: 8))
+                        Text("\(hole.swingCount) swing\(hole.swingCount == 1 ? "" : "s")")
+                            .font(.system(size: 10, weight: .medium, design: .rounded))
+                    }
+                    .foregroundStyle(.cyan.opacity(0.7))
+                    .opacity(statsAppear ? 1.0 : 0.0)
+                }
             }
             .scaleEffect(celebrationScale)
 

@@ -104,6 +104,9 @@ struct ShotCounterView: View {
             guard !Task.isCancelled else { return }
 
             if let metrics = swingDetector.lastSwingMetrics {
+                // Persist for later review
+                currentHole?.swingData.append(metrics)
+
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.65)) {
                     displayedMetrics = metrics
                 }
