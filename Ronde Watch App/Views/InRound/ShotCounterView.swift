@@ -16,7 +16,8 @@ struct ShotCounterView: View {
     @StateObject private var pedometer = PedometerService.shared
     @StateObject private var swingDetector = SwingDetector.shared
 
-    @State private var showSwingToast = false
+    @State private var displayedMetrics: SwingMetrics?
+    @State private var metricsDisplayTask: Task<Void, Never>?
     @State private var lastManualIncrementTime: Date = .distantPast
 
     // MARK: - Animation State
@@ -65,11 +66,8 @@ struct ShotCounterView: View {
             WKInterfaceDevice.current().play(.start)
             triggerShotPulse()
 
-            showSwingToast = true
-            Task {
-                try? await Task.sleep(for: .seconds(1.5))
-                showSwingToast = false
-            }
+            // Show metrics card instead of plain "SWING" toast
+            showSwingMetrics()
         }
     }
 
@@ -93,6 +91,30 @@ struct ShotCounterView: View {
         Task {
             try? await Task.sleep(for: .milliseconds(200))
             shotPulse = false
+        }
+    }
+
+    private func showSwingMetrics() {
+        // Cancel any previous display timer
+        metricsDisplayTask?.cancel()
+
+        metricsDisplayTask = Task {
+            // Wait for SwingDetector to finish capturing follow-through data
+            try? await Task.sleep(for: .milliseconds(350))
+            guard !Task.isCancelled else { return }
+
+            if let metrics = swingDetector.lastSwingMetrics {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.65)) {
+                    displayedMetrics = metrics
+                }
+            }
+
+            // Auto-dismiss after 3.5 seconds
+            try? await Task.sleep(for: .seconds(3.5))
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeOut(duration: 0.3)) {
+                displayedMetrics = nil
+            }
         }
     }
 
@@ -174,15 +196,6 @@ struct ShotCounterView: View {
 
             // ── Center: hero shot count — tap to add ──
             VStack(spacing: 2) {
-                // Swing toast
-                if showSwingToast {
-                    Text("SWING")
-                        .font(.system(size: 9, weight: .heavy, design: .rounded))
-                        .foregroundStyle(.green)
-                        .tracking(1.5)
-                        .transition(.opacity.combined(with: .scale(scale: 0.7)))
-                }
-
                 // Shot count — massive
                 Text(hole.shots > 0 ? "\(hole.shots)" : "0")
                     .font(.system(size: 80, weight: .heavy, design: .rounded))
@@ -212,7 +225,6 @@ struct ShotCounterView: View {
             .accessibilityElement(children: .combine)
             .accessibilityLabel(hole.shots > 0 ? "\(hole.shots) shots" : "No shots yet")
             .accessibilityHint("Tap to add a shot")
-            .animation(.easeOut(duration: 0.25), value: showSwingToast)
             .animation(.easeOut(duration: 0.2), value: hole.shots)
 
             Spacer(minLength: 0)
@@ -276,6 +288,19 @@ struct ShotCounterView: View {
         .padding(.top, 2)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background { Rectangle().fill(backgroundGradient(for: hole)).ignoresSafeArea() }
+        .overlay {
+            if let metrics = displayedMetrics {
+                SwingMetricsCard(metrics: metrics)
+                    .transition(
+                        .asymmetric(
+                            insertion: .scale(scale: 0.7).combined(with: .opacity),
+                            removal: .opacity
+                        )
+                    )
+                    .zIndex(10)
+            }
+        }
+        .animation(.spring(response: 0.35, dampingFraction: 0.65), value: displayedMetrics?.id)
         .animation(.easeInOut(duration: 0.5), value: hole.shots)
         .navigationBarBackButtonHidden(true)
         .toolbar {

@@ -24,6 +24,9 @@
 		8569F4657A0B1AFC418FCC28 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 91CCFA754A74F1F2D7B0207C /* Assets.xcassets */; };
 		8A7AF25187FB24142F987C91 /* SwingDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A7CAE89D0C9657A288BD4DF /* SwingDetector.swift */; };
 		96CAC2B7776DEF0F726B3B05 /* StartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45D9D2A748520C4A8F3F6288 /* StartView.swift */; };
+		D4E5F6A7B8C9D0E1F2A3B4C5 /* SwingMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B8C9D0E1F2 /* SwingMetrics.swift */; };
+		E5F6A7B8C9D0E1F2A3B4C5D6 /* SwingArcView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F6A7B8C9D0E1F2A3 /* SwingArcView.swift */; };
+		F6A7B8C9D0E1F2A3B4C5D6E7 /* SwingMetricsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3D4E5F6A7B8C9D0E1F2A3B4 /* SwingMetricsCard.swift */; };
 		BBE2CA27DE4C1B3227213C17 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B797484472D0173569100EB /* ContentView.swift */; };
 		CBD6099CF6FE7126D35641BF /* HoleScore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25B36E8588FDD130C83288BC /* HoleScore.swift */; };
 		E211EA86872A63046B4FEE10 /* PedometerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7D70D0ECCA83D8F27B122AA /* PedometerService.swift */; };
@@ -77,6 +80,9 @@
 		B7D70D0ECCA83D8F27B122AA /* PedometerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PedometerService.swift; sourceTree = "<group>"; };
 		BB48D06217DC2F209A427B31 /* ParSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParSetupView.swift; sourceTree = "<group>"; };
 		E45D61C32F937D85FE79428F /* LocationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationService.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F6A7B8C9D0E1F2 /* SwingMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwingMetrics.swift; sourceTree = "<group>"; };
+		B2C3D4E5F6A7B8C9D0E1F2A3 /* SwingArcView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwingArcView.swift; sourceTree = "<group>"; };
+		C3D4E5F6A7B8C9D0E1F2A3B4 /* SwingMetricsCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwingMetricsCard.swift; sourceTree = "<group>"; };
 		E5F04A6E1CB927F3C0518A3A /* Round.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Round.swift; sourceTree = "<group>"; };
 		E8764C37704E9AA04FE48354 /* ShotCounterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShotCounterView.swift; sourceTree = "<group>"; };
 		F64D15FB7F7003989F11E89E /* ShotCountIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShotCountIntent.swift; sourceTree = "<group>"; };
@@ -115,6 +121,8 @@
 			children = (
 				12D53C04BF6C0BE0B04EA0BD /* HoleTransitionView.swift */,
 				E8764C37704E9AA04FE48354 /* ShotCounterView.swift */,
+				B2C3D4E5F6A7B8C9D0E1F2A3 /* SwingArcView.swift */,
+				C3D4E5F6A7B8C9D0E1F2A3B4 /* SwingMetricsCard.swift */,
 			);
 			path = InRound;
 			sourceTree = "<group>";
@@ -133,6 +141,7 @@
 				4ED8D963FBF1F472838BBCAB /* CourseData.swift */,
 				25B36E8588FDD130C83288BC /* HoleScore.swift */,
 				E5F04A6E1CB927F3C0518A3A /* Round.swift */,
+				A1B2C3D4E5F6A7B8C9D0E1F2 /* SwingMetrics.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -310,6 +319,9 @@
 				2F0BA0F2B959D68F703CB1A9 /* ShotCountIntent.swift in Sources */,
 				7FAA8CFF844DD20339EB7B94 /* ShotCounterView.swift in Sources */,
 				96CAC2B7776DEF0F726B3B05 /* StartView.swift in Sources */,
+				D4E5F6A7B8C9D0E1F2A3B4C5 /* SwingMetrics.swift in Sources */,
+				E5F6A7B8C9D0E1F2A3B4C5D6 /* SwingArcView.swift in Sources */,
+				F6A7B8C9D0E1F2A3B4C5D6E7 /* SwingMetricsCard.swift in Sources */,
 				8A7AF25187FB24142F987C91 /* SwingDetector.swift in Sources */,
 				1038683561CF1C47DCEE65DE /* WorkoutManager.swift in Sources */,
 			);
