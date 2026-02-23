@@ -9,8 +9,8 @@ final class Round {
     var numberOfHoles: Int
     var isComplete: Bool
     var currentHoleIndex: Int
-    var totalSteps: Int
-    var totalDistanceMeters: Double
+    var totalSteps: Int = 0
+    var totalDistanceMeters: Double = 0.0
 
     @Relationship(deleteRule: .cascade, inverse: \HoleScore.round)
     var holeScores: [HoleScore]

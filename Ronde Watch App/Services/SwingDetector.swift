@@ -90,7 +90,7 @@ final class SwingDetector: ObservableObject {
         detectionTask?.cancel()
         detectionTask = nil
         isRunning = false
-        log.info("Swing detection stopped — \(swingCount) swings detected this session")
+        log.info("Swing detection stopped — \(self.swingCount) swings detected this session")
     }
 
     // MARK: - Detection Logic
