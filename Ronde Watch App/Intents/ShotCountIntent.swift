@@ -21,7 +21,7 @@ struct ShotCountIntent: AppIntent {
         // app's main context share the same NSPersistentStoreCoordinator.
         // Saves from here trigger NSManagedObjectContextDidSave on the main
         // context, keeping @Bindable / @Query up-to-date without extra glue.
-        let context = ModelContext(RondeApp.sharedModelContainer)
+        let context = ModelContext(appModelContainer)
 
         // Fetch the most recent incomplete round
         var descriptor = FetchDescriptor<Round>(
