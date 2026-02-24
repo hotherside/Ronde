@@ -16,10 +16,12 @@ struct ShotCounterView: View {
 
     @StateObject private var pedometer = PedometerService.shared
     @StateObject private var swingDetector = SwingDetector.shared
+    @StateObject private var workoutManager = WorkoutManager.shared
 
     @State private var displayedMetrics: SwingMetrics?
     @State private var metricsDisplayTask: Task<Void, Never>?
     @State private var lastManualIncrementTime: Date = .distantPast
+    @State private var showHealthKitBanner = false
 
     // MARK: - Animation State
 
@@ -65,16 +67,35 @@ struct ShotCounterView: View {
                     }
                 }
                 .animation(.spring(response: 0.35, dampingFraction: 0.65), value: displayedMetrics?.id)
+                .overlay(alignment: .top) {
+                    if showHealthKitBanner {
+                        Text("Enable Health access in Settings for swing tracking")
+                            .font(.system(size: 10, weight: .medium, design: .rounded))
+                            .foregroundStyle(.white)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(.orange.opacity(0.8), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                            .padding(.top, 4)
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                    }
+                }
+                .animation(.easeInOut(duration: 0.3), value: showHealthKitBanner)
             }
         }
         .task {
             await WorkoutManager.shared.startWorkout()
             PedometerService.shared.startTracking()
-            // CMBatchedSensorManager works in the foreground without a
-            // workout session. Start swing detection regardless — the
-            // workout session is primarily for keeping the app alive
-            // during long rounds and saving to Apple Health.
-            SwingDetector.shared.startDetecting()
+            // CMBatchedSensorManager requires an active HKWorkoutSession
+            // on real hardware (CMErrorDomain 109 without one).
+            if WorkoutManager.shared.isActive {
+                SwingDetector.shared.startDetecting()
+            } else if workoutManager.authorizationDenied {
+                showHealthKitBanner = true
+                // Auto-dismiss after 5 seconds
+                try? await Task.sleep(for: .seconds(5))
+                withAnimation { showHealthKitBanner = false }
+            }
         }
         .onChange(of: swingDetector.swingCount) { oldValue, newValue in
             guard newValue > oldValue else { return }
