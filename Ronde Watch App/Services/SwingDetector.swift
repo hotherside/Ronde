@@ -47,6 +47,11 @@ final class SwingDetector: ObservableObject {
     private var metricsTask: Task<Void, Never>?
     private var isRunning = false
 
+    /// Stored as a property so ARC keeps the manager alive for the
+    /// entire round. Creating it as a local variable in `startDetecting()`
+    /// risks premature deallocation before the async stream yields data.
+    private var sensorManager: CMBatchedSensorManager?
+
     /// Rolling buffer of recent acceleration samples for swing-window capture.
     /// Keeps the last `bufferDurationSeconds` worth of data.
     private var sampleBuffer: [(magnitude: Double, timestamp: TimeInterval)] = []
@@ -74,6 +79,15 @@ final class SwingDetector: ObservableObject {
         }
         guard !isRunning else { return }
 
+        // Check CoreMotion authorization status
+        let authStatus = CMBatchedSensorManager.authorizationStatus
+        log.info("CoreMotion authorization status: \(authStatus.rawValue)")
+
+        if authStatus == .denied {
+            log.warning("CoreMotion authorization denied — swing detection disabled. Check Settings → Privacy & Security → Motion & Fitness")
+            return
+        }
+
         isRunning = true
         swingCount = 0
         lastSwingTime = .distantPast
@@ -81,6 +95,7 @@ final class SwingDetector: ObservableObject {
         sampleBuffer.removeAll()
 
         let manager = CMBatchedSensorManager()
+        self.sensorManager = manager
 
         detectionTask = Task { [weak self] in
             guard let self else { return }
@@ -89,16 +104,22 @@ final class SwingDetector: ObservableObject {
                 "Swing detection started (threshold: \(self.accelerationThreshold)g, cooldown: \(self.cooldownSeconds)s)"
             )
 
+            var batchCount = 0
+
             do {
                 for try await batch in manager.accelerometerUpdates() {
                     guard !Task.isCancelled else { break }
+                    batchCount += 1
+                    if batchCount == 1 {
+                        log.info("First accelerometer batch received (\(batch.count) samples)")
+                    }
                     self.processBatch(batch)
                 }
             } catch {
                 log.error("Accelerometer stream error: \(error.localizedDescription)")
             }
 
-            log.info("Swing detection loop ended")
+            log.info("Swing detection loop ended after \(batchCount) batches")
         }
     }
 
@@ -108,6 +129,7 @@ final class SwingDetector: ObservableObject {
         detectionTask = nil
         metricsTask?.cancel()
         metricsTask = nil
+        sensorManager = nil
         isRunning = false
         sampleBuffer.removeAll()
         log.info("Swing detection stopped — \(self.swingCount) swings detected this session")
