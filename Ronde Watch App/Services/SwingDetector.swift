@@ -79,12 +79,15 @@ final class SwingDetector: ObservableObject {
         }
         guard !isRunning else { return }
 
-        // Check CoreMotion authorization status
+        // Check CoreMotion authorization status.
+        // Only proceed when explicitly authorized; .notDetermined and .denied
+        // both lead to CMErrorDomain 109 on real hardware without an active
+        // workout session.
         let authStatus = CMBatchedSensorManager.authorizationStatus
         log.info("CoreMotion authorization status: \(authStatus.rawValue)")
 
-        if authStatus == .denied {
-            log.warning("CoreMotion authorization denied — swing detection disabled. Check Settings → Privacy & Security → Motion & Fitness")
+        guard authStatus == .authorized else {
+            log.warning("CoreMotion not authorized (status: \(authStatus.rawValue)) — swing detection disabled")
             return
         }
 
