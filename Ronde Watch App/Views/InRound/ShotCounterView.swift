@@ -70,11 +70,11 @@ struct ShotCounterView: View {
         .task {
             await WorkoutManager.shared.startWorkout()
             PedometerService.shared.startTracking()
-            // CMBatchedSensorManager requires an active HKWorkoutSession.
-            // Only start swing detection if the workout session is running.
-            if WorkoutManager.shared.isActive {
-                SwingDetector.shared.startDetecting()
-            }
+            // CMBatchedSensorManager works in the foreground without a
+            // workout session. Start swing detection regardless — the
+            // workout session is primarily for keeping the app alive
+            // during long rounds and saving to Apple Health.
+            SwingDetector.shared.startDetecting()
         }
         .onChange(of: swingDetector.swingCount) { oldValue, newValue in
             guard newValue > oldValue else { return }

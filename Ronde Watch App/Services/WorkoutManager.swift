@@ -11,7 +11,7 @@ private let log = Logger(subsystem: "com.ronde.Ronde", category: "WorkoutManager
 ///   - Call `startWorkout()` when a round begins (ShotCounterView.onAppear)
 ///   - Call `endWorkout()` before navigating to the summary screen
 @MainActor
-final class WorkoutManager: NSObject {
+final class WorkoutManager: NSObject, ObservableObject {
 
     // MARK: - Shared instance
 
@@ -20,6 +20,12 @@ final class WorkoutManager: NSObject {
     // MARK: - State
 
     private(set) var isActive = false
+
+    /// True when HealthKit is unavailable or the user denied authorization.
+    /// The app still works — shot counting, pedometer, and swing detection
+    /// all function without a workout session — but the round won't be saved
+    /// to Apple Health and the app may get suspended during long rounds.
+    @Published private(set) var authorizationDenied = false
 
     // MARK: - Private
 
@@ -38,16 +44,30 @@ final class WorkoutManager: NSObject {
 
         guard HKHealthStore.isHealthDataAvailable() else {
             log.info("HealthKit not available on this device — skipping workout session")
+            authorizationDenied = true
             return
         }
 
+        // Request authorization. This shows the system prompt on first launch;
+        // on subsequent launches it returns immediately without throwing,
+        // even if the user previously denied access.
         let typesToShare: Set<HKSampleType> = [HKQuantityType.workoutType()]
         let typesToRead: Set<HKObjectType> = [HKQuantityType.workoutType()]
 
         do {
             try await healthStore.requestAuthorization(toShare: typesToShare, read: typesToRead)
         } catch {
-            log.error("HealthKit authorization failed: \(error.localizedDescription)")
+            log.error("HealthKit authorization request failed: \(error.localizedDescription)")
+            authorizationDenied = true
+            return
+        }
+
+        // Check the actual authorization status — requestAuthorization
+        // succeeds even when the user denies permission.
+        let workoutStatus = healthStore.authorizationStatus(for: HKQuantityType.workoutType())
+        if workoutStatus != .sharingAuthorized {
+            log.warning("HealthKit workout sharing not authorized (status: \(workoutStatus.rawValue)) — workout session will not start")
+            authorizationDenied = true
             return
         }
 
@@ -75,13 +95,15 @@ final class WorkoutManager: NSObject {
             try await workoutBuilder.beginCollection(at: .now)
 
             isActive = true
+            authorizationDenied = false
             log.info("Golf workout session started")
         } catch {
             log.error("Failed to create/start workout session: \(error.localizedDescription)")
-            // End any partially-started session to avoid HKLiveWorkoutBuilder state machine errors.
-            session?.end()
-            session = nil
-            builder = nil
+            // Clean up without calling session.end() on a session that
+            // never fully started — avoids HKLiveWorkoutBuilder state
+            // machine transition errors.
+            self.session = nil
+            self.builder = nil
         }
     }
 
