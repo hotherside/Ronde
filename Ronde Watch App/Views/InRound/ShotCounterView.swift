@@ -10,6 +10,7 @@ struct ShotCounterView: View {
 
     @State private var showingHoleTransition = false
     @State private var showingEndConfirmation = false
+    @State private var selectedPage = 0
 
     // MARK: - Motion Services
 
@@ -36,13 +37,34 @@ struct ShotCounterView: View {
                     isLastHole: round.currentHoleIndex >= round.numberOfHoles - 1
                 ) {
                     showingHoleTransition = false
+                    selectedPage = 0
                     round.advanceToNextHole()
                     if round.isComplete {
                         finishRound()
                     }
                 }
             } else if let hole = currentHole {
-                shotCounterContent(hole: hole)
+                TabView(selection: $selectedPage) {
+                    shotCounterContent(hole: hole)
+                        .tag(0)
+
+                    SwingAnalysisPage(hole: hole)
+                        .tag(1)
+                }
+                .tabViewStyle(.verticalPage)
+                .overlay {
+                    if let metrics = displayedMetrics {
+                        SwingMetricsCard(metrics: metrics)
+                            .transition(
+                                .asymmetric(
+                                    insertion: .scale(scale: 0.7).combined(with: .opacity),
+                                    removal: .opacity
+                                )
+                            )
+                            .zIndex(10)
+                    }
+                }
+                .animation(.spring(response: 0.35, dampingFraction: 0.65), value: displayedMetrics?.id)
             }
         }
         .task {
@@ -291,19 +313,6 @@ struct ShotCounterView: View {
         .padding(.top, 2)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background { Rectangle().fill(backgroundGradient(for: hole)).ignoresSafeArea() }
-        .overlay {
-            if let metrics = displayedMetrics {
-                SwingMetricsCard(metrics: metrics)
-                    .transition(
-                        .asymmetric(
-                            insertion: .scale(scale: 0.7).combined(with: .opacity),
-                            removal: .opacity
-                        )
-                    )
-                    .zIndex(10)
-            }
-        }
-        .animation(.spring(response: 0.35, dampingFraction: 0.65), value: displayedMetrics?.id)
         .animation(.easeInOut(duration: 0.5), value: hole.shots)
         .navigationBarBackButtonHidden(true)
         .toolbar {
