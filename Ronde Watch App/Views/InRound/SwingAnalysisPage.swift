@@ -122,7 +122,7 @@ private struct SwingRow: View {
 
             // Mini arc
             SwingArcView(
-                normalizedForce: metrics.normalizedForce,
+                normalizedValue: metrics.normalizedSpeed,
                 diameter: 30
             )
 

@@ -59,19 +59,32 @@ struct SwingMetrics: Sendable, Identifiable, Codable {
 
     // MARK: - Derived Display Values
 
+    /// Estimated clubhead speed in km/h using centripetal acceleration model.
+    ///
+    /// During a golf swing the wrist follows a circular arc, so peak
+    /// acceleration is primarily centripetal:  a = v² / r
+    ///   → v_wrist = √((peakG − 1) × 9.81 × r)
+    ///
+    /// Constants:
+    ///   - `wristArcRadius` 0.7 m — typical radius of the wrist's swing arc
+    ///   - `wristToClubheadRatio` 3.3 — empirical average across clubs
+    ///     (shaft acts as a lever, clubhead travels ~3–4× faster than the wrist)
+    var estimatedSpeedKMH: Double {
+        let netG = max(peakG - 1.0, 0.0)          // subtract gravity baseline
+        let wristArcRadius = 0.7                    // metres
+        let wristToClubheadRatio = 3.3              // empirical average
+        let wristSpeedMPS = (netG * 9.81 * wristArcRadius).squareRoot()
+        return wristSpeedMPS * 3.6 * wristToClubheadRatio
+    }
+
+    /// Speed for display: "103"
+    var estimatedSpeedFormatted: String {
+        String(format: "%.0f", estimatedSpeedKMH)
+    }
+
     /// Peak g formatted: "12.4g"
     var peakGFormatted: String {
         String(format: "%.1fg", peakG)
-    }
-
-    /// Estimated speed in km/h (hand speed × ~3.0 wrist-to-club multiplier).
-    var estimatedSpeedKMH: Double {
-        estimatedSpeedMPS * 3.6 * 3.0
-    }
-
-    /// Speed for display: "97"
-    var estimatedSpeedFormatted: String {
-        String(format: "%.0f", estimatedSpeedKMH)
     }
 
     /// Tempo in milliseconds: "240ms"
@@ -79,11 +92,11 @@ struct SwingMetrics: Sendable, Identifiable, Codable {
         String(format: "%.0fms", tempoSeconds * 1000)
     }
 
-    /// Normalized force from 0.0 to 1.0 for arc fill.
-    /// Maps 8g (threshold) → 0.0 and 25g → 1.0, clamped.
-    var normalizedForce: Double {
-        let minG = 8.0
-        let maxG = 25.0
-        return min(max((peakG - minG) / (maxG - minG), 0.0), 1.0)
+    /// Normalized speed from 0.0 to 1.0 for arc fill.
+    /// Maps 40 km/h → 0.0 and 180 km/h → 1.0, clamped.
+    var normalizedSpeed: Double {
+        let minSpeed = 40.0
+        let maxSpeed = 180.0
+        return min(max((estimatedSpeedKMH - minSpeed) / (maxSpeed - minSpeed), 0.0), 1.0)
     }
 }

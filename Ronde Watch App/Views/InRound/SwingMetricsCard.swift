@@ -12,20 +12,20 @@ struct SwingMetricsCard: View {
 
     var body: some View {
         VStack(spacing: 4) {
-            // ── Arc ring with peak-g hero number ──
+            // ── Arc ring with swing speed hero number ──
             ZStack {
                 SwingArcView(
-                    normalizedForce: metrics.normalizedForce,
+                    normalizedValue: metrics.normalizedSpeed,
                     diameter: 90
                 )
 
-                // Centre: peak g-force
+                // Centre: estimated swing speed
                 VStack(spacing: 0) {
-                    Text(String(format: "%.1f", metrics.peakG))
+                    Text(metrics.estimatedSpeedFormatted)
                         .font(.system(size: 22, weight: .heavy, design: .rounded))
                         .monospacedDigit()
                         .foregroundStyle(.white)
-                    Text("G-FORCE")
+                    Text("KM/H")
                         .font(.system(size: 7, weight: .bold, design: .rounded))
                         .foregroundStyle(.white.opacity(0.4))
                         .tracking(1)
@@ -34,15 +34,15 @@ struct SwingMetricsCard: View {
                 .scaleEffect(statsAppeared ? 1 : 0.8)
             }
 
-            // ── Bottom stats: speed + tempo ──
+            // ── Bottom stats: g-force + tempo ──
             HStack(spacing: 12) {
-                // Estimated speed (km/h)
+                // Peak g-force
                 VStack(spacing: 0) {
-                    Text(metrics.estimatedSpeedFormatted)
+                    Text(metrics.peakGFormatted)
                         .font(.system(size: 14, weight: .heavy, design: .rounded))
                         .monospacedDigit()
                         .foregroundStyle(.cyan)
-                    Text("EST. KM/H")
+                    Text("G-FORCE")
                         .font(.system(size: 7, weight: .bold, design: .rounded))
                         .foregroundStyle(.white.opacity(0.3))
                         .tracking(0.8)
@@ -88,8 +88,8 @@ struct SwingMetricsCard: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(
-            "Swing detected. Peak force \(metrics.peakGFormatted), "
-            + "estimated speed \(metrics.estimatedSpeedFormatted) kilometres per hour, "
+            "Swing detected. Speed \(metrics.estimatedSpeedFormatted) kilometres per hour, "
+            + "peak force \(metrics.peakGFormatted), "
             + "tempo \(metrics.tempoFormatted)"
         )
     }
