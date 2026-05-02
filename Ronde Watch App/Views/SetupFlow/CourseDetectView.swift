@@ -19,27 +19,34 @@ struct CourseDetectView: View {
     }
 
     var body: some View {
-        Group {
-            switch detectState {
-            case .detecting:
-                loadingView
-            case .results(let courses):
-                resultsList(courses: courses)
-            case .denied:
-                noLocationView(
-                    icon: "location.slash.fill",
-                    title: "Location off",
-                    message: "Browse all courses or enter your own."
-                )
-            case .noResults:
-                noLocationView(
-                    icon: "map",
-                    title: "Off the fairway",
-                    message: "No nearby Sydney clubs found."
-                )
+        VStack(spacing: 0) {
+            NavHeader(title: "New Round", leading: .close)
+
+            Group {
+                switch detectState {
+                case .detecting:
+                    loadingView
+                case .results(let courses):
+                    resultsList(courses: courses)
+                case .denied:
+                    noLocationView(
+                        icon: "location.slash.fill",
+                        title: "Location off",
+                        message: "Browse all courses or set up a custom round."
+                    )
+                case .noResults:
+                    noLocationView(
+                        icon: "map",
+                        title: "Off the fairway",
+                        message: "We didn't spot a course nearby. Browse all or tee it up your own way."
+                    )
+                }
             }
         }
-        .navigationTitle("New Round")
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .fairwayBackground()
+        .fairwayContainerBackground()
+        .toolbar(.hidden, for: .navigationBar)
         .task { await startDetection() }
         .onChange(of: locationService.authorizationStatus) { _, status in
             if status == .denied || status == .restricted {
@@ -91,35 +98,36 @@ struct CourseDetectView: View {
     // MARK: - Sub-views
 
     private var loadingView: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 14) {
             Spacer()
 
             ZStack {
                 Circle()
                     .fill(Theme.fairway.opacity(0.18))
-                    .frame(width: 56, height: 56)
+                    .frame(width: 60, height: 60)
                 Image(systemName: Theme.Symbol.location)
                     .font(.system(size: 22, weight: .semibold))
                     .foregroundStyle(Theme.fairwayBright)
             }
 
-            VStack(spacing: 4) {
+            VStack(spacing: 6) {
                 ProgressView()
                 Text("Finding nearby courses…")
-                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .font(.caption)
                     .foregroundStyle(Theme.dimText)
                     .multilineTextAlignment(.center)
             }
 
             Spacer()
 
-            browseAllButton
+            PrimaryButton(title: "Browse Courses", icon: Theme.Symbol.course) {
+                let all = CourseLibrary.shared.alphabetical()
+                detectState = all.isEmpty ? .noResults : .results(all)
+            }
         }
         .padding(.horizontal, 12)
         .padding(.bottom, 6)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .fairwayBackground()
-        .containerBackground(Theme.fairway.gradient, for: .navigation)
     }
 
     private func resultsList(courses: [CourseData]) -> some View {
@@ -132,7 +140,7 @@ struct CourseDetectView: View {
                         CourseRow(course: course)
                     }
                     .buttonStyle(CardRowButtonStyle())
-                    .listRowBackground(courseRowBackground)
+                    .listRowBackground(Theme.cardSurfaceShape)
                 }
             } header: {
                 Label {
@@ -145,45 +153,39 @@ struct CourseDetectView: View {
             }
 
             Section {
-                browseAllButton
-                    .listRowBackground(Color.clear)
-                manualButton
+                PrimaryButton(title: "Browse All", icon: Theme.Symbol.course) {
+                    let all = CourseLibrary.shared.alphabetical()
+                    detectState = all.isEmpty ? .noResults : .results(all)
+                }
+                .listRowBackground(Color.clear)
+
+                OutlineButton(title: "Custom Round", action: onManual)
                     .listRowBackground(Color.clear)
             }
         }
         .scrollContentBackground(.hidden)
-        .background(Theme.surface)
-        .containerBackground(Theme.fairway.gradient, for: .navigation)
-    }
-
-    private var courseRowBackground: some View {
-        RoundedRectangle(cornerRadius: 14, style: .continuous)
-            .fill(Theme.cardSurface)
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(Theme.textPrimary.opacity(0.05), lineWidth: 1)
-            )
     }
 
     private func noLocationView(icon: String, title: String, message: String) -> some View {
-        VStack(spacing: 14) {
+        VStack(spacing: 12) {
             Spacer()
 
             ZStack {
                 Circle()
                     .fill(Theme.bunker.opacity(0.15))
-                    .frame(width: 56, height: 56)
+                    .frame(width: 60, height: 60)
                 Image(systemName: icon)
                     .font(.system(size: 22, weight: .semibold))
                     .foregroundStyle(Theme.bunker)
             }
+            .padding(.bottom, 2)
 
             VStack(spacing: 4) {
                 Text(title)
-                    .font(.system(size: 14, weight: .heavy, design: .rounded))
+                    .font(.titleSmall)
                     .foregroundStyle(Theme.textPrimary)
                 Text(message)
-                    .font(.system(size: 10, weight: .medium))
+                    .font(.caption)
                     .foregroundStyle(Theme.dimText)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 6)
@@ -191,83 +193,16 @@ struct CourseDetectView: View {
 
             Spacer()
 
-            browseAllButton
-            manualButton
+            VStack(spacing: 8) {
+                PrimaryButton(title: "Browse Courses", icon: Theme.Symbol.course) {
+                    let all = CourseLibrary.shared.alphabetical()
+                    detectState = all.isEmpty ? .noResults : .results(all)
+                }
+                OutlineButton(title: "Custom Round", action: onManual)
+            }
         }
         .padding(.horizontal, 12)
         .padding(.bottom, 6)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .fairwayBackground()
-        .containerBackground(Theme.fairway.gradient, for: .navigation)
-    }
-
-    private var browseAllButton: some View {
-        Button {
-            let all = CourseLibrary.shared.alphabetical()
-            detectState = all.isEmpty ? .noResults : .results(all)
-        } label: {
-            HStack(spacing: 5) {
-                Image(systemName: Theme.Symbol.course)
-                    .font(.system(size: 11, weight: .bold))
-                Text("Browse Courses")
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
-            }
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 10)
-            .background(Capsule().fill(Theme.fairway))
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Browse all courses")
-    }
-
-    private var manualButton: some View {
-        Button(action: onManual) {
-            Text("Custom Round")
-                .font(.system(size: 12, weight: .semibold, design: .rounded))
-                .foregroundStyle(Theme.textSecondary)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
-                .background(Capsule().stroke(Theme.textPrimary.opacity(0.18), lineWidth: 1))
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Set up a custom round without a course")
-    }
-}
-
-// MARK: - Course row
-
-private struct CourseRow: View {
-    let course: CourseData
-
-    var body: some View {
-        HStack(spacing: 8) {
-            ZStack {
-                Circle()
-                    .fill(Theme.fairway.opacity(0.18))
-                    .frame(width: 26, height: 26)
-                Image(systemName: Theme.Symbol.pin)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(Theme.fairwayBright)
-            }
-
-            VStack(alignment: .leading, spacing: 1) {
-                Text(course.name)
-                    .font(.system(size: 12, weight: .bold, design: .rounded))
-                    .foregroundStyle(Theme.textPrimary)
-                    .lineLimit(1)
-                HStack(spacing: 4) {
-                    Text("\(course.numberOfHoles) holes")
-                    Text("·")
-                    Text("Par \(course.totalPar)")
-                }
-                .font(.system(size: 9, weight: .medium))
-                .foregroundStyle(Theme.dimText)
-            }
-
-            Spacer()
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(course.name), \(course.numberOfHoles) holes, par \(course.totalPar)")
     }
 }

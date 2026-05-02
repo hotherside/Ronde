@@ -165,6 +165,33 @@ extension View {
         scrollContentBackground(.hidden)
             .background(Theme.surface)
     }
+
+    /// Wraps a view in the canonical cream rounded card. Use this on view
+    /// content; for `.listRowBackground` callers (which need a view rather than
+    /// a modifier) use `Theme.cardSurfaceShape` instead.
+    func cardSurface(cornerRadius: CGFloat = 14) -> some View {
+        background {
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .fill(Theme.cardSurface)
+                .overlay(
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .stroke(Theme.textPrimary.opacity(0.05), lineWidth: 1)
+                )
+        }
+    }
+}
+
+extension Theme {
+    /// The canonical card-surface shape — cream fill, hairline forest stroke.
+    /// Use as a `.listRowBackground` value where a `View` is required.
+    static var cardSurfaceShape: some View {
+        RoundedRectangle(cornerRadius: 14, style: .continuous)
+            .fill(cardSurface)
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(textPrimary.opacity(0.05), lineWidth: 1)
+            )
+    }
 }
 
 // MARK: - Typography
@@ -179,6 +206,30 @@ extension Font {
     static func microLabel() -> Font {
         .system(size: 9, weight: .heavy, design: .rounded)
     }
+
+    // MARK: Named text styles
+    //
+    // Use these instead of raw `.system(size:weight:design:)` calls so the
+    // typography stays consistent across screens.
+
+    /// 17pt heavy rounded — empty-state hero / large titles.
+    static let titleLarge = Font.system(size: 17, weight: .heavy, design: .rounded)
+
+    /// 14pt heavy rounded — NavHeader title, hero callouts.
+    static let titleSmall = Font.system(size: 14, weight: .heavy, design: .rounded)
+
+    /// 13pt semibold rounded — primary card text (course names, row titles).
+    static let bodyEmphasized = Font.system(size: 13, weight: .semibold, design: .rounded)
+
+    /// 12pt medium rounded — row labels, button text, secondary body copy.
+    static let body = Font.system(size: 12, weight: .medium, design: .rounded)
+
+    /// 10pt medium rounded — meta lines like "9 holes · Par 72".
+    static let caption = Font.system(size: 10, weight: .medium, design: .rounded)
+
+    /// 9pt heavy rounded — uppercase tags. Pair with `.tracking(1)` and
+    /// `.textCase(.uppercase)` (or use `.sectionHeaderStyle()` on `Text`).
+    static let micro = Font.system(size: 9, weight: .heavy, design: .rounded)
 }
 
 // MARK: - Button styles

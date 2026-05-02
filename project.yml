@@ -24,7 +24,11 @@ targets:
         IPHONEOS_DEPLOYMENT_TARGET: "17.0"
         SWIFT_VERSION: "6.0"
         GENERATE_INFOPLIST_FILE: YES
-        TARGETED_DEVICE_FAMILY: "1,2"
+        # Stub companion is iPhone-only; sidesteps the iPad multitasking
+        # orientation warning. Watch app remains the real product.
+        TARGETED_DEVICE_FAMILY: "1"
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         DEVELOPMENT_TEAM: ""
     dependencies:
       - target: Ronde Watch App

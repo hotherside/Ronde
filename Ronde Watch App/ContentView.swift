@@ -52,7 +52,7 @@ struct ContentView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 14) {
             Spacer()
 
             ZStack {
@@ -66,10 +66,10 @@ struct ContentView: View {
 
             VStack(spacing: 4) {
                 Text("Tee it up")
-                    .font(.system(size: 17, weight: .heavy, design: .rounded))
+                    .font(.titleLarge)
                     .foregroundStyle(Theme.textPrimary)
                 Text("Tap below to start your first round.")
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.caption)
                     .foregroundStyle(Theme.dimText)
                     .multilineTextAlignment(.center)
             }
@@ -77,28 +77,16 @@ struct ContentView: View {
 
             Spacer()
 
-            Button {
+            PrimaryButton(title: "New Round", icon: Theme.Symbol.pin) {
                 showingSetup = true
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: Theme.Symbol.pin)
-                        .font(.system(size: 12, weight: .bold))
-                    Text("New Round")
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
-                }
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(Capsule().fill(Theme.fairway))
             }
-            .buttonStyle(.plain)
             .padding(.horizontal, 12)
             .padding(.bottom, 4)
             .accessibilityLabel("Start a new round")
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .fairwayBackground()
-        .containerBackground(Theme.fairway.gradient, for: .navigation)
+        .fairwayContainerBackground()
         .navigationTitle("Ronde")
         .sheet(isPresented: $showingSetup) {
             StartView { round in
@@ -124,13 +112,13 @@ struct ContentView: View {
                                 .foregroundStyle(.white)
                         }
                         Text("New Round")
-                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                            .font(.bodyEmphasized)
                             .foregroundStyle(Theme.textPrimary)
                         Spacer()
                     }
                 }
                 .buttonStyle(CardRowButtonStyle())
-                .listRowBackground(roundedRowBackground)
+                .listRowBackground(Theme.cardSurfaceShape)
                 .accessibilityLabel("Start a new round")
             }
 
@@ -141,7 +129,7 @@ struct ContentView: View {
                     } label: {
                         RoundRowView(round: round)
                     }
-                    .listRowBackground(roundedRowBackground)
+                    .listRowBackground(Theme.cardSurfaceShape)
                 }
                 .onDelete(perform: deleteRounds)
             } header: {
@@ -150,7 +138,7 @@ struct ContentView: View {
         }
         .scrollContentBackground(.hidden)
         .background(Theme.surface)
-        .containerBackground(Theme.fairway.gradient, for: .navigation)
+        .fairwayContainerBackground()
         .navigationTitle("Ronde")
         .sheet(isPresented: $showingSetup) {
             StartView { round in
@@ -158,15 +146,6 @@ struct ContentView: View {
                 showingSetup = false
             }
         }
-    }
-
-    private var roundedRowBackground: some View {
-        RoundedRectangle(cornerRadius: 14, style: .continuous)
-            .fill(Theme.cardSurface)
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(Theme.textPrimary.opacity(0.05), lineWidth: 1)
-            )
     }
 
     private func deleteRounds(at offsets: IndexSet) {
@@ -194,9 +173,11 @@ private struct RoundRowView: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(round.courseName ?? "Custom Round")
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .font(.bodyEmphasized)
                     .foregroundStyle(Theme.textPrimary)
-                    .lineLimit(1)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.9)
+                    .allowsTightening(true)
                 HStack(spacing: 4) {
                     Text(round.date, format: .dateTime.month(.abbreviated).day())
                     Text("·")
@@ -205,7 +186,7 @@ private struct RoundRowView: View {
                     Text("\(round.totalShots) shots")
                         .monospacedDigit()
                 }
-                .font(.system(size: 10, weight: .medium))
+                .font(.caption)
                 .foregroundStyle(Theme.dimText)
             }
 

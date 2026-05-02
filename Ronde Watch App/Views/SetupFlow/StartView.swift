@@ -48,42 +48,34 @@ struct StartView: View {
     // MARK: - Manual hole-count selection
 
     private var manualHoleSelectView: some View {
-        VStack(spacing: 12) {
-            Spacer()
+        VStack(spacing: 0) {
+            NavHeader(title: "Custom Round", leading: .back)
 
-            Text("How many holes?")
-                .font(.system(size: 15, weight: .bold, design: .rounded))
-                .foregroundStyle(Theme.textPrimary)
+            VStack(spacing: 12) {
+                Spacer()
 
-            holeCountButton(holes: 9)
-            holeCountButton(holes: 18)
+                Text("How many holes?")
+                    .font(.titleSmall)
+                    .foregroundStyle(Theme.textPrimary)
 
-            Spacer()
+                holeCountButton(holes: 9)
+                holeCountButton(holes: 18)
+
+                Spacer()
+            }
+            .padding(.horizontal, 14)
         }
-        .padding(.horizontal, 14)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .fairwayBackground()
-        .containerBackground(Theme.fairway.gradient, for: .navigation)
-        .navigationTitle("Custom Round")
+        .fairwayContainerBackground()
+        .toolbar(.hidden, for: .navigationBar)
     }
 
     private func holeCountButton(holes: Int) -> some View {
-        Button {
+        PrimaryButton(title: "\(holes) Holes", icon: Theme.Symbol.pin) {
             pars = Array(repeating: 4, count: holes)
             path.append(Dest.parSetup)
-        } label: {
-            HStack(spacing: 6) {
-                Image(systemName: Theme.Symbol.pin)
-                    .font(.system(size: 11, weight: .bold))
-                Text("\(holes) Holes")
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
-            }
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .background(Capsule().fill(Theme.fairway))
         }
-        .buttonStyle(.plain)
     }
 
     // MARK: - Round creation
