@@ -23,7 +23,6 @@ struct ShotCountIntent: AppIntent {
         // context, keeping @Bindable / @Query up-to-date without extra glue.
         let context = ModelContext(appModelContainer)
 
-        // Fetch the most recent incomplete round
         var descriptor = FetchDescriptor<Round>(
             predicate: #Predicate { $0.isComplete == false },
             sortBy: [SortDescriptor(\Round.date, order: .reverse)]
@@ -43,20 +42,6 @@ struct ShotCountIntent: AppIntent {
             return .result(dialog: "No active round")
         }
 
-        // Dedup: skip if swing was auto-detected within the last 2 seconds
-        let swingRecent = await MainActor.run {
-            SwingDetector.shared.wasSwingDetectedWithin(seconds: 2.0)
-        }
-        if swingRecent {
-            let shots = hole.shots
-            let holeNumber = hole.holeNumber
-            log.debug("Action Button skipped — swing already detected for hole \(holeNumber)")
-            await MainActor.run {
-                WKInterfaceDevice.current().play(.click)
-            }
-            return .result(dialog: "Shot \(shots) on hole \(holeNumber)")
-        }
-
         hole.incrementShot()
 
         do {
@@ -68,7 +53,6 @@ struct ShotCountIntent: AppIntent {
         let shots = hole.shots
         let holeNumber = hole.holeNumber
 
-        // Trigger haptic on the main thread (crisp click matches the on-screen + button)
         await MainActor.run {
             WKInterfaceDevice.current().play(.click)
         }

@@ -21,11 +21,9 @@ struct ContentView: View {
                 ShotCounterView(
                     round: round,
                     onEndRound: {
-                        // Round finished normally — show post-round summary.
                         showingSummaryForRound = activeRound
                     },
                     onDiscard: {
-                        // Round was discarded — return straight to history list.
                         activeRound = nil
                     }
                 )
@@ -34,7 +32,6 @@ struct ContentView: View {
             }
         }
         .onAppear {
-            // Resume any round that was active when the app was last closed.
             if activeRound == nil, showingSummaryForRound == nil {
                 activeRound = rounds.first { !$0.isComplete }
             }
@@ -45,35 +42,105 @@ struct ContentView: View {
         rounds.filter(\.isComplete)
     }
 
+    @ViewBuilder
     private var roundsList: some View {
+        if completedRounds.isEmpty {
+            emptyState
+        } else {
+            populatedList
+        }
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 16) {
+            Spacer()
+
+            ZStack {
+                Circle()
+                    .fill(Theme.fairway.opacity(0.18))
+                    .frame(width: 64, height: 64)
+                Image(systemName: Theme.Symbol.golfer)
+                    .font(.system(size: 30, weight: .semibold))
+                    .foregroundStyle(Theme.fairwayBright)
+            }
+
+            VStack(spacing: 4) {
+                Text("Tee it up")
+                    .font(.system(size: 17, weight: .heavy, design: .rounded))
+                    .foregroundStyle(.white)
+                Text("Tap below to start your first round.")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Theme.dimText)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.horizontal)
+
+            Spacer()
+
+            Button {
+                showingSetup = true
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: Theme.Symbol.pin)
+                        .font(.system(size: 12, weight: .bold))
+                    Text("New Round")
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(Capsule().fill(Theme.fairway))
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 12)
+            .padding(.bottom, 4)
+            .accessibilityLabel("Start a new round")
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .fairwayBackground()
+        .navigationTitle("Ronde")
+        .sheet(isPresented: $showingSetup) {
+            StartView { round in
+                activeRound = round
+                showingSetup = false
+            }
+        }
+    }
+
+    private var populatedList: some View {
         List {
             Section {
                 Button {
                     showingSetup = true
                 } label: {
-                    HStack {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 22))
-                            .foregroundStyle(.green)
+                    HStack(spacing: 8) {
+                        ZStack {
+                            Circle()
+                                .fill(Theme.fairway)
+                                .frame(width: 26, height: 26)
+                            Image(systemName: Theme.Symbol.pin)
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(.white)
+                        }
                         Text("New Round")
-                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+                        Spacer()
                     }
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Start a new round")
             }
 
-            if !completedRounds.isEmpty {
-                Section("Past Rounds") {
-                    ForEach(completedRounds) { round in
-                        NavigationLink {
-                            RoundSummaryView(round: round, onDone: nil)
-                        } label: {
-                            RoundRowView(round: round)
-                        }
+            Section("Past Rounds") {
+                ForEach(completedRounds) { round in
+                    NavigationLink {
+                        RoundSummaryView(round: round, onDone: nil)
+                    } label: {
+                        RoundRowView(round: round)
                     }
-                    .onDelete(perform: deleteRounds)
                 }
+                .onDelete(perform: deleteRounds)
             }
         }
         .navigationTitle("Ronde")
@@ -97,18 +164,17 @@ private struct RoundRowView: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            // Score indicator — colored circle on the left
+            // Score chip
             ZStack {
-                Circle()
-                    .fill(scoreCircleColor.opacity(0.15))
-                    .frame(width: 32, height: 32)
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .fill(scoreColor.opacity(0.18))
+                    .frame(width: 36, height: 32)
                 Text(scoreShortText)
-                    .font(.system(size: 12, weight: .heavy, design: .rounded))
+                    .font(.system(size: 13, weight: .heavy, design: .rounded))
                     .monospacedDigit()
-                    .foregroundStyle(scoreCircleColor)
+                    .foregroundStyle(scoreColor)
             }
 
-            // Course + details
             VStack(alignment: .leading, spacing: 2) {
                 Text(round.courseName ?? "Custom Round")
                     .font(.system(size: 13, weight: .semibold, design: .rounded))
@@ -118,11 +184,11 @@ private struct RoundRowView: View {
                     Text("·")
                     Text("\(round.numberOfHoles)H")
                     Text("·")
-                    Text("\(round.totalShots)")
+                    Text("\(round.totalShots) shots")
                         .monospacedDigit()
                 }
                 .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(.white.opacity(0.4))
+                .foregroundStyle(Theme.dimText)
             }
 
             Spacer()
@@ -146,11 +212,12 @@ private struct RoundRowView: View {
         return score > 0 ? "+\(score)" : "\(score)"
     }
 
-    private var scoreCircleColor: Color {
+    private var scoreColor: Color {
         let score = round.scoreToPar
-        if score <= 0 { return .green }
-        if score <= 5 { return .orange }
-        return .red
+        if score <= -1 { return Theme.fairwayBright }
+        if score == 0  { return Theme.fairway }
+        if score <= 5  { return Theme.bunker }
+        return Theme.rough
     }
 }
 

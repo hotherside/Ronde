@@ -49,7 +49,7 @@ targets:
         INFOPLIST_KEY_NSHealthUpdateUsageDescription: "Ronde saves your golf rounds as workouts in the Health app."
         INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription: "Ronde uses your location to find nearby golf courses."
         INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "Ronde uses your location to find nearby golf courses."
-        INFOPLIST_KEY_NSMotionUsageDescription: "Ronde uses motion sensors to automatically detect golf swings and track your steps during a round."
+        INFOPLIST_KEY_NSMotionUsageDescription: "Ronde uses motion sensors to track your steps and distance walked during a round."
         DEVELOPMENT_TEAM: ""
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     entitlements:

@@ -32,47 +32,13 @@ final class Round {
     }
 
     var currentHole: HoleScore? {
-        let sorted = holeScores.sorted { $0.holeNumber < $1.holeNumber }
+        let sorted = sortedHoleScores
         guard currentHoleIndex >= 0, currentHoleIndex < sorted.count else { return nil }
         return sorted[currentHoleIndex]
     }
 
     var sortedHoleScores: [HoleScore] {
         holeScores.sorted { $0.holeNumber < $1.holeNumber }
-    }
-
-    // MARK: - Swing Aggregates
-
-    var allSwingData: [SwingMetrics] {
-        holeScores.flatMap(\.swingData)
-    }
-
-    var totalSwingsDetected: Int {
-        holeScores.reduce(0) { $0 + $1.swingCount }
-    }
-
-    var roundAverageSpeedKMH: Double {
-        let all = allSwingData
-        guard !all.isEmpty else { return 0 }
-        return all.map(\.estimatedSpeedKMH).reduce(0, +) / Double(all.count)
-    }
-
-    var roundFastestSpeedKMH: Double {
-        allSwingData.map(\.estimatedSpeedKMH).max() ?? 0
-    }
-
-    /// The hole number where the fastest swing occurred.
-    var fastestSwingHole: Int? {
-        holeScores
-            .filter { !$0.swingData.isEmpty }
-            .max(by: { $0.fastestSpeedKMH < $1.fastestSpeedKMH })?
-            .holeNumber
-    }
-
-    var roundAverageTempoSeconds: Double {
-        let all = allSwingData
-        guard !all.isEmpty else { return 0 }
-        return all.map(\.tempoSeconds).reduce(0, +) / Double(all.count)
     }
 
     init(

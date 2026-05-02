@@ -13,20 +13,24 @@ struct HoleTransitionView: View {
         hole.shots > 0 && hole.scoreToPar < 0
     }
 
+    private var scoreColor: Color {
+        Theme.scoreColor(forDelta: hole.scoreToPar, hasShots: hole.shots > 0)
+    }
+
     var body: some View {
         ZStack {
-            // ── Top: hole + par in a compact bar ──
+            // ── Top bar ──
             HStack {
-                Text("HOLE \(hole.holeNumber)")
-                    .font(.system(size: 10, weight: .heavy, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.4))
+                Label("HOLE \(hole.holeNumber)", systemImage: Theme.Symbol.pin)
+                    .font(.system(size: 9, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Theme.mutedText)
                     .tracking(1.5)
 
                 Spacer()
 
                 Text("PAR \(hole.par)")
-                    .font(.system(size: 10, weight: .heavy, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.4))
+                    .font(.system(size: 9, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Theme.mutedText)
                     .tracking(1.5)
             }
             .padding(.horizontal, 14)
@@ -34,43 +38,39 @@ struct HoleTransitionView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .opacity(contentAppear ? 1 : 0)
 
-            // ── Center: score card ──
-            VStack(spacing: 6) {
-                // Score name — hero label
-                Text(scoreName)
-                    .font(.system(size: 24, weight: .heavy, design: .rounded))
+            // ── Centre: scorecard ──
+            VStack(spacing: 8) {
+                // Score name — hero
+                Text(scoreName.uppercased())
+                    .font(.system(size: 22, weight: .heavy, design: .rounded))
                     .foregroundStyle(scoreColor)
-                    .tracking(1)
+                    .tracking(1.5)
+                    .multilineTextAlignment(.center)
 
-                // Two-column stat grid: shots vs par
+                // Shots vs par split
                 HStack(spacing: 0) {
-                    // Shots column
                     VStack(spacing: 1) {
                         Text("\(hole.shots)")
-                            .font(.system(size: 36, weight: .heavy, design: .rounded))
-                            .monospacedDigit()
+                            .font(.scoreNumeral(size: 38))
                             .foregroundStyle(.white)
                         Text("SHOTS")
                             .font(.system(size: 8, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white.opacity(0.35))
+                            .foregroundStyle(Theme.dimText)
                             .tracking(1)
                     }
                     .frame(maxWidth: .infinity)
 
-                    // Divider
                     Rectangle()
-                        .fill(.white.opacity(0.12))
-                        .frame(width: 1, height: 40)
+                        .fill(.white.opacity(0.10))
+                        .frame(width: 1, height: 42)
 
-                    // Par column
                     VStack(spacing: 1) {
                         Text("\(hole.par)")
-                            .font(.system(size: 36, weight: .heavy, design: .rounded))
-                            .monospacedDigit()
-                            .foregroundStyle(.white.opacity(0.4))
+                            .font(.scoreNumeral(size: 38))
+                            .foregroundStyle(Theme.mutedText)
                         Text("PAR")
                             .font(.system(size: 8, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white.opacity(0.35))
+                            .foregroundStyle(Theme.dimText)
                             .tracking(1)
                     }
                     .frame(maxWidth: .infinity)
@@ -78,44 +78,32 @@ struct HoleTransitionView: View {
                 .scaleEffect(statsAppear ? 1.0 : 0.85)
                 .opacity(statsAppear ? 1.0 : 0.0)
 
-                // Score-to-par badge
                 if hole.shots > 0 {
                     Text(scoreToParText)
-                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
                         .monospacedDigit()
+                        .tracking(1)
                         .foregroundStyle(scoreColor)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 3)
-                        .background(Capsule().fill(scoreColor.opacity(0.12)))
+                        .background(Capsule().fill(scoreColor.opacity(0.15)))
                         .opacity(statsAppear ? 1.0 : 0.0)
-                }
-
-                // Swing metrics summary
-                if !hole.swingData.isEmpty {
-                    HStack(spacing: 4) {
-                        Image(systemName: "bolt.fill")
-                            .font(.system(size: 8))
-                        Text("\(String(format: "%.0f", hole.fastestSpeedKMH)) km/h best")
-                            .font(.system(size: 10, weight: .bold, design: .rounded))
-                        Text("·")
-                            .font(.system(size: 8))
-                        Text("\(hole.swingCount) swing\(hole.swingCount == 1 ? "" : "s")")
-                            .font(.system(size: 10, weight: .medium, design: .rounded))
-                    }
-                    .foregroundStyle(.cyan.opacity(0.7))
-                    .opacity(statsAppear ? 1.0 : 0.0)
                 }
             }
             .scaleEffect(celebrationScale)
 
-            // ── Bottom: action button ──
+            // ── Bottom action ──
             Button(action: onContinue) {
-                Text(isLastHole ? "Finish Round" : "Next Hole")
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(Capsule().fill(isLastHole ? Color.green : Color.blue))
+                HStack(spacing: 6) {
+                    Image(systemName: isLastHole ? Theme.Symbol.flag : Theme.Symbol.pin)
+                        .font(.system(size: 12, weight: .bold))
+                    Text(isLastHole ? "Finish Round" : "Next Hole")
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(Capsule().fill(Theme.fairway))
             }
             .buttonStyle(.plain)
             .padding(.horizontal, 14)
@@ -127,32 +115,17 @@ struct HoleTransitionView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background {
             Rectangle()
-                .fill(
-                    RadialGradient(
-                        colors: [
-                            scoreColor.opacity(0.22),
-                            scoreColor.opacity(0.06),
-                            .clear,
-                        ],
-                        center: .center,
-                        startRadius: 5,
-                        endRadius: 150
-                    )
-                )
+                .fill(Theme.scoreBackdrop(forDelta: hole.scoreToPar, hasShots: hole.shots > 0))
                 .ignoresSafeArea()
         }
         .navigationBarBackButtonHidden(true)
         .task {
-            // Staggered entrance
             withAnimation(.easeOut(duration: 0.35)) {
                 contentAppear = true
             }
-
             withAnimation(.easeOut(duration: 0.4).delay(0.15)) {
                 statsAppear = true
             }
-
-            // Celebration bounce for under-par
             if isUnderPar {
                 withAnimation(.spring(response: 0.45, dampingFraction: 0.4).delay(0.2)) {
                     celebrationScale = 1.05
@@ -167,7 +140,7 @@ struct HoleTransitionView: View {
                 }
             }
 
-            // Auto-advance after 4 s
+            // Auto-advance after 4s
             try? await Task.sleep(for: .seconds(4))
             if !Task.isCancelled {
                 onContinue()
@@ -183,27 +156,8 @@ struct HoleTransitionView: View {
         return diff > 0 ? "+\(diff) OVER" : "\(diff) UNDER"
     }
 
-    private var scoreColor: Color {
-        guard hole.shots > 0 else { return .secondary }
-        switch hole.scoreToPar {
-        case ...(-2): return .yellow
-        case -1:      return .green
-        case 0:       return .green
-        case 1:       return .orange
-        default:      return .red
-        }
-    }
-
     private var scoreName: String {
-        guard hole.shots > 0 else { return "–" }
-        switch hole.scoreToPar {
-        case ...(-3): return "ALBATROSS"
-        case -2:      return "EAGLE"
-        case -1:      return "BIRDIE"
-        case 0:       return "PAR"
-        case 1:       return "BOGEY"
-        case 2:       return "DOUBLE"
-        default:      return "+\(hole.scoreToPar)"
-        }
+        guard hole.shots > 0 else { return "—" }
+        return Theme.scoreName(forDelta: hole.scoreToPar)
     }
 }

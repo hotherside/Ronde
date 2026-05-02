@@ -3,11 +3,8 @@ import SwiftUI
 struct StartView: View {
     @Environment(\.modelContext) private var modelContext
 
-    // Navigation
     @State private var path = NavigationPath()
 
-    // Round config accumulated across steps.
-    // numberOfHoles is always pars.count — there is no separate state for it.
     @State private var date = Date.now
     @State private var pars: [Int] = Array(repeating: 4, count: 18)
     @State private var courseName: String?
@@ -21,7 +18,6 @@ struct StartView: View {
 
     var body: some View {
         NavigationStack(path: $path) {
-            // Root: GPS course detection.
             CourseDetectView(
                 onCourseSelected: { course in
                     courseName = course.name
@@ -52,39 +48,41 @@ struct StartView: View {
     // MARK: - Manual hole-count selection
 
     private var manualHoleSelectView: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 12) {
+            Spacer()
+
             Text("How many holes?")
-                .font(.system(size: 16, weight: .bold, design: .rounded))
-                .foregroundStyle(.white.opacity(0.7))
+                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .foregroundStyle(.white.opacity(0.85))
 
-            Button {
-                pars = Array(repeating: 4, count: 9)
-                path.append(Dest.parSetup)
-            } label: {
-                Text("9 Holes")
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(Capsule().fill(.blue))
-            }
-            .buttonStyle(.plain)
+            holeCountButton(holes: 9)
+            holeCountButton(holes: 18)
 
-            Button {
-                pars = Array(repeating: 4, count: 18)
-                path.append(Dest.parSetup)
-            } label: {
-                Text("18 Holes")
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(Capsule().fill(.blue))
-            }
-            .buttonStyle(.plain)
+            Spacer()
         }
-        .padding(.horizontal, 12)
-        .navigationTitle("Manual Setup")
+        .padding(.horizontal, 14)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .fairwayBackground()
+        .navigationTitle("Custom Round")
+    }
+
+    private func holeCountButton(holes: Int) -> some View {
+        Button {
+            pars = Array(repeating: 4, count: holes)
+            path.append(Dest.parSetup)
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: Theme.Symbol.pin)
+                    .font(.system(size: 11, weight: .bold))
+                Text("\(holes) Holes")
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+            }
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(Capsule().fill(Theme.fairway))
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Round creation

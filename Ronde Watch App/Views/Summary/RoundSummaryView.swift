@@ -16,17 +16,21 @@ struct RoundSummaryView: View {
             // ── Hero header: course + score grid ──
             Section {
                 VStack(spacing: 8) {
-                    Text(round.courseName ?? "Custom Round")
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
-                        .multilineTextAlignment(.center)
-                        .lineLimit(1)
-                        .accessibilityAddTraits(.isHeader)
+                    HStack(spacing: 4) {
+                        Image(systemName: Theme.Symbol.course)
+                            .font(.system(size: 9))
+                            .foregroundStyle(Theme.fairwayBright)
+                        Text(round.courseName ?? "Custom Round")
+                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                            .multilineTextAlignment(.center)
+                            .lineLimit(1)
+                    }
+                    .accessibilityAddTraits(.isHeader)
 
-                    Text(round.date, format: .dateTime.month(.abbreviated).day())
+                    Text(round.date, format: .dateTime.weekday(.abbreviated).month(.abbreviated).day())
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.dimText)
 
-                    // ── 3-column stat grid ──
                     HStack(spacing: 0) {
                         statColumn(
                             value: "\(round.totalShots)",
@@ -35,26 +39,24 @@ struct RoundSummaryView: View {
                             valueSize: 28
                         )
 
-                        // Divider
                         Rectangle()
-                            .fill(.white.opacity(0.12))
+                            .fill(.white.opacity(0.10))
                             .frame(width: 1, height: 38)
 
                         statColumn(
                             value: "\(round.totalPar)",
                             label: "PAR",
-                            valueColor: .white.opacity(0.45),
+                            valueColor: Theme.mutedText,
                             valueSize: 28
                         )
 
-                        // Divider
                         Rectangle()
-                            .fill(.white.opacity(0.12))
+                            .fill(.white.opacity(0.10))
                             .frame(width: 1, height: 38)
 
                         statColumn(
                             value: scoreText,
-                            label: "SCORE",
+                            label: "VS PAR",
                             valueColor: scoreColor,
                             valueSize: 28
                         )
@@ -65,10 +67,10 @@ struct RoundSummaryView: View {
                         "\(round.totalShots) shots, par \(round.totalPar), \(accessibilityScoreText)"
                     )
 
-                    // ── Steps + distance row ──
+                    // Steps + distance
                     if round.totalSteps > 0 {
                         HStack(spacing: 4) {
-                            Image(systemName: "figure.walk")
+                            Image(systemName: Theme.Symbol.walking)
                                 .font(.system(size: 9))
                             Text("\(round.totalSteps.formatted())")
                                 .font(.system(size: 10, weight: .bold, design: .rounded))
@@ -77,8 +79,7 @@ struct RoundSummaryView: View {
                             Text("\(String(format: "%.1f", round.totalDistanceKm)) km")
                                 .font(.system(size: 10, weight: .bold, design: .rounded))
                         }
-                        .font(.system(size: 10))
-                        .foregroundStyle(.white.opacity(0.35))
+                        .foregroundStyle(Theme.dimText)
                         .accessibilityElement(children: .combine)
                         .accessibilityLabel(
                             "\(round.totalSteps) steps walked, \(String(format: "%.1f", round.totalDistanceKm)) kilometers"
@@ -86,97 +87,39 @@ struct RoundSummaryView: View {
                     }
                 }
                 .frame(maxWidth: .infinity)
+                .padding(.vertical, 4)
             }
 
-            // Per-hole breakdown
-            Section("Holes") {
+            // ── Per-hole scorecard ──
+            Section("Scorecard") {
                 ForEach(round.sortedHoleScores) { hole in
                     HoleScoreRow(hole: hole)
                 }
             }
 
-            // Swing analysis
-            if round.totalSwingsDetected > 0 {
-                Section("Swing Analysis") {
-                    // Stat grid: avg speed | fastest
-                    HStack(spacing: 0) {
-                        statColumn(
-                            value: String(format: "%.0f", round.roundAverageSpeedKMH),
-                            label: "AVG KM/H",
-                            valueColor: .cyan,
-                            valueSize: 22
-                        )
-
-                        Rectangle()
-                            .fill(.white.opacity(0.12))
-                            .frame(width: 1, height: 30)
-
-                        statColumn(
-                            value: String(format: "%.0f", round.roundFastestSpeedKMH),
-                            label: "BEST KM/H",
-                            valueColor: .green,
-                            valueSize: 22
-                        )
-                    }
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel(
-                        "Average swing speed \(String(format: "%.0f", round.roundAverageSpeedKMH)) kilometres per hour, "
-                        + "fastest \(String(format: "%.0f", round.roundFastestSpeedKMH)) kilometres per hour"
-                    )
-
-                    // Detail rows
-                    HStack {
-                        Text("Swings detected")
-                            .font(.system(size: 11, weight: .medium, design: .rounded))
-                            .foregroundStyle(.white.opacity(0.6))
-                        Spacer()
-                        Text("\(round.totalSwingsDetected)")
-                            .font(.system(size: 11, weight: .bold, design: .rounded))
-                            .monospacedDigit()
-                    }
-
-                    if let holeNum = round.fastestSwingHole {
-                        HStack {
-                            Text("Fastest on")
-                                .font(.system(size: 11, weight: .medium, design: .rounded))
-                                .foregroundStyle(.white.opacity(0.6))
-                            Spacer()
-                            Text("Hole \(holeNum)")
-                                .font(.system(size: 11, weight: .bold, design: .rounded))
-                        }
-                    }
-
-                    HStack {
-                        Text("Avg tempo")
-                            .font(.system(size: 11, weight: .medium, design: .rounded))
-                            .foregroundStyle(.white.opacity(0.6))
-                        Spacer()
-                        Text(String(format: "%.0fms", round.roundAverageTempoSeconds * 1000))
-                            .font(.system(size: 11, weight: .bold, design: .rounded))
-                            .monospacedDigit()
-                    }
-                }
-            }
-
-            // Score legend
+            // ── Score legend ──
             Section {
                 ScoreLegend()
                     .padding(.vertical, 2)
             }
 
-            // Post-round actions
+            // ── Post-round actions ──
             if isPostRound {
                 Section {
                     Button {
                         round.isComplete = true
                         onDone?()
                     } label: {
-                        Text("Save & Done")
-                            .font(.system(size: 15, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                            .background(Capsule().fill(.green))
+                        HStack(spacing: 6) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 13))
+                            Text("Save Round")
+                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                        }
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(Capsule().fill(Theme.fairway))
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Save round and return to history")
@@ -216,12 +159,11 @@ struct RoundSummaryView: View {
     ) -> some View {
         VStack(spacing: 1) {
             Text(value)
-                .font(.system(size: valueSize, weight: .heavy, design: .rounded))
-                .monospacedDigit()
+                .font(.scoreNumeral(size: valueSize))
                 .foregroundStyle(valueColor)
             Text(label)
                 .font(.system(size: 8, weight: .bold, design: .rounded))
-                .foregroundStyle(.white.opacity(0.35))
+                .foregroundStyle(Theme.dimText)
                 .tracking(0.8)
         }
         .frame(maxWidth: .infinity)
@@ -244,11 +186,12 @@ struct RoundSummaryView: View {
     }
 
     private var scoreColor: Color {
-        guard round.totalShots > 0 else { return .secondary }
+        guard round.totalShots > 0 else { return Theme.mutedText }
         let score = round.scoreToPar
-        if score <= 0 { return .green }
-        if score <= 5 { return .yellow }
-        return .red
+        if score <= -1 { return Theme.fairwayBright }
+        if score == 0  { return Theme.fairway }
+        if score <= 5  { return Theme.bunker }
+        return Theme.rough
     }
 }
 
@@ -258,32 +201,31 @@ private struct HoleScoreRow: View {
     let hole: HoleScore
 
     var body: some View {
-        HStack(spacing: 0) {
-            // Hole number — left aligned with color dot
-            HStack(spacing: 4) {
+        HStack(spacing: 8) {
+            // Coloured dot + hole number
+            HStack(spacing: 5) {
                 Circle()
                     .fill(badgeColor)
                     .frame(width: 6, height: 6)
                 Text("\(hole.holeNumber)")
                     .font(.system(size: 12, weight: .bold, design: .rounded))
                     .monospacedDigit()
-                    .foregroundStyle(.white.opacity(0.6))
+                    .foregroundStyle(.white.opacity(0.7))
             }
-            .frame(width: 30, alignment: .leading)
+            .frame(width: 32, alignment: .leading)
 
             Spacer()
 
             // Par
             Text("P\(hole.par)")
                 .font(.system(size: 10, weight: .medium, design: .rounded))
-                .foregroundStyle(.white.opacity(0.3))
+                .foregroundStyle(Theme.dimText)
 
             Spacer()
 
             // Shot count
             Text(hole.shots > 0 ? "\(hole.shots)" : "–")
-                .font(.system(size: 16, weight: .heavy, design: .rounded))
-                .monospacedDigit()
+                .font(.scoreNumeral(size: 16))
                 .foregroundStyle(.white)
 
             Spacer()
@@ -293,24 +235,15 @@ private struct HoleScoreRow: View {
                 Text(hole.scoreLabel)
                     .font(.system(size: 10, weight: .bold, design: .rounded))
                     .foregroundStyle(badgeColor)
-                    .padding(.horizontal, 6)
+                    .padding(.horizontal, 7)
                     .padding(.vertical, 2)
-                    .background(Capsule().fill(badgeColor.opacity(0.15)))
+                    .background(Capsule().fill(badgeColor.opacity(0.18)))
                     .accessibilityLabel(hole.scoreLabel == "E" ? "Par" : hole.scoreLabel)
             } else {
                 Text("–")
                     .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(Theme.faintText)
                     .frame(width: 28, alignment: .center)
-            }
-
-            // Fastest swing speed for this hole
-            if hole.swingCount > 0 {
-                Text(String(format: "%.0f", hole.fastestSpeedKMH))
-                    .font(.system(size: 9, weight: .bold, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundStyle(.cyan.opacity(0.6))
-                    .frame(width: 24, alignment: .trailing)
             }
         }
         .accessibilityElement(children: .combine)
@@ -321,25 +254,11 @@ private struct HoleScoreRow: View {
         guard hole.shots > 0 else {
             return "Hole \(hole.holeNumber), par \(hole.par), no shots"
         }
-        let scoreDesc: String
-        switch hole.scoreToPar {
-        case ...(-2): return "Hole \(hole.holeNumber), eagle or better, \(hole.shots) shots"
-        case -1:      scoreDesc = "birdie"
-        case 0:       scoreDesc = "par"
-        case 1:       scoreDesc = "bogey"
-        default:      scoreDesc = "\(hole.scoreToPar) over par"
-        }
-        return "Hole \(hole.holeNumber), \(scoreDesc), \(hole.shots) shots"
+        return "Hole \(hole.holeNumber), \(Theme.scoreName(forDelta: hole.scoreToPar)), \(hole.shots) shots"
     }
 
     private var badgeColor: Color {
-        switch hole.scoreToPar {
-        case ...(-2): return .yellow
-        case -1:      return .green
-        case 0:       return Color(white: 0.5)
-        case 1:       return .orange
-        default:      return .red
-        }
+        Theme.scoreColor(forDelta: hole.scoreToPar)
     }
 }
 
@@ -347,11 +266,11 @@ private struct HoleScoreRow: View {
 
 private struct ScoreLegend: View {
     private let items: [(label: String, color: Color)] = [
-        ("Egl", .yellow),
-        ("Bird", .green),
-        ("Par", Color(white: 0.5)),
-        ("Bog", .orange),
-        ("Dbl+", .red),
+        ("Egl", Theme.eagleGold),
+        ("Bird", Theme.fairwayBright),
+        ("Par", Theme.fairway),
+        ("Bog", Theme.bunker),
+        ("Dbl+", Theme.rough),
     ]
 
     var body: some View {
@@ -363,12 +282,12 @@ private struct ScoreLegend: View {
                         .frame(width: 6, height: 6)
                     Text(item.label)
                         .font(.system(size: 8, weight: .medium))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.dimText)
                 }
                 .frame(maxWidth: .infinity)
             }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Score legend: Eagle yellow, Birdie green, Par gray, Bogey orange, Double bogey or worse red")
+        .accessibilityLabel("Score legend: Eagle gold, Birdie bright green, Par green, Bogey amber, Double bogey or worse red")
     }
 }

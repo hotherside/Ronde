@@ -1,8 +1,9 @@
 import SwiftUI
 import CoreLocation
 
-/// Detects the user's location, queries the course API, and lets them
-/// pick from nearby courses or fall through to manual setup.
+/// Detects the user's location, searches the bundled Sydney course catalog
+/// for nearby clubs, and lets them pick one or fall through to manual entry
+/// (which presents the full alphabetical course list).
 struct CourseDetectView: View {
     let onCourseSelected: (CourseData) -> Void
     let onManual: () -> Void
@@ -12,30 +13,30 @@ struct CourseDetectView: View {
 
     private enum DetectState {
         case detecting
-        case searching
         case results([CourseData])
         case denied
-        case failed
         case noResults
     }
-
-    // MARK: - Body
 
     var body: some View {
         Group {
             switch detectState {
             case .detecting:
-                loadingView(label: "Detecting location…")
-            case .searching:
-                loadingView(label: "Finding courses…")
+                loadingView
             case .results(let courses):
                 resultsList(courses: courses)
             case .denied:
-                errorView(icon: "location.slash", message: "Location access denied")
-            case .failed:
-                errorView(icon: "wifi.slash", message: "Couldn't detect course")
+                noLocationView(
+                    icon: "location.slash.fill",
+                    title: "Location off",
+                    message: "Browse all courses or enter your own."
+                )
             case .noResults:
-                errorView(icon: "map", message: "No courses found nearby")
+                noLocationView(
+                    icon: "map",
+                    title: "Off the fairway",
+                    message: "No nearby Sydney clubs found."
+                )
             }
         }
         .navigationTitle("New Round")
@@ -47,11 +48,11 @@ struct CourseDetectView: View {
         }
         .onChange(of: locationService.currentLocation) { _, location in
             guard let location, isDetecting else { return }
-            Task { await searchCourses(near: location) }
+            handleLocation(location)
         }
     }
 
-    // MARK: - Detection Logic
+    // MARK: - Detection
 
     private var isDetecting: Bool {
         if case .detecting = detectState { return true }
@@ -59,7 +60,6 @@ struct CourseDetectView: View {
     }
 
     private func startDetection() async {
-        // React to an already-denied status without waiting for the delegate.
         switch locationService.authorizationStatus {
         case .denied, .restricted:
             detectState = .denied
@@ -70,85 +70,185 @@ struct CourseDetectView: View {
 
         locationService.requestPermissionAndLocation()
 
-        // 15-second timeout: if no fix arrives, fall through to manual.
-        try? await Task.sleep(for: .seconds(15))
+        // 10s timeout — fall back to "noResults" so the user still sees the
+        // browse-all path.
+        try? await Task.sleep(for: .seconds(10))
         if case .detecting = detectState {
-            detectState = .failed
+            detectState = .noResults
         }
     }
 
-    private func searchCourses(near location: CLLocation) async {
-        detectState = .searching
+    private func handleLocation(_ location: CLLocation) {
         locationService.stopUpdates()
-        let courses = await CourseAPIService.shared.fetchNearbyCourses(location: location)
-        if courses.isEmpty {
+        let nearby = CourseLibrary.shared.nearby(location, maxKilometers: 30, limit: 5)
+        if nearby.isEmpty {
             detectState = .noResults
         } else {
-            detectState = .results(Array(courses.prefix(3)))
+            detectState = .results(nearby)
         }
     }
 
     // MARK: - Sub-views
 
-    private func loadingView(label: String) -> some View {
+    private var loadingView: some View {
         VStack(spacing: 16) {
-            ProgressView()
-            Text(label)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
             Spacer()
-            manualButton
+
+            ZStack {
+                Circle()
+                    .fill(Theme.fairway.opacity(0.18))
+                    .frame(width: 56, height: 56)
+                Image(systemName: Theme.Symbol.location)
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(Theme.fairwayBright)
+            }
+
+            VStack(spacing: 4) {
+                ProgressView()
+                Text("Finding nearby courses…")
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundStyle(Theme.dimText)
+                    .multilineTextAlignment(.center)
+            }
+
+            Spacer()
+
+            browseAllButton
         }
-        .padding()
+        .padding(.horizontal, 12)
+        .padding(.bottom, 6)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .fairwayBackground()
     }
 
     private func resultsList(courses: [CourseData]) -> some View {
         List {
-            Section("Nearby Courses") {
+            Section {
                 ForEach(courses) { course in
                     Button {
                         onCourseSelected(course)
                     } label: {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(course.name)
-                                .font(.body)
-                                .lineLimit(1)
-                            Text("\(course.numberOfHoles) holes · Par \(course.totalPar)")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
+                        CourseRow(course: course)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("\(course.name), \(course.numberOfHoles) holes, par \(course.totalPar)")
                 }
+            } header: {
+                Label("Nearby", systemImage: Theme.Symbol.location)
+                    .font(.system(size: 10, weight: .heavy, design: .rounded))
+                    .tracking(1)
             }
 
             Section {
+                browseAllButton
+                    .listRowBackground(Color.clear)
                 manualButton
-                    .frame(maxWidth: .infinity, alignment: .center)
+                    .listRowBackground(Color.clear)
             }
         }
     }
 
-    private func errorView(icon: String, message: String) -> some View {
-        VStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.title2)
-                .foregroundStyle(.secondary)
-            Text(message)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+    private func noLocationView(icon: String, title: String, message: String) -> some View {
+        VStack(spacing: 14) {
             Spacer()
+
+            ZStack {
+                Circle()
+                    .fill(Theme.bunker.opacity(0.15))
+                    .frame(width: 56, height: 56)
+                Image(systemName: icon)
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(Theme.bunker)
+            }
+
+            VStack(spacing: 4) {
+                Text(title)
+                    .font(.system(size: 14, weight: .heavy, design: .rounded))
+                    .foregroundStyle(.white)
+                Text(message)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(Theme.dimText)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 6)
+            }
+
+            Spacer()
+
+            browseAllButton
             manualButton
         }
-        .padding()
+        .padding(.horizontal, 12)
+        .padding(.bottom, 6)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .fairwayBackground()
+    }
+
+    private var browseAllButton: some View {
+        Button {
+            let all = CourseLibrary.shared.alphabetical()
+            detectState = all.isEmpty ? .noResults : .results(all)
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: Theme.Symbol.course)
+                    .font(.system(size: 11, weight: .bold))
+                Text("Browse Courses")
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+            }
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 10)
+            .background(Capsule().fill(Theme.fairway))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Browse all courses")
     }
 
     private var manualButton: some View {
-        Button("Enter manually", action: onManual)
-            .buttonStyle(.bordered)
-            .accessibilityLabel("Set up round manually without GPS")
+        Button(action: onManual) {
+            Text("Custom Round")
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .foregroundStyle(.white.opacity(0.7))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .background(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Set up a custom round without a course")
+    }
+}
+
+// MARK: - Course row
+
+private struct CourseRow: View {
+    let course: CourseData
+
+    var body: some View {
+        HStack(spacing: 8) {
+            ZStack {
+                Circle()
+                    .fill(Theme.fairway.opacity(0.18))
+                    .frame(width: 26, height: 26)
+                Image(systemName: Theme.Symbol.pin)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(Theme.fairwayBright)
+            }
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(course.name)
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                HStack(spacing: 4) {
+                    Text("\(course.numberOfHoles) holes")
+                    Text("·")
+                    Text("Par \(course.totalPar)")
+                }
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(Theme.dimText)
+            }
+
+            Spacer()
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(course.name), \(course.numberOfHoles) holes, par \(course.totalPar)")
     }
 }

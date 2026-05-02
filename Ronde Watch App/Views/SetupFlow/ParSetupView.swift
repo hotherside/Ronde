@@ -7,7 +7,6 @@ struct ParSetupView: View {
     @Binding var pars: [Int]
     let onStart: () -> Void
 
-    // Derived from the binding — can never diverge from pars.count.
     private var numberOfHoles: Int { pars.count }
 
     private var totalPar: Int {
@@ -16,23 +15,31 @@ struct ParSetupView: View {
 
     var body: some View {
         List {
-            // Course + summary header
+            // Course header
             Section {
-                if let name = courseName {
-                    Text(name)
-                        .font(.headline)
-                        .lineLimit(1)
+                VStack(spacing: 6) {
+                    if let name = courseName {
+                        HStack(spacing: 5) {
+                            Image(systemName: Theme.Symbol.course)
+                                .font(.system(size: 10))
+                                .foregroundStyle(Theme.fairwayBright)
+                            Text(name)
+                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .lineLimit(1)
+                        }
+                    }
+
+                    HStack(spacing: 0) {
+                        statColumn(value: "\(numberOfHoles)", label: "HOLES")
+                        Rectangle().fill(.white.opacity(0.10)).frame(width: 1, height: 24)
+                        statColumn(value: "\(totalPar)", label: "PAR")
+                    }
+                    .padding(.top, 2)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("\(numberOfHoles) holes, total par \(totalPar)")
                 }
-                HStack {
-                    Text("Total Par")
-                        .font(.headline)
-                    Spacer()
-                    Text("\(totalPar)")
-                        .font(.headline)
-                        .foregroundStyle(.secondary)
-                }
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel("Total par: \(totalPar)")
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 4)
 
                 DatePicker(
                     "Date",
@@ -40,11 +47,10 @@ struct ParSetupView: View {
                     in: ...Date.now,
                     displayedComponents: .date
                 )
-                .font(.headline)
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
             }
 
-            Section("Set Par Per Hole") {
-                // Use pars.indices so the subscript is always in bounds.
+            Section("Par per hole") {
                 ForEach(pars.indices, id: \.self) { index in
                     HoleParRow(
                         holeNumber: index + 1,
@@ -55,12 +61,16 @@ struct ParSetupView: View {
 
             Section {
                 Button(action: onStart) {
-                    Text("Start Round")
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(Capsule().fill(.green))
+                    HStack(spacing: 6) {
+                        Image(systemName: Theme.Symbol.golfer)
+                            .font(.system(size: 13, weight: .bold))
+                        Text("Tee Off")
+                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Capsule().fill(Theme.fairway))
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Start round with \(numberOfHoles) holes, total par \(totalPar)")
@@ -69,6 +79,19 @@ struct ParSetupView: View {
         }
         .navigationTitle(courseName != nil ? "Adjust Par" : "\(numberOfHoles) Holes")
     }
+
+    private func statColumn(value: String, label: String) -> some View {
+        VStack(spacing: 1) {
+            Text(value)
+                .font(.scoreNumeral(size: 22))
+                .foregroundStyle(.white)
+            Text(label)
+                .font(.system(size: 8, weight: .bold, design: .rounded))
+                .foregroundStyle(Theme.dimText)
+                .tracking(0.8)
+        }
+        .frame(maxWidth: .infinity)
+    }
 }
 
 private struct HoleParRow: View {
@@ -76,9 +99,12 @@ private struct HoleParRow: View {
     @Binding var par: Int
 
     var body: some View {
-        HStack {
-            Text("Hole \(holeNumber)")
-                .font(.body)
+        HStack(spacing: 8) {
+            Text("\(holeNumber)")
+                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(Theme.mutedText)
+                .frame(width: 18, alignment: .leading)
 
             Spacer()
 
@@ -87,15 +113,18 @@ private struct HoleParRow: View {
                 WKInterfaceDevice.current().play(.click)
             } label: {
                 Image(systemName: "minus.circle.fill")
-                    .foregroundStyle(par > 3 ? .blue : .gray)
+                    .font(.system(size: 18))
+                    .foregroundStyle(par > 3 ? Theme.sky : Theme.faintText)
             }
             .buttonStyle(.plain)
             .disabled(par <= 3)
             .accessibilityLabel("Decrease par for hole \(holeNumber)")
 
-            Text("\(par)")
-                .font(.body.monospacedDigit().bold())
-                .frame(width: 24, alignment: .center)
+            Text("P\(par)")
+                .font(.system(size: 13, weight: .heavy, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(.white)
+                .frame(width: 30, alignment: .center)
                 .accessibilityLabel("Par \(par)")
 
             Button {
@@ -103,7 +132,8 @@ private struct HoleParRow: View {
                 WKInterfaceDevice.current().play(.click)
             } label: {
                 Image(systemName: "plus.circle.fill")
-                    .foregroundStyle(par < 5 ? .blue : .gray)
+                    .font(.system(size: 18))
+                    .foregroundStyle(par < 5 ? Theme.sky : Theme.faintText)
             }
             .buttonStyle(.plain)
             .disabled(par >= 5)

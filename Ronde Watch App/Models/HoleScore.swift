@@ -10,9 +10,6 @@ final class HoleScore {
     var isComplete: Bool
     var round: Round?
 
-    /// Per-swing metrics collected during play. Only populated for auto-detected swings.
-    var swingData: [SwingMetrics] = []
-
     var scoreToPar: Int {
         shots - par
     }
@@ -24,29 +21,20 @@ final class HoleScore {
         return diff > 0 ? "+\(diff)" : "\(diff)"
     }
 
-    // MARK: - Swing Aggregates
-
-    var swingCount: Int { swingData.count }
-
-    var averageSpeedKMH: Double {
-        guard !swingData.isEmpty else { return 0 }
-        return swingData.map(\.estimatedSpeedKMH).reduce(0, +) / Double(swingData.count)
+    /// Golf-vocabulary name for the hole's score.
+    var scoreName: String {
+        guard shots > 0 else { return "—" }
+        switch scoreToPar {
+        case ...(-3): return "Albatross"
+        case -2:      return "Eagle"
+        case -1:      return "Birdie"
+        case 0:       return "Par"
+        case 1:       return "Bogey"
+        case 2:       return "Double"
+        case 3:       return "Triple"
+        default:      return "+\(scoreToPar)"
+        }
     }
-
-    var fastestSpeedKMH: Double {
-        swingData.map(\.estimatedSpeedKMH).max() ?? 0
-    }
-
-    var averagePeakG: Double {
-        guard !swingData.isEmpty else { return 0 }
-        return swingData.map(\.peakG).reduce(0, +) / Double(swingData.count)
-    }
-
-    var bestTempo: Double {
-        swingData.map(\.tempoSeconds).min() ?? 0
-    }
-
-    // MARK: - Init
 
     init(holeNumber: Int, par: Int) {
         self.id = UUID()

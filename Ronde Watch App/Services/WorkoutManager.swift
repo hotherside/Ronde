@@ -22,9 +22,9 @@ final class WorkoutManager: NSObject, ObservableObject {
     private(set) var isActive = false
 
     /// True when HealthKit is unavailable or the user denied authorization.
-    /// The app still works — shot counting, pedometer, and swing detection
-    /// all function without a workout session — but the round won't be saved
-    /// to Apple Health and the app may get suspended during long rounds.
+    /// The app still works — shot counting and pedometer function without a
+    /// workout session — but the round won't be saved to Apple Health and the
+    /// app may get suspended during long rounds.
     @Published private(set) var authorizationDenied = false
 
     // MARK: - Private

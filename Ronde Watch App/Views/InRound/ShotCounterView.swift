@@ -10,21 +10,11 @@ struct ShotCounterView: View {
 
     @State private var showingHoleTransition = false
     @State private var showingEndConfirmation = false
-    @State private var selectedPage = 0
-
-    // MARK: - Motion Services
 
     @StateObject private var pedometer = PedometerService.shared
-    @StateObject private var swingDetector = SwingDetector.shared
     @StateObject private var workoutManager = WorkoutManager.shared
 
-    @State private var displayedMetrics: SwingMetrics?
-    @State private var metricsDisplayTask: Task<Void, Never>?
-    @State private var lastManualIncrementTime: Date = .distantPast
     @State private var showHealthKitBanner = false
-
-    // MARK: - Animation State
-
     @State private var shotPulse = false
 
     private var currentHole: HoleScore? {
@@ -39,87 +29,44 @@ struct ShotCounterView: View {
                     isLastHole: round.currentHoleIndex >= round.numberOfHoles - 1
                 ) {
                     showingHoleTransition = false
-                    selectedPage = 0
                     round.advanceToNextHole()
                     if round.isComplete {
                         finishRound()
                     }
                 }
             } else if let hole = currentHole {
-                TabView(selection: $selectedPage) {
-                    shotCounterContent(hole: hole)
-                        .tag(0)
-
-                    SwingAnalysisPage(hole: hole)
-                        .tag(1)
-                }
-                .tabViewStyle(.verticalPage)
-                .overlay {
-                    if let metrics = displayedMetrics {
-                        SwingMetricsCard(metrics: metrics)
-                            .transition(
-                                .asymmetric(
-                                    insertion: .scale(scale: 0.7).combined(with: .opacity),
-                                    removal: .opacity
-                                )
-                            )
-                            .zIndex(10)
+                shotCounterContent(hole: hole)
+                    .overlay(alignment: .top) {
+                        if showHealthKitBanner {
+                            Text("Enable Health access in Settings to save your round")
+                                .font(.system(size: 10, weight: .medium, design: .rounded))
+                                .foregroundStyle(.white)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(Theme.bunker.opacity(0.85), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                                .padding(.top, 4)
+                                .transition(.move(edge: .top).combined(with: .opacity))
+                        }
                     }
-                }
-                .animation(.spring(response: 0.35, dampingFraction: 0.65), value: displayedMetrics?.id)
-                .overlay(alignment: .top) {
-                    if showHealthKitBanner {
-                        Text("Enable Health access in Settings for swing tracking")
-                            .font(.system(size: 10, weight: .medium, design: .rounded))
-                            .foregroundStyle(.white)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(.orange.opacity(0.8), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                            .padding(.top, 4)
-                            .transition(.move(edge: .top).combined(with: .opacity))
-                    }
-                }
-                .animation(.easeInOut(duration: 0.3), value: showHealthKitBanner)
+                    .animation(.easeInOut(duration: 0.3), value: showHealthKitBanner)
             }
         }
         .task {
             await WorkoutManager.shared.startWorkout()
             PedometerService.shared.startTracking()
-            // CMBatchedSensorManager requires an active HKWorkoutSession
-            // on real hardware (CMErrorDomain 109 without one).
-            if WorkoutManager.shared.isActive {
-                SwingDetector.shared.startDetecting()
-            } else if workoutManager.authorizationDenied {
+            if !WorkoutManager.shared.isActive && workoutManager.authorizationDenied {
                 showHealthKitBanner = true
-                // Auto-dismiss after 5 seconds
                 try? await Task.sleep(for: .seconds(5))
                 withAnimation { showHealthKitBanner = false }
             }
-        }
-        .onChange(of: swingDetector.swingCount) { oldValue, newValue in
-            guard newValue > oldValue else { return }
-            guard let hole = currentHole else { return }
-
-            if Date().timeIntervalSince(lastManualIncrementTime) < 2.0 {
-                return
-            }
-
-            hole.incrementShot()
-            WKInterfaceDevice.current().play(.start)
-            triggerShotPulse()
-
-            // Show metrics card instead of plain "SWING" toast
-            showSwingMetrics()
         }
     }
 
     // MARK: - Actions
 
     private func addShot(_ hole: HoleScore) {
-        if swingDetector.wasSwingDetectedWithin(seconds: 2.0) { return }
         hole.incrementShot()
-        lastManualIncrementTime = .now
         WKInterfaceDevice.current().play(.click)
         triggerShotPulse()
     }
@@ -137,115 +84,70 @@ struct ShotCounterView: View {
         }
     }
 
-    private func showSwingMetrics() {
-        // Cancel any previous display timer
-        metricsDisplayTask?.cancel()
-
-        metricsDisplayTask = Task {
-            // Wait for SwingDetector to finish capturing follow-through data
-            try? await Task.sleep(for: .milliseconds(350))
-            guard !Task.isCancelled else { return }
-
-            if let metrics = swingDetector.lastSwingMetrics {
-                // Persist for later review
-                currentHole?.swingData.append(metrics)
-
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.65)) {
-                    displayedMetrics = metrics
-                }
-            }
-
-            // Auto-dismiss after 3.5 seconds
-            try? await Task.sleep(for: .seconds(3.5))
-            guard !Task.isCancelled else { return }
-            withAnimation(.easeOut(duration: 0.3)) {
-                displayedMetrics = nil
-            }
-        }
-    }
-
     private func finishRound() {
         let result = PedometerService.shared.stopTracking()
         round.totalSteps = result.steps
         round.totalDistanceMeters = result.distanceMeters
-        SwingDetector.shared.stopDetecting()
         Task { await WorkoutManager.shared.endWorkout() }
         onEndRound()
     }
 
     private func discardRound() {
         _ = PedometerService.shared.stopTracking()
-        SwingDetector.shared.stopDetecting()
         Task { await WorkoutManager.shared.endWorkout() }
         modelContext.delete(round)
         onDiscard()
     }
 
-    // MARK: - Color Helpers
-
-    private func scoreColor(for hole: HoleScore) -> Color {
-        guard hole.shots > 0 else { return .clear }
-        let diff = hole.shots - hole.par
-        if diff < 0  { return .green }
-        if diff == 0 { return .green }
-        if diff <= 2 { return .orange }
-        return .red
-    }
-
-    private func backgroundGradient(for hole: HoleScore) -> some ShapeStyle {
-        let tint = scoreColor(for: hole)
-        return RadialGradient(
-            colors: hole.shots > 0
-                ? [tint.opacity(0.18), tint.opacity(0.05), .clear]
-                : [.clear, .clear, .clear],
-            center: .center,
-            startRadius: 5,
-            endRadius: 180
-        )
-    }
-
-    // MARK: - Main Content — Spatial Dashboard
+    // MARK: - Main Content
 
     private func shotCounterContent(hole: HoleScore) -> some View {
         VStack(spacing: 0) {
-            // ── Top corners: hole info + par ──
+            // ── Top bar: hole + par ──
             HStack(alignment: .top) {
-                // Left: hole number
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("HOLE")
-                        .font(.system(size: 8, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.35))
-                        .tracking(1)
+                    HStack(spacing: 3) {
+                        Image(systemName: Theme.Symbol.pin)
+                            .font(.system(size: 7, weight: .bold))
+                        Text("HOLE")
+                            .font(.system(size: 8, weight: .bold, design: .rounded))
+                            .tracking(1)
+                    }
+                    .foregroundStyle(Theme.fairwayBright.opacity(0.7))
+
                     Text("\(hole.holeNumber)")
-                        .font(.system(size: 24, weight: .heavy, design: .rounded))
-                        .monospacedDigit()
+                        .font(.scoreNumeral(size: 26))
                         .foregroundStyle(.white)
                 }
 
                 Spacer()
 
-                // Right: par
+                // Hole progress dots — at-a-glance position in the round
+                HoleProgressDots(
+                    total: round.numberOfHoles,
+                    current: round.currentHoleIndex
+                )
+
+                Spacer()
+
                 VStack(alignment: .trailing, spacing: 0) {
                     Text("PAR")
                         .font(.system(size: 8, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.35))
+                        .foregroundStyle(Theme.mutedText)
                         .tracking(1)
                     Text("\(hole.par)")
-                        .font(.system(size: 24, weight: .heavy, design: .rounded))
-                        .monospacedDigit()
-                        .foregroundStyle(.white.opacity(0.45))
+                        .font(.scoreNumeral(size: 26))
+                        .foregroundStyle(Theme.mutedText)
                 }
             }
             .padding(.horizontal, 10)
 
             Spacer(minLength: 0)
 
-            // ── Center: hero shot count — tap to add ──
-            VStack(spacing: 2) {
-                // Shot count — massive
+            // ── Hero: shot count, tap-to-add ──
+            VStack(spacing: 4) {
                 Text(hole.shots > 0 ? "\(hole.shots)" : "0")
-                    .font(.system(size: 80, weight: .heavy, design: .rounded))
-                    .monospacedDigit()
+                    .font(.scoreNumeral(size: 84))
                     .foregroundStyle(.white)
                     .contentTransition(.numericText())
                     .scaleEffect(shotPulse ? 1.08 : 1.0)
@@ -254,14 +156,13 @@ struct ShotCounterView: View {
                     .minimumScaleFactor(0.5)
                     .lineLimit(1)
 
-                // Score badge or tap hint
                 if hole.shots > 0 {
                     scoreToParBadge(for: hole)
                         .transition(.scale.combined(with: .opacity))
                 } else {
-                    Text("TAP TO START")
+                    Text("TAP TO LOG SHOT")
                         .font(.system(size: 9, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.2))
+                        .foregroundStyle(Theme.faintText)
                         .tracking(1.5)
                 }
             }
@@ -275,15 +176,16 @@ struct ShotCounterView: View {
 
             Spacer(minLength: 0)
 
-            // ── Bottom: icon toolbar ──
+            // ── Bottom toolbar ──
             HStack(spacing: 0) {
-                // Undo
                 Button { undoShot(hole) } label: {
-                    Image(systemName: "arrow.uturn.backward")
+                    Image(systemName: Theme.Symbol.undo)
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(hole.shots > 0 ? .white.opacity(0.6) : .white.opacity(0.12))
-                        .frame(width: 32, height: 32)
-                        .background(Circle().fill(.white.opacity(hole.shots > 0 ? 0.08 : 0.03)))
+                        .foregroundStyle(hole.shots > 0 ? .white.opacity(0.7) : Theme.faintText)
+                        .frame(width: 34, height: 34)
+                        .background(
+                            Circle().fill(.white.opacity(hole.shots > 0 ? 0.10 : 0.03))
+                        )
                 }
                 .buttonStyle(.plain)
                 .disabled(hole.shots == 0)
@@ -291,19 +193,18 @@ struct ShotCounterView: View {
 
                 Spacer()
 
-                // Steps + distance — compact center
                 HStack(spacing: 3) {
-                    Image(systemName: "figure.walk")
+                    Image(systemName: Theme.Symbol.walking)
                         .font(.system(size: 8))
                     Text("\(pedometer.totalSteps.formatted())")
                         .font(.system(size: 10, weight: .bold, design: .rounded))
                         .monospacedDigit()
                     Text("·")
                         .font(.system(size: 8))
-                    Text("\(String(format: "%.1f", pedometer.totalDistanceMeters / 1000.0))km")
+                    Text("\(String(format: "%.1f", pedometer.totalDistanceMeters / 1000.0)) km")
                         .font(.system(size: 10, weight: .bold, design: .rounded))
                 }
-                .foregroundStyle(.white.opacity(0.3))
+                .foregroundStyle(Theme.dimText)
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel(
                     "\(pedometer.totalSteps) steps, \(String(format: "%.1f", pedometer.totalDistanceMeters / 1000.0)) kilometers"
@@ -311,16 +212,15 @@ struct ShotCounterView: View {
 
                 Spacer()
 
-                // Finish hole
                 Button {
                     showingHoleTransition = true
                     WKInterfaceDevice.current().play(.success)
                 } label: {
-                    Image(systemName: "flag.fill")
+                    Image(systemName: Theme.Symbol.flag)
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.green)
-                        .frame(width: 32, height: 32)
-                        .background(Circle().fill(.green.opacity(0.15)))
+                        .foregroundStyle(Theme.fairwayBright)
+                        .frame(width: 34, height: 34)
+                        .background(Circle().fill(Theme.fairway.opacity(0.20)))
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(
@@ -333,7 +233,11 @@ struct ShotCounterView: View {
         }
         .padding(.top, 2)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background { Rectangle().fill(backgroundGradient(for: hole)).ignoresSafeArea() }
+        .background {
+            Rectangle()
+                .fill(Theme.scoreBackdrop(forDelta: hole.scoreToPar, hasShots: hole.shots > 0))
+                .ignoresSafeArea()
+        }
         .animation(.easeInOut(duration: 0.5), value: hole.shots)
         .navigationBarBackButtonHidden(true)
         .toolbar {
@@ -367,33 +271,55 @@ struct ShotCounterView: View {
     @ViewBuilder
     private func scoreToParBadge(for hole: HoleScore) -> some View {
         let diff = hole.scoreToPar
-        let (text, color): (String, Color) = {
-            switch diff {
-            case ...(-2): return (hole.scoreLabel, .yellow)
-            case -1:      return ("-1", .green)
-            case 0:       return ("E", Color(white: 0.5))
-            case 1:       return ("+1", .orange)
-            default:      return (hole.scoreLabel, .red)
-            }
+        let color = Theme.scoreColor(forDelta: diff)
+        let text: String = {
+            if diff <= -2 { return hole.scoreLabel }
+            if diff == 0  { return "PAR" }
+            return diff > 0 ? "+\(diff)" : "\(diff)"
         }()
 
         Text(text)
-            .font(.system(size: 16, weight: .bold, design: .rounded))
+            .font(.system(size: 14, weight: .heavy, design: .rounded))
             .monospacedDigit()
+            .tracking(1)
             .foregroundStyle(color)
             .padding(.horizontal, 12)
-            .padding(.vertical, 2)
-            .background(Capsule().fill(color.opacity(0.15)))
-            .accessibilityLabel(accessibilityScoreLabel(diff: diff, shots: hole.shots))
+            .padding(.vertical, 3)
+            .background(Capsule().fill(color.opacity(0.18)))
+            .accessibilityLabel(accessibilityScoreLabel(diff: diff))
     }
 
-    private func accessibilityScoreLabel(diff: Int, shots: Int) -> String {
+    private func accessibilityScoreLabel(diff: Int) -> String {
         switch diff {
-        case ...(-2): return "\(abs(diff)) under par"
+        case ...(-2): return "\(abs(diff)) under par, \(Theme.scoreName(forDelta: diff))"
         case -1:      return "1 under par, birdie"
         case 0:       return "Even par"
         case 1:       return "1 over par, bogey"
         default:      return "\(diff) over par"
         }
+    }
+}
+
+// MARK: - Hole progress dots
+
+private struct HoleProgressDots: View {
+    let total: Int
+    let current: Int
+
+    var body: some View {
+        HStack(spacing: 3) {
+            ForEach(0..<min(total, 18), id: \.self) { index in
+                Circle()
+                    .fill(color(for: index))
+                    .frame(width: 4, height: 4)
+            }
+        }
+        .accessibilityHidden(true)
+    }
+
+    private func color(for index: Int) -> Color {
+        if index == current { return Theme.fairwayBright }
+        if index < current { return Theme.fairway.opacity(0.6) }
+        return Theme.faintText
     }
 }
