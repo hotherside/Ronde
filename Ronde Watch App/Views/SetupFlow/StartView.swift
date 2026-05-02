@@ -53,7 +53,7 @@ struct StartView: View {
 
             Text("How many holes?")
                 .font(.system(size: 15, weight: .bold, design: .rounded))
-                .foregroundStyle(.white.opacity(0.85))
+                .foregroundStyle(Theme.textPrimary)
 
             holeCountButton(holes: 9)
             holeCountButton(holes: 18)

@@ -31,7 +31,7 @@ struct ParSetupView: View {
 
                     HStack(spacing: 0) {
                         statColumn(value: "\(numberOfHoles)", label: "HOLES")
-                        Rectangle().fill(.white.opacity(0.10)).frame(width: 1, height: 24)
+                        Rectangle().fill(Theme.textPrimary.opacity(0.12)).frame(width: 1, height: 24)
                         statColumn(value: "\(totalPar)", label: "PAR")
                     }
                     .padding(.top, 2)
@@ -84,7 +84,7 @@ struct ParSetupView: View {
         VStack(spacing: 1) {
             Text(value)
                 .font(.scoreNumeral(size: 22))
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.textPrimary)
             Text(label)
                 .font(.system(size: 8, weight: .bold, design: .rounded))
                 .foregroundStyle(Theme.dimText)
@@ -123,7 +123,7 @@ private struct HoleParRow: View {
             Text("P\(par)")
                 .font(.system(size: 13, weight: .heavy, design: .rounded))
                 .monospacedDigit()
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.textPrimary)
                 .frame(width: 30, alignment: .center)
                 .accessibilityLabel("Par \(par)")
 

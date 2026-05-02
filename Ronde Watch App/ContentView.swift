@@ -67,7 +67,7 @@ struct ContentView: View {
             VStack(spacing: 4) {
                 Text("Tee it up")
                     .font(.system(size: 17, weight: .heavy, design: .rounded))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.textPrimary)
                 Text("Tap below to start your first round.")
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(Theme.dimText)
@@ -124,7 +124,7 @@ struct ContentView: View {
                         }
                         Text("New Round")
                             .font(.system(size: 14, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Theme.textPrimary)
                         Spacer()
                     }
                 }
@@ -178,6 +178,7 @@ private struct RoundRowView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(round.courseName ?? "Custom Round")
                     .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Theme.textPrimary)
                     .lineLimit(1)
                 HStack(spacing: 4) {
                     Text(round.date, format: .dateTime.month(.abbreviated).day())

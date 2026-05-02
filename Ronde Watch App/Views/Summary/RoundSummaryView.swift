@@ -35,12 +35,12 @@ struct RoundSummaryView: View {
                         statColumn(
                             value: "\(round.totalShots)",
                             label: "SHOTS",
-                            valueColor: .white,
+                            valueColor: Theme.textPrimary,
                             valueSize: 28
                         )
 
                         Rectangle()
-                            .fill(.white.opacity(0.10))
+                            .fill(Theme.textPrimary.opacity(0.12))
                             .frame(width: 1, height: 38)
 
                         statColumn(
@@ -51,7 +51,7 @@ struct RoundSummaryView: View {
                         )
 
                         Rectangle()
-                            .fill(.white.opacity(0.10))
+                            .fill(Theme.textPrimary.opacity(0.12))
                             .frame(width: 1, height: 38)
 
                         statColumn(
@@ -210,7 +210,7 @@ private struct HoleScoreRow: View {
                 Text("\(hole.holeNumber)")
                     .font(.system(size: 12, weight: .bold, design: .rounded))
                     .monospacedDigit()
-                    .foregroundStyle(.white.opacity(0.7))
+                    .foregroundStyle(Theme.textSecondary)
             }
             .frame(width: 32, alignment: .leading)
 
@@ -226,7 +226,7 @@ private struct HoleScoreRow: View {
             // Shot count
             Text(hole.shots > 0 ? "\(hole.shots)" : "–")
                 .font(.scoreNumeral(size: 16))
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.textPrimary)
 
             Spacer()
 

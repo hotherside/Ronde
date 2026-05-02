@@ -117,7 +117,7 @@ struct ShotCounterView: View {
 
                     Text("\(hole.holeNumber)")
                         .font(.scoreNumeral(size: 26))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.textPrimary)
                 }
 
                 Spacer()
@@ -148,7 +148,7 @@ struct ShotCounterView: View {
             VStack(spacing: 4) {
                 Text(hole.shots > 0 ? "\(hole.shots)" : "0")
                     .font(.scoreNumeral(size: 84))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.textPrimary)
                     .contentTransition(.numericText())
                     .scaleEffect(shotPulse ? 1.08 : 1.0)
                     .animation(.spring(response: 0.2, dampingFraction: 0.45), value: shotPulse)
@@ -181,10 +181,10 @@ struct ShotCounterView: View {
                 Button { undoShot(hole) } label: {
                     Image(systemName: Theme.Symbol.undo)
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(hole.shots > 0 ? .white.opacity(0.7) : Theme.faintText)
+                        .foregroundStyle(hole.shots > 0 ? Theme.textSecondary : Theme.faintText)
                         .frame(width: 34, height: 34)
                         .background(
-                            Circle().fill(.white.opacity(hole.shots > 0 ? 0.10 : 0.03))
+                            Circle().fill(Theme.textPrimary.opacity(hole.shots > 0 ? 0.06 : 0.02))
                         )
                 }
                 .buttonStyle(.plain)

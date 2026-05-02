@@ -27,6 +27,8 @@ struct RondeApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .preferredColorScheme(.light)
+                .tint(Theme.fairway)
         }
         .modelContainer(appModelContainer)
     }

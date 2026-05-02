@@ -163,7 +163,7 @@ struct CourseDetectView: View {
             VStack(spacing: 4) {
                 Text(title)
                     .font(.system(size: 14, weight: .heavy, design: .rounded))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.textPrimary)
                 Text(message)
                     .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(Theme.dimText)
@@ -206,10 +206,10 @@ struct CourseDetectView: View {
         Button(action: onManual) {
             Text("Custom Round")
                 .font(.system(size: 12, weight: .semibold, design: .rounded))
-                .foregroundStyle(.white.opacity(0.7))
+                .foregroundStyle(Theme.textSecondary)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)
-                .background(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 1))
+                .background(Capsule().stroke(Theme.textPrimary.opacity(0.18), lineWidth: 1))
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Set up a custom round without a course")
@@ -235,7 +235,7 @@ private struct CourseRow: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text(course.name)
                     .font(.system(size: 12, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.textPrimary)
                     .lineLimit(1)
                 HStack(spacing: 4) {
                     Text("\(course.numberOfHoles) holes")

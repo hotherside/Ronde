@@ -52,7 +52,7 @@ struct HoleTransitionView: View {
                     VStack(spacing: 1) {
                         Text("\(hole.shots)")
                             .font(.scoreNumeral(size: 38))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Theme.textPrimary)
                         Text("SHOTS")
                             .font(.system(size: 8, weight: .bold, design: .rounded))
                             .foregroundStyle(Theme.dimText)
@@ -61,7 +61,7 @@ struct HoleTransitionView: View {
                     .frame(maxWidth: .infinity)
 
                     Rectangle()
-                        .fill(.white.opacity(0.10))
+                        .fill(Theme.textPrimary.opacity(0.12))
                         .frame(width: 1, height: 42)
 
                     VStack(spacing: 1) {
