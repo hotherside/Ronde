@@ -217,10 +217,14 @@ struct ShotCounterView: View {
                     WKInterfaceDevice.current().play(.success)
                 } label: {
                     Image(systemName: Theme.Symbol.flag)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Theme.fairwayBright)
-                        .frame(width: 34, height: 34)
-                        .background(Circle().fill(Theme.fairway.opacity(0.20)))
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 44, height: 44)
+                        .background(
+                            Circle()
+                                .fill(Theme.fairway)
+                                .shadow(color: Theme.fairway.opacity(0.35), radius: 4, y: 2)
+                        )
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(

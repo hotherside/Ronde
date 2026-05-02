@@ -7,28 +7,28 @@ enum Theme {
 
     // MARK: - Surfaces
 
-    /// Warm off-white scorecard background — primary canvas.
-    static let surface = Color(red: 0.98, green: 0.96, blue: 0.91)
+    /// Soft fairway-grass sage — the canvas everything sits on.
+    static let surface = Color(red: 0.871, green: 0.906, blue: 0.835) // #DEE7D5
 
-    /// Pure white card surface — for list rows / elevated content.
-    static let cardSurface = Color.white
+    /// Slightly deeper sage for subtle vignette / muted regions.
+    static let surfaceMuted = Color(red: 0.835, green: 0.871, blue: 0.788) // #D5DEC9
 
-    /// Slightly darker tinted surface for subtle separation.
-    static let surfaceMuted = Color(red: 0.94, green: 0.92, blue: 0.86)
+    /// Warm cream card surface — used for list rows that sit on the sage canvas.
+    static let cardSurface = Color(red: 0.969, green: 0.949, blue: 0.894) // #F7F2E4
 
     // MARK: - Text
 
-    /// Primary text — very dark green, near black, for max readability.
-    static let textPrimary = Color(red: 0.08, green: 0.16, blue: 0.10)
+    /// Primary text — deep forest green, near-black, for max readability.
+    static let textPrimary = Color(red: 0.055, green: 0.141, blue: 0.090) // #0E2417
 
-    /// Secondary text — muted dark green for labels and hints.
-    static let textSecondary = Color(red: 0.32, green: 0.40, blue: 0.34)
+    /// Secondary text — muted forest for labels and hints.
+    static let textSecondary = Color(red: 0.227, green: 0.290, blue: 0.243) // #3A4A3E
 
-    /// Tertiary text — soft greyish-green for disabled or supplementary text.
-    static let textTertiary = Color(red: 0.55, green: 0.60, blue: 0.55)
+    /// Tertiary text — soft greyish-green for supplementary text.
+    static let textTertiary = Color(red: 0.353, green: 0.396, blue: 0.333) // #5A6555
 
-    /// Faint text — barely visible, for placeholders and dot indicators.
-    static let textFaint = Color(red: 0.78, green: 0.80, blue: 0.76)
+    /// Faint text — barely visible, for placeholders / inactive dots.
+    static let textFaint = Color(red: 0.627, green: 0.667, blue: 0.627) // #A0AAA0
 
     /// Legacy aliases used across views — keep semantic.
     static let mutedText = textSecondary
@@ -37,26 +37,26 @@ enum Theme {
 
     // MARK: - Brand colours
 
-    /// Deep fairway green — primary brand colour, used for actions and "good" states.
-    static let fairway = Color(red: 0.13, green: 0.45, blue: 0.25)
+    /// Refined fairway green — primary brand colour for actions and "good" states.
+    static let fairway = Color(red: 0.106, green: 0.431, blue: 0.200) // #1B6E33
 
     /// Brighter fairway accent for highlights and birdies.
-    static let fairwayBright = Color(red: 0.20, green: 0.62, blue: 0.32)
+    static let fairwayBright = Color(red: 0.165, green: 0.533, blue: 0.278) // #2A8847
 
-    /// Very deep fairway tint used for backdrop gradients.
-    static let fairwayDeep = Color(red: 0.10, green: 0.32, blue: 0.18)
+    /// Very deep fairway used for accents on light backdrops.
+    static let fairwayDeep = Color(red: 0.043, green: 0.180, blue: 0.090) // #0B2E17
 
-    /// Sand bunker amber — warning / over-par.
-    static let bunker = Color(red: 0.78, green: 0.55, blue: 0.18)
+    /// Sand bunker amber — warning / bogey state.
+    static let bunker = Color(red: 0.549, green: 0.376, blue: 0.063) // #8C6010
 
-    /// Eagle gold — albatross/eagle celebrations.
-    static let eagleGold = Color(red: 0.82, green: 0.62, blue: 0.10)
+    /// Eagle gold — albatross/eagle celebrations and the highlighted -2 badge.
+    static let eagleGold = Color(red: 0.761, green: 0.541, blue: 0.055) // #C28A0E
 
     /// Sky blue — secondary accent for navigation chrome and informational chips.
-    static let sky = Color(red: 0.16, green: 0.45, blue: 0.78)
+    static let sky = Color(red: 0.161, green: 0.420, blue: 0.690) // #296BB0
 
     /// Rough red — destructive / serious "over par" states.
-    static let rough = Color(red: 0.74, green: 0.18, blue: 0.18)
+    static let rough = Color(red: 0.659, green: 0.157, blue: 0.157) // #A82828
 
     // MARK: - Score colour
 

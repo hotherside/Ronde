@@ -14,7 +14,10 @@ private let log = Logger(subsystem: "com.ronde.Ronde", category: "ShotCountInten
 struct ShotCountIntent: AppIntent {
     static let title: LocalizedStringResource = "Log Golf Shot"
     static let description = IntentDescription("Increment the shot count for the current hole.")
-    static let openAppWhenRun: Bool = true
+    /// Runs silently in the background so the Action Button doesn't interrupt
+    /// the user mid-swing. The app's @Query updates the on-screen count
+    /// automatically if the app is already in the foreground.
+    static let openAppWhenRun: Bool = false
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
         // Reuse the app's shared ModelContainer so the intent context and the
