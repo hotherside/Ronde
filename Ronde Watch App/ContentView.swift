@@ -99,7 +99,7 @@ struct ContentView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .fairwayBackground()
         .containerBackground(Theme.surface.gradient, for: .navigation)
-        .navigationTitle("Ronde")
+        .navigationTitle("")
         .sheet(isPresented: $showingSetup) {
             StartView { round in
                 activeRound = round
@@ -110,6 +110,16 @@ struct ContentView: View {
 
     private var populatedList: some View {
         List {
+            // Custom hero title — system title would wash out on sage.
+            Section {
+                Text("Ronde")
+                    .font(.system(size: 22, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Theme.textPrimary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 2, trailing: 4))
+            }
+
             Section {
                 Button {
                     showingSetup = true
@@ -134,7 +144,7 @@ struct ContentView: View {
                 .accessibilityLabel("Start a new round")
             }
 
-            Section("Past Rounds") {
+            Section {
                 ForEach(completedRounds) { round in
                     NavigationLink {
                         RoundSummaryView(round: round, onDone: nil)
@@ -144,12 +154,17 @@ struct ContentView: View {
                     .listRowBackground(roundedRowBackground)
                 }
                 .onDelete(perform: deleteRounds)
+            } header: {
+                Text("PAST ROUNDS")
+                    .font(.system(size: 10, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Theme.textSecondary)
+                    .tracking(1.2)
             }
         }
         .scrollContentBackground(.hidden)
         .background(Theme.surface)
         .containerBackground(Theme.surface.gradient, for: .navigation)
-        .navigationTitle("Ronde")
+        .navigationTitle("")
         .sheet(isPresented: $showingSetup) {
             StartView { round in
                 activeRound = round

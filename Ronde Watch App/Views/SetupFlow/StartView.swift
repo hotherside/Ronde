@@ -64,7 +64,7 @@ struct StartView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .fairwayBackground()
         .containerBackground(Theme.surface.gradient, for: .navigation)
-        .navigationTitle("Custom Round")
+        .navigationTitle("")
     }
 
     private func holeCountButton(holes: Int) -> some View {

@@ -13,6 +13,16 @@ struct RoundSummaryView: View {
 
     var body: some View {
         List {
+            // Custom hero title
+            Section {
+                Text(isPostRound ? "Round Complete" : "Round Details")
+                    .font(.system(size: 18, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Theme.textPrimary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 2, trailing: 4))
+            }
+
             // ── Hero header: course + score grid ──
             Section {
                 VStack(spacing: 8) {
@@ -99,10 +109,10 @@ struct RoundSummaryView: View {
                         .listRowBackground(cardBackground)
                 }
             } header: {
-                Text("Scorecard")
-                    .font(.system(size: 11, weight: .heavy, design: .rounded))
+                Text("SCORECARD")
+                    .font(.system(size: 10, weight: .heavy, design: .rounded))
                     .foregroundStyle(Theme.textSecondary)
-                    .tracking(0.5)
+                    .tracking(1.2)
             }
 
             // ── Score legend ──
@@ -147,7 +157,7 @@ struct RoundSummaryView: View {
         .scrollContentBackground(.hidden)
         .background(Theme.surface)
         .containerBackground(Theme.surface.gradient, for: .navigation)
-        .navigationTitle(isPostRound ? "Round Complete" : "Round Details")
+        .navigationTitle("")
         .confirmationDialog(
             "Discard this round?",
             isPresented: $showingDiscardConfirmation,

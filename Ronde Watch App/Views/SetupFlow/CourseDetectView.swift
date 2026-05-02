@@ -39,7 +39,7 @@ struct CourseDetectView: View {
                 )
             }
         }
-        .navigationTitle("New Round")
+        .navigationTitle("")
         .task { await startDetection() }
         .onChange(of: locationService.authorizationStatus) { _, status in
             if status == .denied || status == .restricted {
@@ -124,6 +124,16 @@ struct CourseDetectView: View {
 
     private func resultsList(courses: [CourseData]) -> some View {
         List {
+            // Custom hero title
+            Section {
+                Text("New Round")
+                    .font(.system(size: 18, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Theme.textPrimary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 2, trailing: 4))
+            }
+
             Section {
                 ForEach(courses) { course in
                     Button {
@@ -135,10 +145,10 @@ struct CourseDetectView: View {
                     .listRowBackground(courseRowBackground)
                 }
             } header: {
-                Label("Nearby", systemImage: Theme.Symbol.location)
+                Label("NEARBY", systemImage: Theme.Symbol.location)
                     .font(.system(size: 10, weight: .heavy, design: .rounded))
                     .foregroundStyle(Theme.textSecondary)
-                    .tracking(1)
+                    .tracking(1.2)
             }
 
             Section {

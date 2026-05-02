@@ -15,6 +15,16 @@ struct ParSetupView: View {
 
     var body: some View {
         List {
+            // Custom hero title
+            Section {
+                Text(courseName != nil ? "Adjust Par" : "\(numberOfHoles) Holes")
+                    .font(.system(size: 18, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Theme.textPrimary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 2, trailing: 4))
+            }
+
             // Course header
             Section {
                 VStack(spacing: 6) {
@@ -63,10 +73,10 @@ struct ParSetupView: View {
                     .listRowBackground(cardBackground)
                 }
             } header: {
-                Text("Par per hole")
-                    .font(.system(size: 11, weight: .heavy, design: .rounded))
+                Text("PAR PER HOLE")
+                    .font(.system(size: 10, weight: .heavy, design: .rounded))
                     .foregroundStyle(Theme.textSecondary)
-                    .tracking(0.5)
+                    .tracking(1.2)
             }
 
             Section {
@@ -90,7 +100,7 @@ struct ParSetupView: View {
         .scrollContentBackground(.hidden)
         .background(Theme.surface)
         .containerBackground(Theme.surface.gradient, for: .navigation)
-        .navigationTitle(courseName != nil ? "Adjust Par" : "\(numberOfHoles) Holes")
+        .navigationTitle("")
     }
 
     private var cardBackground: some View {
