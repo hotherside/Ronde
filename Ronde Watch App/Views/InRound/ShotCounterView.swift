@@ -234,10 +234,10 @@ struct ShotCounterView: View {
         .padding(.top, 2)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background {
-            Rectangle()
-                .fill(Theme.scoreBackdrop(forDelta: hole.scoreToPar, hasShots: hole.shots > 0))
+            Theme.scoreBackdrop(forDelta: hole.scoreToPar, hasShots: hole.shots > 0)
                 .ignoresSafeArea()
         }
+        .containerBackground(Theme.surface.gradient, for: .navigation)
         .animation(.easeInOut(duration: 0.5), value: hole.shots)
         .navigationBarBackButtonHidden(true)
         .toolbar {

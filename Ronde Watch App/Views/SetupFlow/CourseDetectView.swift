@@ -119,6 +119,7 @@ struct CourseDetectView: View {
         .padding(.bottom, 6)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .fairwayBackground()
+        .containerBackground(Theme.surface.gradient, for: .navigation)
     }
 
     private func resultsList(courses: [CourseData]) -> some View {
@@ -131,10 +132,12 @@ struct CourseDetectView: View {
                         CourseRow(course: course)
                     }
                     .buttonStyle(.plain)
+                    .listRowBackground(courseRowBackground)
                 }
             } header: {
                 Label("Nearby", systemImage: Theme.Symbol.location)
                     .font(.system(size: 10, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Theme.textSecondary)
                     .tracking(1)
             }
 
@@ -145,6 +148,14 @@ struct CourseDetectView: View {
                     .listRowBackground(Color.clear)
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(Theme.surface)
+        .containerBackground(Theme.surface.gradient, for: .navigation)
+    }
+
+    private var courseRowBackground: some View {
+        RoundedRectangle(cornerRadius: 12, style: .continuous)
+            .fill(Theme.cardSurface)
     }
 
     private func noLocationView(icon: String, title: String, message: String) -> some View {
@@ -180,6 +191,7 @@ struct CourseDetectView: View {
         .padding(.bottom, 6)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .fairwayBackground()
+        .containerBackground(Theme.surface.gradient, for: .navigation)
     }
 
     private var browseAllButton: some View {

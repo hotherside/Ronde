@@ -98,6 +98,7 @@ struct ContentView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .fairwayBackground()
+        .containerBackground(Theme.surface.gradient, for: .navigation)
         .navigationTitle("Ronde")
         .sheet(isPresented: $showingSetup) {
             StartView { round in
@@ -129,6 +130,7 @@ struct ContentView: View {
                     }
                 }
                 .buttonStyle(.plain)
+                .listRowBackground(roundedRowBackground)
                 .accessibilityLabel("Start a new round")
             }
 
@@ -139,10 +141,14 @@ struct ContentView: View {
                     } label: {
                         RoundRowView(round: round)
                     }
+                    .listRowBackground(roundedRowBackground)
                 }
                 .onDelete(perform: deleteRounds)
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(Theme.surface)
+        .containerBackground(Theme.surface.gradient, for: .navigation)
         .navigationTitle("Ronde")
         .sheet(isPresented: $showingSetup) {
             StartView { round in
@@ -150,6 +156,11 @@ struct ContentView: View {
                 showingSetup = false
             }
         }
+    }
+
+    private var roundedRowBackground: some View {
+        RoundedRectangle(cornerRadius: 12, style: .continuous)
+            .fill(Theme.cardSurface)
     }
 
     private func deleteRounds(at offsets: IndexSet) {

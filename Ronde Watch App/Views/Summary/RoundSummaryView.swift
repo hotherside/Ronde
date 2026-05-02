@@ -22,6 +22,7 @@ struct RoundSummaryView: View {
                             .foregroundStyle(Theme.fairwayBright)
                         Text(round.courseName ?? "Custom Round")
                             .font(.system(size: 14, weight: .bold, design: .rounded))
+                            .foregroundStyle(Theme.textPrimary)
                             .multilineTextAlignment(.center)
                             .lineLimit(1)
                     }
@@ -88,19 +89,27 @@ struct RoundSummaryView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 4)
+                .listRowBackground(cardBackground)
             }
 
             // ── Per-hole scorecard ──
-            Section("Scorecard") {
+            Section {
                 ForEach(round.sortedHoleScores) { hole in
                     HoleScoreRow(hole: hole)
+                        .listRowBackground(cardBackground)
                 }
+            } header: {
+                Text("Scorecard")
+                    .font(.system(size: 11, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Theme.textSecondary)
+                    .tracking(0.5)
             }
 
             // ── Score legend ──
             Section {
                 ScoreLegend()
                     .padding(.vertical, 2)
+                    .listRowBackground(cardBackground)
             }
 
             // ── Post-round actions ──
@@ -135,6 +144,9 @@ struct RoundSummaryView: View {
                 }
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(Theme.surface)
+        .containerBackground(Theme.surface.gradient, for: .navigation)
         .navigationTitle(isPostRound ? "Round Complete" : "Round Details")
         .confirmationDialog(
             "Discard this round?",
@@ -147,6 +159,11 @@ struct RoundSummaryView: View {
             }
             Button("Cancel", role: .cancel) {}
         }
+    }
+
+    private var cardBackground: some View {
+        RoundedRectangle(cornerRadius: 12, style: .continuous)
+            .fill(Theme.cardSurface)
     }
 
     // MARK: - Stat Column

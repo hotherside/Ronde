@@ -103,32 +103,43 @@ enum Theme {
 
     // MARK: - Backgrounds
 
-    /// Subtle vignette gradient — cream centre, slightly tinted edges.
-    static var fairwayBackdrop: some ShapeStyle {
-        RadialGradient(
-            colors: [
-                surface,
-                surface,
-                surfaceMuted,
-            ],
-            center: .center,
-            startRadius: 5,
-            endRadius: 220
-        )
+    /// Cream surface with a faint vignette — the canonical full-screen backdrop.
+    @ViewBuilder
+    static var fairwayBackdrop: some View {
+        ZStack {
+            surface
+            RadialGradient(
+                colors: [.clear, .clear, surfaceMuted.opacity(0.6)],
+                center: .center,
+                startRadius: 5,
+                endRadius: 240
+            )
+        }
     }
 
-    /// Score-tinted radial backdrop for in-round screens.
-    /// Stays light and readable — a faint wash of the score colour over cream.
-    static func scoreBackdrop(forDelta delta: Int, hasShots: Bool = true) -> some ShapeStyle {
+    /// Score-tinted radial backdrop for in-round screens. Always opaque cream
+    /// underneath so the watch's black system background never bleeds through.
+    @ViewBuilder
+    static func scoreBackdrop(forDelta delta: Int, hasShots: Bool = true) -> some View {
         let tint = scoreColor(forDelta: delta, hasShots: hasShots)
-        return RadialGradient(
-            colors: hasShots
-                ? [tint.opacity(0.18), tint.opacity(0.05), surface]
-                : [surface, surface, surfaceMuted],
-            center: .center,
-            startRadius: 5,
-            endRadius: 200
-        )
+        ZStack {
+            surface
+            if hasShots {
+                RadialGradient(
+                    colors: [tint.opacity(0.22), tint.opacity(0.06), .clear],
+                    center: .center,
+                    startRadius: 5,
+                    endRadius: 220
+                )
+            } else {
+                RadialGradient(
+                    colors: [.clear, .clear, surfaceMuted.opacity(0.6)],
+                    center: .center,
+                    startRadius: 5,
+                    endRadius: 240
+                )
+            }
+        }
     }
 }
 
@@ -138,8 +149,21 @@ extension View {
     /// Applies the cream backdrop ignoring safe areas — for full-screen views.
     func fairwayBackground() -> some View {
         background {
-            Rectangle().fill(Theme.fairwayBackdrop).ignoresSafeArea()
+            Theme.fairwayBackdrop.ignoresSafeArea()
         }
+    }
+
+    /// Applies the cream backdrop as the watchOS container background so the
+    /// nav-bar gradient and pull-down area also pick up our light theme.
+    func fairwayContainerBackground() -> some View {
+        containerBackground(Theme.surface.gradient, for: .navigation)
+    }
+
+    /// Hides the system List/Form scroll background so our cream surface shows
+    /// through. Lists otherwise paint their own opaque background.
+    func clearListBackground() -> some View {
+        scrollContentBackground(.hidden)
+            .background(Theme.surface)
     }
 }
 

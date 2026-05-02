@@ -25,6 +25,7 @@ struct ParSetupView: View {
                                 .foregroundStyle(Theme.fairwayBright)
                             Text(name)
                                 .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .foregroundStyle(Theme.textPrimary)
                                 .lineLimit(1)
                         }
                     }
@@ -40,6 +41,7 @@ struct ParSetupView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 4)
+                .listRowBackground(cardBackground)
 
                 DatePicker(
                     "Date",
@@ -48,15 +50,23 @@ struct ParSetupView: View {
                     displayedComponents: .date
                 )
                 .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .foregroundStyle(Theme.textPrimary)
+                .listRowBackground(cardBackground)
             }
 
-            Section("Par per hole") {
+            Section {
                 ForEach(pars.indices, id: \.self) { index in
                     HoleParRow(
                         holeNumber: index + 1,
                         par: $pars[index]
                     )
+                    .listRowBackground(cardBackground)
                 }
+            } header: {
+                Text("Par per hole")
+                    .font(.system(size: 11, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Theme.textSecondary)
+                    .tracking(0.5)
             }
 
             Section {
@@ -77,7 +87,15 @@ struct ParSetupView: View {
                 .listRowBackground(Color.clear)
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(Theme.surface)
+        .containerBackground(Theme.surface.gradient, for: .navigation)
         .navigationTitle(courseName != nil ? "Adjust Par" : "\(numberOfHoles) Holes")
+    }
+
+    private var cardBackground: some View {
+        RoundedRectangle(cornerRadius: 12, style: .continuous)
+            .fill(Theme.cardSurface)
     }
 
     private func statColumn(value: String, label: String) -> some View {
