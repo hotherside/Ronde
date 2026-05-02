@@ -13,16 +13,6 @@ struct RoundSummaryView: View {
 
     var body: some View {
         List {
-            // Custom hero title
-            Section {
-                Text(isPostRound ? "Round Complete" : "Round Details")
-                    .font(.system(size: 18, weight: .heavy, design: .rounded))
-                    .foregroundStyle(Theme.textPrimary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 2, trailing: 4))
-            }
-
             // ── Hero header: course + score grid ──
             Section {
                 VStack(spacing: 8) {
@@ -109,10 +99,7 @@ struct RoundSummaryView: View {
                         .listRowBackground(cardBackground)
                 }
             } header: {
-                Text("SCORECARD")
-                    .font(.system(size: 10, weight: .heavy, design: .rounded))
-                    .foregroundStyle(Theme.textSecondary)
-                    .tracking(1.2)
+                Text("Scorecard").sectionHeaderStyle()
             }
 
             // ── Score legend ──
@@ -156,8 +143,8 @@ struct RoundSummaryView: View {
         }
         .scrollContentBackground(.hidden)
         .background(Theme.surface)
-        .containerBackground(Theme.surface.gradient, for: .navigation)
-        .navigationTitle("")
+        .containerBackground(Theme.fairway.gradient, for: .navigation)
+        .navigationTitle(isPostRound ? "Round Complete" : "Round Details")
         .confirmationDialog(
             "Discard this round?",
             isPresented: $showingDiscardConfirmation,
@@ -172,8 +159,12 @@ struct RoundSummaryView: View {
     }
 
     private var cardBackground: some View {
-        RoundedRectangle(cornerRadius: 12, style: .continuous)
+        RoundedRectangle(cornerRadius: 14, style: .continuous)
             .fill(Theme.cardSurface)
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Theme.textPrimary.opacity(0.05), lineWidth: 1)
+            )
     }
 
     // MARK: - Stat Column

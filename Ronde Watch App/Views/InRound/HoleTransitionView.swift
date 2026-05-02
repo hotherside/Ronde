@@ -117,7 +117,7 @@ struct HoleTransitionView: View {
             Theme.scoreBackdrop(forDelta: hole.scoreToPar, hasShots: hole.shots > 0)
                 .ignoresSafeArea()
         }
-        .containerBackground(Theme.surface.gradient, for: .navigation)
+        .containerBackground(Theme.fairway.gradient, for: .navigation)
         .navigationBarBackButtonHidden(true)
         .task {
             withAnimation(.easeOut(duration: 0.35)) {

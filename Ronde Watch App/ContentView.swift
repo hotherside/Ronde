@@ -98,8 +98,8 @@ struct ContentView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .fairwayBackground()
-        .containerBackground(Theme.surface.gradient, for: .navigation)
-        .navigationTitle("")
+        .containerBackground(Theme.fairway.gradient, for: .navigation)
+        .navigationTitle("Ronde")
         .sheet(isPresented: $showingSetup) {
             StartView { round in
                 activeRound = round
@@ -110,16 +110,6 @@ struct ContentView: View {
 
     private var populatedList: some View {
         List {
-            // Custom hero title — system title would wash out on sage.
-            Section {
-                Text("Ronde")
-                    .font(.system(size: 22, weight: .heavy, design: .rounded))
-                    .foregroundStyle(Theme.textPrimary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 2, trailing: 4))
-            }
-
             Section {
                 Button {
                     showingSetup = true
@@ -139,7 +129,7 @@ struct ContentView: View {
                         Spacer()
                     }
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(CardRowButtonStyle())
                 .listRowBackground(roundedRowBackground)
                 .accessibilityLabel("Start a new round")
             }
@@ -155,16 +145,13 @@ struct ContentView: View {
                 }
                 .onDelete(perform: deleteRounds)
             } header: {
-                Text("PAST ROUNDS")
-                    .font(.system(size: 10, weight: .heavy, design: .rounded))
-                    .foregroundStyle(Theme.textSecondary)
-                    .tracking(1.2)
+                Text("Past Rounds").sectionHeaderStyle()
             }
         }
         .scrollContentBackground(.hidden)
         .background(Theme.surface)
-        .containerBackground(Theme.surface.gradient, for: .navigation)
-        .navigationTitle("")
+        .containerBackground(Theme.fairway.gradient, for: .navigation)
+        .navigationTitle("Ronde")
         .sheet(isPresented: $showingSetup) {
             StartView { round in
                 activeRound = round
@@ -174,8 +161,12 @@ struct ContentView: View {
     }
 
     private var roundedRowBackground: some View {
-        RoundedRectangle(cornerRadius: 12, style: .continuous)
+        RoundedRectangle(cornerRadius: 14, style: .continuous)
             .fill(Theme.cardSurface)
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Theme.textPrimary.opacity(0.05), lineWidth: 1)
+            )
     }
 
     private func deleteRounds(at offsets: IndexSet) {

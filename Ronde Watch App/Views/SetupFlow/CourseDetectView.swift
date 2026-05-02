@@ -39,7 +39,7 @@ struct CourseDetectView: View {
                 )
             }
         }
-        .navigationTitle("")
+        .navigationTitle("New Round")
         .task { await startDetection() }
         .onChange(of: locationService.authorizationStatus) { _, status in
             if status == .denied || status == .restricted {
@@ -119,21 +119,11 @@ struct CourseDetectView: View {
         .padding(.bottom, 6)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .fairwayBackground()
-        .containerBackground(Theme.surface.gradient, for: .navigation)
+        .containerBackground(Theme.fairway.gradient, for: .navigation)
     }
 
     private func resultsList(courses: [CourseData]) -> some View {
         List {
-            // Custom hero title
-            Section {
-                Text("New Round")
-                    .font(.system(size: 18, weight: .heavy, design: .rounded))
-                    .foregroundStyle(Theme.textPrimary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 2, trailing: 4))
-            }
-
             Section {
                 ForEach(courses) { course in
                     Button {
@@ -141,14 +131,17 @@ struct CourseDetectView: View {
                     } label: {
                         CourseRow(course: course)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(CardRowButtonStyle())
                     .listRowBackground(courseRowBackground)
                 }
             } header: {
-                Label("NEARBY", systemImage: Theme.Symbol.location)
-                    .font(.system(size: 10, weight: .heavy, design: .rounded))
-                    .foregroundStyle(Theme.textSecondary)
-                    .tracking(1.2)
+                Label {
+                    Text("Nearby").sectionHeaderStyle()
+                } icon: {
+                    Image(systemName: Theme.Symbol.location)
+                        .font(.system(size: 9, weight: .heavy))
+                        .foregroundStyle(Theme.textSecondary)
+                }
             }
 
             Section {
@@ -160,12 +153,16 @@ struct CourseDetectView: View {
         }
         .scrollContentBackground(.hidden)
         .background(Theme.surface)
-        .containerBackground(Theme.surface.gradient, for: .navigation)
+        .containerBackground(Theme.fairway.gradient, for: .navigation)
     }
 
     private var courseRowBackground: some View {
-        RoundedRectangle(cornerRadius: 12, style: .continuous)
+        RoundedRectangle(cornerRadius: 14, style: .continuous)
             .fill(Theme.cardSurface)
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Theme.textPrimary.opacity(0.05), lineWidth: 1)
+            )
     }
 
     private func noLocationView(icon: String, title: String, message: String) -> some View {
@@ -201,7 +198,7 @@ struct CourseDetectView: View {
         .padding(.bottom, 6)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .fairwayBackground()
-        .containerBackground(Theme.surface.gradient, for: .navigation)
+        .containerBackground(Theme.fairway.gradient, for: .navigation)
     }
 
     private var browseAllButton: some View {

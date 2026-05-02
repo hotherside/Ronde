@@ -180,3 +180,27 @@ extension Font {
         .system(size: 9, weight: .heavy, design: .rounded)
     }
 }
+
+// MARK: - Button styles
+
+/// Card-style row button with our own pressed treatment. Avoids the watchOS
+/// system "focus dim" overlay that makes plain-style buttons in a List
+/// look pre-selected when the digital crown lands on them.
+struct CardRowButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .opacity(configuration.isPressed ? 0.65 : 1.0)
+            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+    }
+}
+
+/// Section-header text style — uppercase, tracked, deep forest secondary.
+extension Text {
+    func sectionHeaderStyle() -> some View {
+        self
+            .font(.system(size: 10, weight: .heavy, design: .rounded))
+            .foregroundStyle(Theme.textSecondary)
+            .tracking(1.2)
+            .textCase(.uppercase)
+    }
+}
