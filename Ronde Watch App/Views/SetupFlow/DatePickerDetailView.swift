@@ -12,8 +12,6 @@ struct DatePickerDetailView: View {
 
     var body: some View {
         VStack(spacing: 6) {
-            NavHeader(title: title, leading: .back)
-
             DatePicker(
                 "",
                 selection: $date,
@@ -31,6 +29,7 @@ struct DatePickerDetailView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .fairwayBackground()
-        .toolbar(.hidden, for: .navigationBar)
+        .fairwayContainerBackground()
+        .navigationTitle(title)
     }
 }

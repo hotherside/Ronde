@@ -30,6 +30,10 @@ struct CourseRow: View {
                     Text("\(course.numberOfHoles) holes")
                     Text("·")
                     Text("Par \(course.totalPar)")
+                    if let distance = course.totalDistanceDisplay {
+                        Text("·")
+                        Text(distance)
+                    }
                 }
                 .font(.caption)
                 .foregroundStyle(Theme.dimText)
@@ -39,6 +43,14 @@ struct CourseRow: View {
         }
         .padding(.vertical, 2)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(course.name), \(course.numberOfHoles) holes, par \(course.totalPar)")
+        .accessibilityLabel(accessibilitySummary)
+    }
+
+    private var accessibilitySummary: String {
+        var parts = [course.name, "\(course.numberOfHoles) holes", "par \(course.totalPar)"]
+        if let distance = course.totalDistanceDisplay {
+            parts.append(distance)
+        }
+        return parts.joined(separator: ", ")
     }
 }

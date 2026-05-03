@@ -52,46 +52,42 @@ struct ContentView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 0) {
-            NavHeader(title: "Ronde", leading: .none)
+        VStack(spacing: 14) {
+            Spacer()
 
-            VStack(spacing: 14) {
-                Spacer()
-
-                ZStack {
-                    Circle()
-                        .fill(Theme.fairway.opacity(0.18))
-                        .frame(width: 64, height: 64)
-                    Image(systemName: Theme.Symbol.golfer)
-                        .font(.system(size: 30, weight: .semibold))
-                        .foregroundStyle(Theme.fairwayBright)
-                }
-
-                VStack(spacing: 4) {
-                    Text("Tee it up")
-                        .font(.titleLarge)
-                        .foregroundStyle(Theme.textPrimary)
-                    Text("Tap below to start your first round.")
-                        .font(.caption)
-                        .foregroundStyle(Theme.dimText)
-                        .multilineTextAlignment(.center)
-                }
-                .padding(.horizontal)
-
-                Spacer()
-
-                PrimaryButton(title: "New Round", icon: Theme.Symbol.pin) {
-                    showingSetup = true
-                }
-                .padding(.horizontal, 12)
-                .padding(.bottom, 4)
-                .accessibilityLabel("Start a new round")
+            ZStack {
+                Circle()
+                    .fill(Theme.fairway.opacity(0.18))
+                    .frame(width: 64, height: 64)
+                Image(systemName: Theme.Symbol.golfer)
+                    .font(.system(size: 30, weight: .semibold))
+                    .foregroundStyle(Theme.fairwayBright)
             }
+
+            VStack(spacing: 4) {
+                Text("Tee it up")
+                    .font(.titleLarge)
+                    .foregroundStyle(Theme.textPrimary)
+                Text("Tap below to start your first round.")
+                    .font(.caption)
+                    .foregroundStyle(Theme.dimText)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.horizontal)
+
+            Spacer()
+
+            PrimaryButton(title: "New Round", icon: Theme.Symbol.pin) {
+                showingSetup = true
+            }
+            .padding(.horizontal, 12)
+            .padding(.bottom, 4)
+            .accessibilityLabel("Start a new round")
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .fairwayBackground()
         .fairwayContainerBackground()
-        .toolbar(.hidden, for: .navigationBar)
+        .navigationTitle("Ronde")
         .sheet(isPresented: $showingSetup) {
             StartView { round in
                 activeRound = round
@@ -101,53 +97,49 @@ struct ContentView: View {
     }
 
     private var populatedList: some View {
-        VStack(spacing: 0) {
-            NavHeader(title: "Ronde", leading: .none)
-
-            List {
-                Section {
-                    Button {
-                        showingSetup = true
-                    } label: {
-                        HStack(spacing: 8) {
-                            ZStack {
-                                Circle()
-                                    .fill(Theme.fairway)
-                                    .frame(width: 26, height: 26)
-                                Image(systemName: Theme.Symbol.pin)
-                                    .font(.system(size: 11, weight: .bold))
-                                    .foregroundStyle(.white)
-                            }
-                            Text("New Round")
-                                .font(.bodyEmphasized)
-                                .foregroundStyle(Theme.textPrimary)
-                            Spacer()
+        List {
+            Section {
+                Button {
+                    showingSetup = true
+                } label: {
+                    HStack(spacing: 8) {
+                        ZStack {
+                            Circle()
+                                .fill(Theme.fairway)
+                                .frame(width: 26, height: 26)
+                            Image(systemName: Theme.Symbol.pin)
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(.white)
                         }
+                        Text("New Round")
+                            .font(.bodyEmphasized)
+                            .foregroundStyle(Theme.textPrimary)
+                        Spacer()
                     }
-                    .buttonStyle(CardRowButtonStyle())
-                    .listRowBackground(Theme.cardSurfaceShape)
-                    .accessibilityLabel("Start a new round")
                 }
-
-                Section {
-                    ForEach(completedRounds) { round in
-                        NavigationLink {
-                            RoundSummaryView(round: round, onDone: nil)
-                        } label: {
-                            RoundRowView(round: round)
-                        }
-                        .listRowBackground(Theme.cardSurfaceShape)
-                    }
-                    .onDelete(perform: deleteRounds)
-                } header: {
-                    Text("Past Rounds").sectionHeaderStyle()
-                }
+                .buttonStyle(CardRowButtonStyle())
+                .listRowBackground(Theme.cardSurfaceShape)
+                .accessibilityLabel("Start a new round")
             }
-            .scrollContentBackground(.hidden)
+
+            Section {
+                ForEach(completedRounds) { round in
+                    NavigationLink {
+                        RoundSummaryView(round: round, onDone: nil)
+                    } label: {
+                        RoundRowView(round: round)
+                    }
+                    .listRowBackground(Theme.cardSurfaceShape)
+                }
+                .onDelete(perform: deleteRounds)
+            } header: {
+                Text("Past Rounds").sectionHeaderStyle()
+            }
         }
+        .scrollContentBackground(.hidden)
         .background(Theme.surface)
         .fairwayContainerBackground()
-        .toolbar(.hidden, for: .navigationBar)
+        .navigationTitle("Ronde")
         .sheet(isPresented: $showingSetup) {
             StartView { round in
                 activeRound = round

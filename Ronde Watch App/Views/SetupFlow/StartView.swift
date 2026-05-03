@@ -8,12 +8,14 @@ struct StartView: View {
     @State private var date = Date.now
     @State private var pars: [Int] = Array(repeating: 4, count: 18)
     @State private var courseName: String?
+    @State private var courseDistanceDisplay: String?
 
     let onStartRound: (Round) -> Void
 
     private enum Dest: Hashable {
         case manualHoleSelect
         case parSetup
+        case ready
     }
 
     var body: some View {
@@ -22,10 +24,12 @@ struct StartView: View {
                 onCourseSelected: { course in
                     courseName = course.name
                     pars = course.pars
+                    courseDistanceDisplay = course.totalDistanceDisplay
                     path.append(Dest.parSetup)
                 },
                 onManual: {
                     courseName = nil
+                    courseDistanceDisplay = nil
                     path.append(Dest.manualHoleSelect)
                 }
             )
@@ -36,8 +40,17 @@ struct StartView: View {
                 case .parSetup:
                     ParSetupView(
                         courseName: courseName,
+                        courseDistanceDisplay: courseDistanceDisplay,
                         date: $date,
                         pars: $pars,
+                        onStart: { path.append(Dest.ready) }
+                    )
+                case .ready:
+                    ReadyView(
+                        courseName: courseName,
+                        numberOfHoles: pars.count,
+                        totalPar: pars.reduce(0, +),
+                        courseDistanceDisplay: courseDistanceDisplay,
                         onStart: startRound
                     )
                 }
@@ -48,27 +61,23 @@ struct StartView: View {
     // MARK: - Manual hole-count selection
 
     private var manualHoleSelectView: some View {
-        VStack(spacing: 0) {
-            NavHeader(title: "Custom Round", leading: .back)
+        VStack(spacing: 12) {
+            Spacer()
 
-            VStack(spacing: 12) {
-                Spacer()
+            Text("How many holes?")
+                .font(.titleSmall)
+                .foregroundStyle(Theme.textPrimary)
 
-                Text("How many holes?")
-                    .font(.titleSmall)
-                    .foregroundStyle(Theme.textPrimary)
+            holeCountButton(holes: 9)
+            holeCountButton(holes: 18)
 
-                holeCountButton(holes: 9)
-                holeCountButton(holes: 18)
-
-                Spacer()
-            }
-            .padding(.horizontal, 14)
+            Spacer()
         }
+        .padding(.horizontal, 14)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .fairwayBackground()
         .fairwayContainerBackground()
-        .toolbar(.hidden, for: .navigationBar)
+        .navigationTitle("Custom Round")
     }
 
     private func holeCountButton(holes: Int) -> some View {

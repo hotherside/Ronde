@@ -8,6 +8,7 @@ final class HoleScore {
     var par: Int
     var shots: Int
     var isComplete: Bool
+    var distanceMeters: Double = 0
     var round: Round?
 
     var scoreToPar: Int {

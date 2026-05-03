@@ -38,7 +38,11 @@ struct NavHeader: View {
         .frame(maxWidth: .infinity)
         .frame(height: 28)
         .padding(.horizontal, 4)
-        .padding(.top, 2)
+        // Leaves clearance for the watchOS system clock that always
+        // overlays the top ~22pt. Pair with
+        // `.ignoresSafeArea(.container, edges: .top)` on the host so we
+        // reclaim the empty navigation-bar space below it.
+        .padding(.top, 22)
     }
 
     @ViewBuilder

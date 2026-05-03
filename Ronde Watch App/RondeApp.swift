@@ -28,7 +28,7 @@ struct RondeApp: App {
         WindowGroup {
             ContentView()
                 .preferredColorScheme(.light)
-                .tint(Theme.fairway)
+                .tint(.white)
         }
         .modelContainer(appModelContainer)
     }

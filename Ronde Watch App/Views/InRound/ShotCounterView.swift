@@ -16,6 +16,9 @@ struct ShotCounterView: View {
 
     @State private var showHealthKitBanner = false
     @State private var shotPulse = false
+    /// Pedometer cumulative distance at the start of the current hole.
+    /// Subtracting from the live reading on hole-finish gives per-hole walking.
+    @State private var holeStartDistance: Double = 0
 
     private var currentHole: HoleScore? {
         round.currentHole
@@ -29,6 +32,7 @@ struct ShotCounterView: View {
                     isLastHole: round.currentHoleIndex >= round.numberOfHoles - 1
                 ) {
                     showingHoleTransition = false
+                    captureHoleDistance(for: hole)
                     round.advanceToNextHole()
                     if round.isComplete {
                         finishRound()
@@ -90,6 +94,15 @@ struct ShotCounterView: View {
         round.totalDistanceMeters = result.distanceMeters
         Task { await WorkoutManager.shared.endWorkout() }
         onEndRound()
+    }
+
+    /// Snapshot pedometer delta into the just-completed hole and re-anchor for
+    /// the next one. Called from the hole-transition continue closure, before
+    /// `round.advanceToNextHole()` flips `currentHole`.
+    private func captureHoleDistance(for hole: HoleScore) {
+        let now = pedometer.totalDistanceMeters
+        hole.distanceMeters = max(0, now - holeStartDistance)
+        holeStartDistance = now
     }
 
     private func discardRound() {
@@ -250,6 +263,7 @@ struct ShotCounterView: View {
                     showingEndConfirmation = true
                 } label: {
                     Image(systemName: "xmark")
+                        .foregroundStyle(.white)
                 }
                 .accessibilityLabel("End or discard round")
             }

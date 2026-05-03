@@ -3,6 +3,7 @@ import WatchKit
 
 struct ParSetupView: View {
     let courseName: String?
+    var courseDistanceDisplay: String? = nil
     @Binding var date: Date
     @Binding var pars: [Int]
     let onStart: () -> Void
@@ -18,71 +19,75 @@ struct ParSetupView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            NavHeader(title: headerTitle, leading: .back)
-
-            List {
-                // Course header card
-                Section {
-                    VStack(spacing: 6) {
-                        if let name = courseName {
-                            HStack(spacing: 5) {
-                                Image(systemName: Theme.Symbol.course)
-                                    .font(.system(size: 10))
-                                    .foregroundStyle(Theme.fairwayBright)
-                                Text(name)
-                                    .font(.bodyEmphasized)
-                                    .foregroundStyle(Theme.textPrimary)
-                                    .lineLimit(2)
-                                    .minimumScaleFactor(0.9)
-                                    .multilineTextAlignment(.center)
-                            }
+        List {
+            // Course header card
+            Section {
+                VStack(spacing: 6) {
+                    if let name = courseName {
+                        HStack(spacing: 5) {
+                            Image(systemName: Theme.Symbol.course)
+                                .font(.system(size: 10))
+                                .foregroundStyle(Theme.fairwayBright)
+                            Text(name)
+                                .font(.bodyEmphasized)
+                                .foregroundStyle(Theme.textPrimary)
+                                .lineLimit(2)
+                                .minimumScaleFactor(0.9)
+                                .multilineTextAlignment(.center)
                         }
-
-                        StatPair(
-                            leading: .init(value: "\(numberOfHoles)", label: "Holes"),
-                            trailing: .init(value: "\(totalPar)", label: "Par")
-                        )
-                        .padding(.top, 2)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 4)
-                    .listRowBackground(Theme.cardSurfaceShape)
 
-                    NavigationLink {
-                        DatePickerDetailView(date: $date)
-                    } label: {
-                        DateRow(date: date)
+                    StatPair(
+                        leading: .init(value: "\(numberOfHoles)", label: "Holes"),
+                        trailing: .init(value: "\(totalPar)", label: "Par")
+                    )
+                    .padding(.top, 2)
+
+                    if let distance = courseDistanceDisplay {
+                        Label(distance, systemImage: "figure.walk")
+                            .font(.caption)
+                            .foregroundStyle(Theme.dimText)
+                            .padding(.top, 2)
+                            .accessibilityLabel("Total course distance \(distance)")
                     }
-                    .buttonStyle(CardRowButtonStyle())
-                    .listRowBackground(Theme.cardSurfaceShape)
                 }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 4)
+                .listRowBackground(Theme.cardSurfaceShape)
 
-                Section {
-                    ForEach(pars.indices, id: \.self) { index in
-                        HoleParRow(
-                            holeNumber: index + 1,
-                            par: $pars[index]
-                        )
-                        .listRowBackground(Theme.cardSurfaceShape)
-                    }
-                } header: {
-                    Text("Par per hole").sectionHeaderStyle()
+                NavigationLink {
+                    DatePickerDetailView(date: $date)
+                } label: {
+                    DateRow(date: date)
                 }
-
-                Section {
-                    PrimaryButton(title: "Tee Off", icon: Theme.Symbol.golfer, action: onStart)
-                        .padding(.vertical, 2)
-                        .accessibilityLabel("Start round with \(numberOfHoles) holes, total par \(totalPar)")
-                        .listRowBackground(Color.clear)
-                }
+                .buttonStyle(CardRowButtonStyle())
+                .listRowBackground(Theme.cardSurfaceShape)
             }
-            .scrollContentBackground(.hidden)
+
+            Section {
+                ForEach(pars.indices, id: \.self) { index in
+                    HoleParRow(
+                        holeNumber: index + 1,
+                        par: $pars[index]
+                    )
+                    .listRowBackground(Theme.cardSurfaceShape)
+                }
+            } header: {
+                Text("Par per hole").sectionHeaderStyle()
+            }
+
+            Section {
+                PrimaryButton(title: "Tee Off", icon: Theme.Symbol.golfer, action: onStart)
+                    .padding(.vertical, 2)
+                    .accessibilityLabel("Start round with \(numberOfHoles) holes, total par \(totalPar)")
+                    .listRowBackground(Color.clear)
+            }
         }
+        .scrollContentBackground(.hidden)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.surface)
         .fairwayContainerBackground()
-        .toolbar(.hidden, for: .navigationBar)
+        .navigationTitle(headerTitle)
     }
 }
 

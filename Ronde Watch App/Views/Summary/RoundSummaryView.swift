@@ -219,7 +219,7 @@ private struct HoleScoreRow: View {
     let hole: HoleScore
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 6) {
             // Coloured dot + hole number
             HStack(spacing: 5) {
                 Circle()
@@ -230,23 +230,23 @@ private struct HoleScoreRow: View {
                     .monospacedDigit()
                     .foregroundStyle(Theme.textSecondary)
             }
-            .frame(width: 32, alignment: .leading)
+            .frame(width: 30, alignment: .leading)
 
-            Spacer()
+            Spacer(minLength: 4)
 
             // Par
             Text("P\(hole.par)")
                 .font(.system(size: 10, weight: .medium, design: .rounded))
                 .foregroundStyle(Theme.dimText)
 
-            Spacer()
+            Spacer(minLength: 4)
 
             // Shot count
             Text(hole.shots > 0 ? "\(hole.shots)" : "–")
                 .font(.scoreNumeral(size: 16))
                 .foregroundStyle(Theme.textPrimary)
 
-            Spacer()
+            Spacer(minLength: 4)
 
             // Score badge
             if hole.shots > 0 {
@@ -263,16 +263,33 @@ private struct HoleScoreRow: View {
                     .foregroundStyle(Theme.faintText)
                     .frame(width: 28, alignment: .center)
             }
+
+            // Walking distance (only for completed holes with non-trivial walk)
+            Text(distanceText)
+                .font(.system(size: 9, weight: .medium, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(Theme.faintText)
+                .frame(width: 36, alignment: .trailing)
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(holeAccessibilityLabel)
     }
 
-    private var holeAccessibilityLabel: String {
-        guard hole.shots > 0 else {
-            return "Hole \(hole.holeNumber), par \(hole.par), no shots"
+    private var distanceText: String {
+        let metres = hole.distanceMeters
+        guard metres >= 1 else { return "" }
+        if metres >= 1000 {
+            return String(format: "%.1fkm", metres / 1000)
         }
-        return "Hole \(hole.holeNumber), \(Theme.scoreName(forDelta: hole.scoreToPar)), \(hole.shots) shots"
+        return "\(Int(metres.rounded()))m"
+    }
+
+    private var holeAccessibilityLabel: String {
+        let walkSuffix = distanceText.isEmpty ? "" : ", walked \(distanceText)"
+        guard hole.shots > 0 else {
+            return "Hole \(hole.holeNumber), par \(hole.par), no shots\(walkSuffix)"
+        }
+        return "Hole \(hole.holeNumber), \(Theme.scoreName(forDelta: hole.scoreToPar)), \(hole.shots) shots\(walkSuffix)"
     }
 
     private var badgeColor: Color {

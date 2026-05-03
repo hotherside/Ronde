@@ -10,6 +10,7 @@ struct CourseDetectView: View {
 
     @StateObject private var locationService = LocationService()
     @State private var detectState: DetectState = .detecting
+    @Environment(\.dismiss) private var dismiss
 
     private enum DetectState {
         case detecting
@@ -19,34 +20,39 @@ struct CourseDetectView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            NavHeader(title: "New Round", leading: .close)
-
-            Group {
-                switch detectState {
-                case .detecting:
-                    loadingView
-                case .results(let courses):
-                    resultsList(courses: courses)
-                case .denied:
-                    noLocationView(
-                        icon: "location.slash.fill",
-                        title: "Location off",
-                        message: "Browse all courses or set up a custom round."
-                    )
-                case .noResults:
-                    noLocationView(
-                        icon: "map",
-                        title: "Off the fairway",
-                        message: "We didn't spot a course nearby. Browse all or tee it up your own way."
-                    )
-                }
+        Group {
+            switch detectState {
+            case .detecting:
+                loadingView
+            case .results(let courses):
+                resultsList(courses: courses)
+            case .denied:
+                noLocationView(
+                    icon: "location.slash.fill",
+                    title: "Location off",
+                    message: "Browse all courses or set up a custom round."
+                )
+            case .noResults:
+                noLocationView(
+                    icon: "map",
+                    title: "Off the fairway",
+                    message: "We didn't spot a course nearby. Browse all or tee it up your own way."
+                )
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .fairwayBackground()
         .fairwayContainerBackground()
-        .toolbar(.hidden, for: .navigationBar)
+        .navigationTitle("New Round")
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button { dismiss() } label: {
+                    Image(systemName: "xmark")
+                        .foregroundStyle(.white)
+                }
+                .accessibilityLabel("Close")
+            }
+        }
         .task { await startDetection() }
         .onChange(of: locationService.authorizationStatus) { _, status in
             if status == .denied || status == .restricted {
