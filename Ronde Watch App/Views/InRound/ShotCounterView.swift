@@ -263,7 +263,10 @@ struct ShotCounterView: View {
                     showingEndConfirmation = true
                 } label: {
                     Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(Theme.fairwayDeep)
                 }
+                .buttonStyle(.plain)
                 .accessibilityLabel("End or discard round")
             }
         }

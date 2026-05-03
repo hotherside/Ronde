@@ -48,7 +48,10 @@ struct CourseDetectView: View {
             ToolbarItem(placement: .cancellationAction) {
                 Button { dismiss() } label: {
                     Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(Theme.fairwayDeep)
                 }
+                .buttonStyle(.plain)
                 .accessibilityLabel("Close")
             }
         }
