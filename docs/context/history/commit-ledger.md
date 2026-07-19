@@ -2,9 +2,9 @@
 
 > Generated from Git. Git remains authoritative. Context-only refresh commits are excluded.
 
-- Source commit: `5d30cadbcba21d47156d97c9c7173e86bf8c0080`
-- Source commit date: 2026-05-03
-- Tracked commit count: 41
+- Source commit: `67a80acc64103fd0e8d42fc082e837f7131863fe`
+- Source commit date: 2026-07-19
+- Tracked commit count: 43
 
 | Date | Commit | Subject |
 | --- | --- | --- |
@@ -49,3 +49,5 @@
 | 2026-05-03 | `684baa1` | Switch to native nav chrome, add Ready screen + per-hole walking |
 | 2026-05-03 | `3b9255c` | Tint chrome with fairwayDeep so toolbar icons read on light pill |
 | 2026-05-03 | `5d30cad` | Strip the toolbar pill from X-close so the icon shows |
+| 2026-07-19 | `c74cbee` | docs: establish Ronde context library |
+| 2026-07-19 | `67a80ac` | Merge pull request #1 from hotherside/agent/ronde-context-library |
