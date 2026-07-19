@@ -24,7 +24,7 @@ final class LocationService: NSObject, ObservableObject {
     func requestPermissionAndLocation() {
         switch manager.authorizationStatus {
         case .notDetermined:
-            manager.requestAlwaysAuthorization()
+            manager.requestWhenInUseAuthorization()
         case .authorizedWhenInUse, .authorizedAlways:
             manager.requestLocation()
         case .denied, .restricted:

@@ -1,66 +1,45 @@
 import SwiftUI
 
-/// Golf-themed design tokens used throughout the app — light theme.
-/// Colours are tuned for a paper-scorecard aesthetic: warm cream surface,
-/// deep fairway-green typography, vintage red for over-par.
+/// Ronde's field-instrument design system.
+///
+/// The watch is used outdoors, one-handed, and often at a glance. The palette
+/// therefore starts with the OLED-black watch face, uses high-contrast type,
+/// reserves green for golf actions and score state, and reserves orange for
+/// the Apple Watch Ultra Action Button.
 enum Theme {
 
     // MARK: - Surfaces
 
-    /// Soft fairway-grass sage — the canvas everything sits on.
-    static let surface = Color(red: 0.871, green: 0.906, blue: 0.835) // #DEE7D5
-
-    /// Slightly deeper sage for subtle vignette / muted regions.
-    static let surfaceMuted = Color(red: 0.835, green: 0.871, blue: 0.788) // #D5DEC9
-
-    /// Warm cream card surface — used for list rows that sit on the sage canvas.
-    static let cardSurface = Color(red: 0.969, green: 0.949, blue: 0.894) // #F7F2E4
+    static let surface = Color(red: 0.018, green: 0.027, blue: 0.021)          // #050705
+    static let surfaceMuted = Color(red: 0.039, green: 0.059, blue: 0.045)     // #0A0F0B
+    static let cardSurface = Color(red: 0.067, green: 0.094, blue: 0.075)      // #111813
+    static let cardSurfacePressed = Color(red: 0.094, green: 0.129, blue: 0.102)
+    static let separator = Color.white.opacity(0.10)
 
     // MARK: - Text
 
-    /// Primary text — deep forest green, near-black, for max readability.
-    static let textPrimary = Color(red: 0.055, green: 0.141, blue: 0.090) // #0E2417
+    static let textPrimary = Color(red: 0.953, green: 0.973, blue: 0.957)
+    static let textSecondary = Color(red: 0.686, green: 0.733, blue: 0.698)
+    static let textTertiary = Color(red: 0.486, green: 0.533, blue: 0.498)
+    static let textFaint = Color(red: 0.294, green: 0.337, blue: 0.306)
 
-    /// Secondary text — muted forest for labels and hints.
-    static let textSecondary = Color(red: 0.227, green: 0.290, blue: 0.243) // #3A4A3E
-
-    /// Tertiary text — soft greyish-green for supplementary text.
-    static let textTertiary = Color(red: 0.353, green: 0.396, blue: 0.333) // #5A6555
-
-    /// Faint text — barely visible, for placeholders / inactive dots.
-    static let textFaint = Color(red: 0.627, green: 0.667, blue: 0.627) // #A0AAA0
-
-    /// Legacy aliases used across views — keep semantic.
     static let mutedText = textSecondary
     static let dimText = textTertiary
     static let faintText = textFaint
 
-    // MARK: - Brand colours
+    // MARK: - Functional colours
 
-    /// Refined fairway green — primary brand colour for actions and "good" states.
-    static let fairway = Color(red: 0.106, green: 0.431, blue: 0.200) // #1B6E33
+    static let fairway = Color(red: 0.267, green: 0.808, blue: 0.463)          // #44CE76
+    static let fairwayBright = Color(red: 0.416, green: 0.906, blue: 0.596)    // #6AE798
+    static let fairwayDeep = Color(red: 0.078, green: 0.431, blue: 0.231)      // #146E3B
+    static let action = Color(red: 1.000, green: 0.502, blue: 0.094)           // Ultra orange
+    static let bunker = Color(red: 1.000, green: 0.706, blue: 0.286)
+    static let eagleGold = Color(red: 1.000, green: 0.812, blue: 0.357)
+    static let sky = Color(red: 0.365, green: 0.686, blue: 1.000)
+    static let rough = Color(red: 1.000, green: 0.376, blue: 0.392)
 
-    /// Brighter fairway accent for highlights and birdies.
-    static let fairwayBright = Color(red: 0.165, green: 0.533, blue: 0.278) // #2A8847
+    // MARK: - Score semantics
 
-    /// Very deep fairway used for accents on light backdrops.
-    static let fairwayDeep = Color(red: 0.043, green: 0.180, blue: 0.090) // #0B2E17
-
-    /// Sand bunker amber — warning / bogey state.
-    static let bunker = Color(red: 0.549, green: 0.376, blue: 0.063) // #8C6010
-
-    /// Eagle gold — albatross/eagle celebrations and the highlighted -2 badge.
-    static let eagleGold = Color(red: 0.761, green: 0.541, blue: 0.055) // #C28A0E
-
-    /// Sky blue — secondary accent for navigation chrome and informational chips.
-    static let sky = Color(red: 0.161, green: 0.420, blue: 0.690) // #296BB0
-
-    /// Rough red — destructive / serious "over par" states.
-    static let rough = Color(red: 0.659, green: 0.157, blue: 0.157) // #A82828
-
-    // MARK: - Score colour
-
-    /// Maps a score-to-par delta to a colour using the golf vocabulary.
     static func scoreColor(forDelta delta: Int, hasShots: Bool = true) -> Color {
         guard hasShots else { return textTertiary }
         switch delta {
@@ -72,7 +51,6 @@ enum Theme {
         }
     }
 
-    /// Long-form name for a score-to-par delta.
     static func scoreName(forDelta delta: Int) -> String {
         switch delta {
         case ...(-3): return "Albatross"
@@ -86,9 +64,14 @@ enum Theme {
         }
     }
 
+    static func compactScore(_ delta: Int, hasShots: Bool = true) -> String {
+        guard hasShots else { return "—" }
+        if delta == 0 { return "E" }
+        return delta > 0 ? "+\(delta)" : "\(delta)"
+    }
+
     // MARK: - Symbols
 
-    /// Canonical SF Symbol names used in golf-specific UI.
     enum Symbol {
         static let golfer = "figure.golf"
         static let flag = "flag.checkered"
@@ -99,26 +82,24 @@ enum Theme {
         static let location = "location.fill"
         static let calendar = "calendar"
         static let course = "leaf.fill"
+        static let actionButton = "button.horizontal.top.press.fill"
     }
 
     // MARK: - Backgrounds
 
-    /// Cream surface with a faint vignette — the canonical full-screen backdrop.
     @ViewBuilder
     static var fairwayBackdrop: some View {
         ZStack {
             surface
             RadialGradient(
-                colors: [.clear, .clear, surfaceMuted.opacity(0.6)],
-                center: .center,
-                startRadius: 5,
-                endRadius: 240
+                colors: [fairwayDeep.opacity(0.16), .clear, .clear],
+                center: .topLeading,
+                startRadius: 0,
+                endRadius: 250
             )
         }
     }
 
-    /// Score-tinted radial backdrop for in-round screens. Always opaque cream
-    /// underneath so the watch's black system background never bleeds through.
     @ViewBuilder
     static func scoreBackdrop(forDelta delta: Int, hasShots: Bool = true) -> some View {
         let tint = scoreColor(forDelta: delta, hasShots: hasShots)
@@ -126,132 +107,97 @@ enum Theme {
             surface
             if hasShots {
                 RadialGradient(
-                    colors: [tint.opacity(0.22), tint.opacity(0.06), .clear],
+                    colors: [tint.opacity(0.14), tint.opacity(0.035), .clear],
                     center: .center,
-                    startRadius: 5,
-                    endRadius: 220
-                )
-            } else {
-                RadialGradient(
-                    colors: [.clear, .clear, surfaceMuted.opacity(0.6)],
-                    center: .center,
-                    startRadius: 5,
-                    endRadius: 240
+                    startRadius: 0,
+                    endRadius: 230
                 )
             }
         }
+    }
+
+    static var cardSurfaceShape: some View {
+        RoundedRectangle(cornerRadius: 16, style: .continuous)
+            .fill(cardSurface)
+            .overlay {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(separator, lineWidth: 1)
+            }
     }
 }
 
 // MARK: - Convenience modifiers
 
 extension View {
-    /// Applies the cream backdrop ignoring safe areas — for full-screen views.
     func fairwayBackground() -> some View {
-        background {
-            Theme.fairwayBackdrop.ignoresSafeArea()
-        }
+        background { Theme.fairwayBackdrop.ignoresSafeArea() }
     }
 
-    /// Applies the cream backdrop as the watchOS container background so the
-    /// nav-bar gradient and pull-down area also pick up our light theme.
     func fairwayContainerBackground() -> some View {
         containerBackground(Theme.surface.gradient, for: .navigation)
     }
 
-    /// Hides the system List/Form scroll background so our cream surface shows
-    /// through. Lists otherwise paint their own opaque background.
     func clearListBackground() -> some View {
         scrollContentBackground(.hidden)
             .background(Theme.surface)
     }
 
-    /// Wraps a view in the canonical cream rounded card. Use this on view
-    /// content; for `.listRowBackground` callers (which need a view rather than
-    /// a modifier) use `Theme.cardSurfaceShape` instead.
-    func cardSurface(cornerRadius: CGFloat = 14) -> some View {
+    func cardSurface(cornerRadius: CGFloat = 16) -> some View {
         background {
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                 .fill(Theme.cardSurface)
-                .overlay(
+                .overlay {
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .stroke(Theme.textPrimary.opacity(0.05), lineWidth: 1)
-                )
+                        .stroke(Theme.separator, lineWidth: 1)
+                }
         }
-    }
-}
-
-extension Theme {
-    /// The canonical card-surface shape — cream fill, hairline forest stroke.
-    /// Use as a `.listRowBackground` value where a `View` is required.
-    static var cardSurfaceShape: some View {
-        RoundedRectangle(cornerRadius: 14, style: .continuous)
-            .fill(cardSurface)
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(textPrimary.opacity(0.05), lineWidth: 1)
-            )
     }
 }
 
 // MARK: - Typography
 
 extension Font {
-    /// Golf-card style: tight rounded heavy numerals.
     static func scoreNumeral(size: CGFloat) -> Font {
-        .system(size: size, weight: .heavy, design: .rounded).monospacedDigit()
+        .system(size: size, weight: .bold, design: .rounded).monospacedDigit()
     }
 
-    /// Small uppercase tracking label, e.g. "PAR", "HOLE".
     static func microLabel() -> Font {
-        .system(size: 9, weight: .heavy, design: .rounded)
+        .system(size: 9, weight: .semibold, design: .rounded)
     }
 
-    // MARK: Named text styles
-    //
-    // Use these instead of raw `.system(size:weight:design:)` calls so the
-    // typography stays consistent across screens.
-
-    /// 17pt heavy rounded — empty-state hero / large titles.
-    static let titleLarge = Font.system(size: 17, weight: .heavy, design: .rounded)
-
-    /// 14pt heavy rounded — NavHeader title, hero callouts.
-    static let titleSmall = Font.system(size: 14, weight: .heavy, design: .rounded)
-
-    /// 13pt semibold rounded — primary card text (course names, row titles).
-    static let bodyEmphasized = Font.system(size: 13, weight: .semibold, design: .rounded)
-
-    /// 12pt medium rounded — row labels, button text, secondary body copy.
-    static let body = Font.system(size: 12, weight: .medium, design: .rounded)
-
-    /// 10pt medium rounded — meta lines like "9 holes · Par 72".
-    static let caption = Font.system(size: 10, weight: .medium, design: .rounded)
-
-    /// 9pt heavy rounded — uppercase tags. Pair with `.tracking(1)` and
-    /// `.textCase(.uppercase)` (or use `.sectionHeaderStyle()` on `Text`).
-    static let micro = Font.system(size: 9, weight: .heavy, design: .rounded)
+    static let titleLarge = Font.system(size: 22, weight: .bold)
+    static let titleSmall = Font.system(size: 16, weight: .bold)
+    static let bodyEmphasized = Font.system(size: 14, weight: .semibold)
+    static let body = Font.system(size: 13, weight: .regular)
+    static let caption = Font.system(size: 11, weight: .regular)
+    static let micro = Font.system(size: 9, weight: .semibold)
 }
 
-// MARK: - Button styles
+// MARK: - Interaction styles
 
-/// Card-style row button with our own pressed treatment. Avoids the watchOS
-/// system "focus dim" overlay that makes plain-style buttons in a List
-/// look pre-selected when the digital crown lands on them.
+struct RondePressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .opacity(configuration.isPressed ? 0.82 : 1)
+            .animation(.spring(response: 0.22, dampingFraction: 0.9), value: configuration.isPressed)
+    }
+}
+
 struct CardRowButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .opacity(configuration.isPressed ? 0.65 : 1.0)
-            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+            .opacity(configuration.isPressed ? 0.72 : 1)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
     }
 }
 
-/// Section-header text style — uppercase, tracked, deep forest secondary.
 extension Text {
     func sectionHeaderStyle() -> some View {
         self
-            .font(.system(size: 10, weight: .heavy, design: .rounded))
-            .foregroundStyle(Theme.textSecondary)
-            .tracking(1.2)
+            .font(.micro)
+            .foregroundStyle(Theme.textTertiary)
+            .tracking(1.1)
             .textCase(.uppercase)
     }
 }

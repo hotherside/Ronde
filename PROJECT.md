@@ -8,7 +8,7 @@ Start a round quickly, log one shot per physical action, see the current hole an
 
 ## Current stage
 
-Ronde is in local product hardening. The active checkout contains an uncommitted reliability, Action Button, workout-recovery, persistence and visual pass on top of committed `main`. See [Current State](docs/context/CURRENT_STATE.md) before making release claims.
+Ronde is in pre-release product hardening. The current release candidate contains the reliability, Action Button, workout-recovery, persistence and visual pass that previously existed only in the working tree. Merge, hardware and distribution status still require direct verification. See [Current State](docs/context/CURRENT_STATE.md) before making release claims.
 
 ## Canonical context
 

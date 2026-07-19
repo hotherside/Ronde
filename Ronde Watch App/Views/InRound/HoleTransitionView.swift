@@ -5,159 +5,111 @@ struct HoleTransitionView: View {
     let isLastHole: Bool
     let onContinue: () -> Void
 
-    @State private var contentAppear = false
-    @State private var statsAppear = false
-    @State private var celebrationScale: CGFloat = 0.7
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var appeared = false
 
-    private var isUnderPar: Bool {
-        hole.shots > 0 && hole.scoreToPar < 0
-    }
-
+    private var hasScore: Bool { hole.shots > 0 }
     private var scoreColor: Color {
-        Theme.scoreColor(forDelta: hole.scoreToPar, hasShots: hole.shots > 0)
+        Theme.scoreColor(forDelta: hole.scoreToPar, hasShots: hasScore)
     }
 
     var body: some View {
-        ZStack {
-            // ── Top bar ──
+        VStack(spacing: 0) {
             HStack {
                 Label("HOLE \(hole.holeNumber)", systemImage: Theme.Symbol.pin)
-                    .font(.system(size: 9, weight: .heavy, design: .rounded))
-                    .foregroundStyle(Theme.mutedText)
-                    .tracking(1.5)
-
                 Spacer()
-
                 Text("PAR \(hole.par)")
-                    .font(.system(size: 9, weight: .heavy, design: .rounded))
-                    .foregroundStyle(Theme.mutedText)
-                    .tracking(1.5)
             }
-            .padding(.horizontal, 14)
-            .padding(.top, 4)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .opacity(contentAppear ? 1 : 0)
+            .font(.micro)
+            .tracking(1.1)
+            .foregroundStyle(Theme.textTertiary)
 
-            // ── Centre: scorecard ──
-            VStack(spacing: 8) {
-                // Score name — hero
+            Spacer(minLength: 4)
+
+            VStack(spacing: 7) {
                 Text(scoreName.uppercased())
-                    .font(.system(size: 22, weight: .heavy, design: .rounded))
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .tracking(1.1)
                     .foregroundStyle(scoreColor)
-                    .tracking(1.5)
                     .multilineTextAlignment(.center)
 
-                // Shots vs par split
                 HStack(spacing: 0) {
-                    VStack(spacing: 1) {
-                        Text("\(hole.shots)")
-                            .font(.scoreNumeral(size: 38))
-                            .foregroundStyle(Theme.textPrimary)
-                        Text("SHOTS")
-                            .font(.system(size: 8, weight: .bold, design: .rounded))
-                            .foregroundStyle(Theme.dimText)
-                            .tracking(1)
-                    }
-                    .frame(maxWidth: .infinity)
-
+                    stat(value: "\(hole.shots)", label: "STROKES", color: Theme.textPrimary)
                     Rectangle()
-                        .fill(Theme.textPrimary.opacity(0.12))
-                        .frame(width: 1, height: 42)
-
-                    VStack(spacing: 1) {
-                        Text("\(hole.par)")
-                            .font(.scoreNumeral(size: 38))
-                            .foregroundStyle(Theme.mutedText)
-                        Text("PAR")
-                            .font(.system(size: 8, weight: .bold, design: .rounded))
-                            .foregroundStyle(Theme.dimText)
-                            .tracking(1)
-                    }
-                    .frame(maxWidth: .infinity)
+                        .fill(Theme.separator)
+                        .frame(width: 1, height: 38)
+                    stat(value: "\(hole.par)", label: "PAR", color: Theme.textSecondary)
                 }
-                .scaleEffect(statsAppear ? 1.0 : 0.85)
-                .opacity(statsAppear ? 1.0 : 0.0)
 
-                if hole.shots > 0 {
+                if hasScore {
                     Text(scoreToParText)
-                        .font(.system(size: 11, weight: .bold, design: .rounded))
-                        .monospacedDigit()
-                        .tracking(1)
+                        .font(.system(size: 10, weight: .semibold, design: .rounded))
+                        .tracking(0.8)
                         .foregroundStyle(scoreColor)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 3)
-                        .background(Capsule().fill(scoreColor.opacity(0.15)))
-                        .opacity(statsAppear ? 1.0 : 0.0)
+                } else {
+                    Text("NOT COUNTED IN ROUND SCORE")
+                        .font(.system(size: 8, weight: .semibold, design: .rounded))
+                        .tracking(0.6)
+                        .foregroundStyle(Theme.textTertiary)
                 }
             }
-            .scaleEffect(celebrationScale)
+            .opacity(appeared ? 1 : 0)
+            .scaleEffect(appeared || reduceMotion ? 1 : 0.94)
 
-            // ── Bottom action ──
+            Spacer(minLength: 6)
+
             Button(action: onContinue) {
                 HStack(spacing: 6) {
-                    Image(systemName: isLastHole ? Theme.Symbol.flag : Theme.Symbol.pin)
-                        .font(.system(size: 12, weight: .bold))
                     Text(isLastHole ? "Finish Round" : "Next Hole")
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .font(.system(size: 14, weight: .bold))
+                    Image(systemName: isLastHole ? Theme.Symbol.flag : "arrow.right")
+                        .font(.system(size: 12, weight: .bold))
                 }
-                .foregroundStyle(.white)
+                .foregroundStyle(Color.black.opacity(0.86))
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(Capsule().fill(Theme.fairway))
+                .frame(height: 48)
+                .background(Theme.fairway, in: RoundedRectangle(cornerRadius: 16))
             }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 14)
-            .padding(.bottom, 6)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-            .opacity(contentAppear ? 1 : 0)
+            .buttonStyle(RondePressStyle())
             .accessibilityLabel(isLastHole ? "Finish round" : "Advance to next hole")
         }
+        .padding(.horizontal, 12)
+        .padding(.top, 10)
+        .padding(.bottom, 7)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background {
-            Theme.scoreBackdrop(forDelta: hole.scoreToPar, hasShots: hole.shots > 0)
+            Theme.scoreBackdrop(forDelta: hole.scoreToPar, hasShots: hasScore)
                 .ignoresSafeArea()
         }
-        .containerBackground(Theme.fairway.gradient, for: .navigation)
-        .navigationBarBackButtonHidden(true)
+        .toolbar(.hidden, for: .navigationBar)
         .task {
-            withAnimation(.easeOut(duration: 0.35)) {
-                contentAppear = true
-            }
-            withAnimation(.easeOut(duration: 0.4).delay(0.15)) {
-                statsAppear = true
-            }
-            if isUnderPar {
-                withAnimation(.spring(response: 0.45, dampingFraction: 0.4).delay(0.2)) {
-                    celebrationScale = 1.05
-                }
-                try? await Task.sleep(for: .milliseconds(500))
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.65)) {
-                    celebrationScale = 1.0
-                }
-            } else {
-                withAnimation(.easeOut(duration: 0.35)) {
-                    celebrationScale = 1.0
-                }
-            }
-
-            // Auto-advance after 4s
-            try? await Task.sleep(for: .seconds(4))
-            if !Task.isCancelled {
-                onContinue()
+            withAnimation(reduceMotion ? .easeOut(duration: 0.15) : .spring(response: 0.34, dampingFraction: 0.88)) {
+                appeared = true
             }
         }
     }
 
-    // MARK: - Helpers
+    private func stat(value: String, label: String, color: Color) -> some View {
+        VStack(spacing: 0) {
+            Text(value)
+                .font(.scoreNumeral(size: 36))
+                .foregroundStyle(color)
+            Text(label)
+                .font(.system(size: 8, weight: .semibold, design: .rounded))
+                .tracking(0.8)
+                .foregroundStyle(Theme.textTertiary)
+        }
+        .frame(maxWidth: .infinity)
+    }
 
     private var scoreToParText: String {
-        let diff = hole.scoreToPar
-        if diff == 0 { return "EVEN" }
-        return diff > 0 ? "+\(diff) OVER" : "\(diff) UNDER"
+        let delta = hole.scoreToPar
+        if delta == 0 { return "EVEN" }
+        return delta > 0 ? "+\(delta) OVER" : "\(abs(delta)) UNDER"
     }
 
     private var scoreName: String {
-        guard hole.shots > 0 else { return "—" }
+        guard hasScore else { return "Skipped" }
         return Theme.scoreName(forDelta: hole.scoreToPar)
     }
 }

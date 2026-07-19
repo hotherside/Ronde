@@ -4,7 +4,6 @@ import WatchKit
 struct ParSetupView: View {
     let courseName: String?
     var courseDistanceDisplay: String? = nil
-    @Binding var date: Date
     @Binding var pars: [Int]
     let onStart: () -> Void
 
@@ -55,13 +54,6 @@ struct ParSetupView: View {
                 .padding(.vertical, 4)
                 .listRowBackground(Theme.cardSurfaceShape)
 
-                NavigationLink {
-                    DatePickerDetailView(date: $date)
-                } label: {
-                    DateRow(date: date)
-                }
-                .buttonStyle(CardRowButtonStyle())
-                .listRowBackground(Theme.cardSurfaceShape)
             }
 
             Section {
@@ -77,7 +69,7 @@ struct ParSetupView: View {
             }
 
             Section {
-                PrimaryButton(title: "Tee Off", icon: Theme.Symbol.golfer, action: onStart)
+                PrimaryButton(title: "Start Round", icon: Theme.Symbol.golfer, action: onStart)
                     .padding(.vertical, 2)
                     .accessibilityLabel("Start round with \(numberOfHoles) holes, total par \(totalPar)")
                     .listRowBackground(Color.clear)
@@ -88,6 +80,7 @@ struct ParSetupView: View {
         .background(Theme.surface)
         .fairwayContainerBackground()
         .navigationTitle(headerTitle)
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 

@@ -2,7 +2,7 @@
 
 ## Now: secure the core round
 
-- Review and commit the active reliability and visual pass.
+- Publish the reliability and visual release candidate to `main`.
 - Verify persistence fallback and active-round restoration.
 - Verify workout recovery and idempotent ending.
 - Verify the Action Button setup and shot action on Apple Watch Ultra.

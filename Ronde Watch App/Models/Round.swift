@@ -23,8 +23,39 @@ final class Round {
         holeScores.reduce(0) { $0 + $1.shots }
     }
 
+    /// Only holes with a recorded stroke participate in score-to-par. This
+    /// prevents skipped or not-yet-played holes from reading as impossible
+    /// under-par scores during and after a round.
+    var scoredHoleScores: [HoleScore] {
+        sortedHoleScores.filter { $0.shots > 0 }
+    }
+
+    var scoredPar: Int {
+        scoredHoleScores.reduce(0) { $0 + $1.par }
+    }
+
+    var completedScoredHoleScores: [HoleScore] {
+        scoredHoleScores.filter(\.isComplete)
+    }
+
+    var completedScoreToPar: Int {
+        completedScoredHoleScores.reduce(0) { $0 + ($1.shots - $1.par) }
+    }
+
+    var hasCompletedScore: Bool {
+        !completedScoredHoleScores.isEmpty
+    }
+
     var scoreToPar: Int {
-        totalShots - totalPar
+        totalShots - scoredPar
+    }
+
+    var completedHoleCount: Int {
+        holeScores.filter(\.isComplete).count
+    }
+
+    var scoredHoleCount: Int {
+        scoredHoleScores.count
     }
 
     var totalDistanceKm: Double {
@@ -64,7 +95,8 @@ final class Round {
         if let current = currentHole {
             current.isComplete = true
         }
-        if currentHoleIndex < numberOfHoles - 1 {
+        let actualHoleCount = sortedHoleScores.count
+        if currentHoleIndex < actualHoleCount - 1 {
             currentHoleIndex += 1
         } else {
             isComplete = true

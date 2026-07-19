@@ -1,70 +1,314 @@
 import SwiftUI
 import SwiftData
 import WatchKit
+import os
+
+private let counterLog = Logger(subsystem: "com.ronde.Ronde", category: "ShotCounter")
 
 struct ShotCounterView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     @Bindable var round: Round
     let onEndRound: () -> Void
     let onDiscard: () -> Void
+    var startsTracking = true
 
     @State private var showingHoleTransition = false
     @State private var showingEndConfirmation = false
+    @State private var showingSkipConfirmation = false
+    @State private var showingParEditor = false
+    @State private var showHealthKitBanner = false
+    @State private var shotPulse = false
+    @State private var isFinishingRound = false
+    @State private var isCommittingHole = false
+    @State private var holeStartDistance: Double = 0
 
     @StateObject private var pedometer = PedometerService.shared
     @StateObject private var workoutManager = WorkoutManager.shared
 
-    @State private var showHealthKitBanner = false
-    @State private var shotPulse = false
-    /// Pedometer cumulative distance at the start of the current hole.
-    /// Subtracting from the live reading on hole-finish gives per-hole walking.
-    @State private var holeStartDistance: Double = 0
-
-    private var currentHole: HoleScore? {
-        round.currentHole
-    }
+    private var currentHole: HoleScore? { round.currentHole }
 
     var body: some View {
         Group {
             if showingHoleTransition, let hole = currentHole {
                 HoleTransitionView(
                     hole: hole,
-                    isLastHole: round.currentHoleIndex >= round.numberOfHoles - 1
-                ) {
-                    showingHoleTransition = false
-                    captureHoleDistance(for: hole)
-                    round.advanceToNextHole()
-                    if round.isComplete {
-                        finishRound()
-                    }
-                }
+                    isLastHole: round.currentHoleIndex >= round.sortedHoleScores.count - 1,
+                    onContinue: { commitHoleAndContinue(hole) }
+                )
             } else if let hole = currentHole {
-                shotCounterContent(hole: hole)
-                    .overlay(alignment: .top) {
-                        if showHealthKitBanner {
-                            Text("Enable Health access in Settings to save your round")
-                                .font(.system(size: 10, weight: .medium, design: .rounded))
-                                .foregroundStyle(.white)
-                                .multilineTextAlignment(.center)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .background(Theme.bunker.opacity(0.85), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                                .padding(.top, 4)
-                                .transition(.move(edge: .top).combined(with: .opacity))
-                        }
-                    }
-                    .animation(.easeInOut(duration: 0.3), value: showHealthKitBanner)
+                dashboard(hole)
+            } else {
+                invalidRoundView
             }
         }
-        .task {
+        .navigationBarBackButtonHidden(true)
+        .toolbar(.hidden, for: .navigationBar)
+        .task(id: round.id) {
+            guard startsTracking else { return }
             await WorkoutManager.shared.startWorkout()
-            PedometerService.shared.startTracking()
+            let earliestReasonableStart = Date.now.addingTimeInterval(-12 * 60 * 60)
+            PedometerService.shared.startTracking(from: max(round.date, earliestReasonableStart))
+            holeStartDistance = completedHoleDistance
+
             if !WorkoutManager.shared.isActive && workoutManager.authorizationDenied {
                 showHealthKitBanner = true
                 try? await Task.sleep(for: .seconds(5))
                 withAnimation { showHealthKitBanner = false }
             }
         }
+        .onChange(of: scenePhase) { _, phase in
+            if phase != .active { persistRound() }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .rondeShotDidChange)) { notification in
+            handleExternalShot(notification)
+        }
+        .sheet(isPresented: $showingParEditor) {
+            if let hole = currentHole {
+                ParPickerView(hole: hole) { persistRound() }
+            }
+        }
+    }
+
+    // MARK: - Dashboard
+
+    private func dashboard(_ hole: HoleScore) -> some View {
+        GeometryReader { proxy in
+            // Width is the reliable discriminator here: the Ultra's curved
+            // safe area can report a short height even with its larger canvas.
+            let compact = proxy.size.width < 180
+
+            VStack(spacing: 0) {
+                topControls(hole)
+
+                Spacer(minLength: 0)
+
+                Button { addShot(hole) } label: {
+                    VStack(spacing: 0) {
+                        Text("\(hole.shots)")
+                            .font(.scoreNumeral(size: compact ? 58 : 86))
+                            .foregroundStyle(Theme.textPrimary)
+                            .contentTransition(.numericText())
+                            .scaleEffect(shotPulse && !reduceMotion ? 1.06 : 1)
+                            .animation(
+                                reduceMotion ? .easeOut(duration: 0.12) : .spring(response: 0.22, dampingFraction: 0.72),
+                                value: shotPulse
+                            )
+                            .minimumScaleFactor(0.55)
+                            .lineLimit(1)
+
+                        if !compact {
+                            Text(hole.shots == 1 ? "STROKE" : "STROKES")
+                                .font(.micro)
+                                .tracking(1.8)
+                                .foregroundStyle(Theme.textSecondary)
+                        }
+
+                        HStack(spacing: 4) {
+                            Image(systemName: Theme.Symbol.actionButton)
+                                .font(.system(size: 9, weight: .semibold))
+                            Text("PRESS ACTION OR TAP")
+                                .font(.system(size: compact ? 8 : 9, weight: .semibold, design: .rounded))
+                                .tracking(compact ? 0.3 : 0.7)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.85)
+                        }
+                        .foregroundStyle(Theme.action)
+                        .padding(.top, compact ? 2 : 6)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("\(hole.shots) strokes on hole \(hole.holeNumber)")
+                .accessibilityHint("Tap to log another shot")
+
+                Spacer(minLength: 0)
+
+                bottomControls(hole, compact: compact)
+                    .offset(y: compact ? -8 : 0)
+            }
+            .padding(.horizontal, compact ? 8 : 10)
+            .padding(.top, compact ? 34 : 26)
+            .padding(.bottom, compact ? 0 : 6)
+        }
+        .ignoresSafeArea(edges: .top)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background { Theme.fairwayBackdrop.ignoresSafeArea() }
+        .overlay(alignment: .top) {
+            if showHealthKitBanner {
+                Text("Enable Health access to keep Ronde active for the full round")
+                    .font(.system(size: 10, weight: .medium, design: .rounded))
+                    .foregroundStyle(Theme.textPrimary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 7)
+                    .background(Theme.bunker.opacity(0.94), in: RoundedRectangle(cornerRadius: 10))
+                    .padding(.horizontal, 12)
+                    .transition(.opacity)
+            }
+        }
+        .confirmationDialog(
+            "End this round?",
+            isPresented: $showingEndConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("End & Save") {
+                hole.isComplete = hole.shots > 0
+                round.isComplete = true
+                finishRound()
+            }
+            Button("Discard Round", role: .destructive) { discardRound() }
+            Button("Keep Playing", role: .cancel) {}
+        }
+        .confirmationDialog(
+            "Skip hole \(hole.holeNumber)?",
+            isPresented: $showingSkipConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Skip Hole") { beginHoleTransition() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("A skipped hole will not count towards your score.")
+        }
+    }
+
+    private func topControls(_ hole: HoleScore) -> some View {
+        VStack(spacing: 7) {
+            HStack(spacing: 7) {
+                Button { showingEndConfirmation = true } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(Theme.textSecondary)
+                        .frame(width: 30, height: 30)
+                        .background(Theme.cardSurface, in: Circle())
+                }
+                .buttonStyle(RondePressStyle())
+                .accessibilityLabel("End or discard round")
+
+                ProgressView(
+                    value: Double(round.currentHoleIndex + 1),
+                    total: Double(max(round.sortedHoleScores.count, 1))
+                )
+                .tint(Theme.fairway)
+
+                Text("\(round.currentHoleIndex + 1)/\(round.sortedHoleScores.count)")
+                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(Theme.textTertiary)
+            }
+
+            HStack(alignment: .firstTextBaseline) {
+                metric(value: "\(hole.holeNumber)", label: "HOLE", alignment: .leading)
+                Spacer()
+
+                if pedometer.totalDistanceMeters >= 100 {
+                    Label(
+                        String(format: "%.1f km", pedometer.totalDistanceMeters / 1000),
+                        systemImage: Theme.Symbol.walking
+                    )
+                    .font(.system(size: 9, weight: .medium, design: .rounded))
+                    .foregroundStyle(Theme.textTertiary)
+                }
+
+                Spacer()
+                metric(
+                    value: Theme.compactScore(round.completedScoreToPar, hasShots: round.hasCompletedScore),
+                    label: "ROUND",
+                    color: Theme.scoreColor(
+                        forDelta: round.completedScoreToPar,
+                        hasShots: round.hasCompletedScore
+                    ),
+                    alignment: .center
+                )
+                Spacer()
+
+                Button { showingParEditor = true } label: {
+                    metric(value: "\(hole.par)", label: "PAR", alignment: .trailing)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(Theme.cardSurface, in: RoundedRectangle(cornerRadius: 9))
+                }
+                .buttonStyle(RondePressStyle())
+                .accessibilityLabel("Par \(hole.par). Tap to adjust")
+            }
+        }
+    }
+
+    private func metric(
+        value: String,
+        label: String,
+        color: Color = Theme.textPrimary,
+        alignment: HorizontalAlignment
+    ) -> some View {
+        VStack(alignment: alignment, spacing: 0) {
+            Text(label)
+                .font(.system(size: 8, weight: .semibold, design: .rounded))
+                .tracking(0.9)
+                .foregroundStyle(Theme.textTertiary)
+            Text(value)
+                .font(.scoreNumeral(size: 21))
+                .foregroundStyle(color)
+        }
+    }
+
+    private func bottomControls(_ hole: HoleScore, compact: Bool) -> some View {
+        HStack(spacing: 8) {
+            Button { undoShot(hole) } label: {
+                Image(systemName: Theme.Symbol.undo)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(hole.shots > 0 ? Theme.textPrimary : Theme.textFaint)
+                    .frame(width: compact ? 36 : 46, height: compact ? 36 : 46)
+                    .background(Theme.cardSurface, in: RoundedRectangle(cornerRadius: compact ? 13 : 15))
+            }
+            .buttonStyle(RondePressStyle())
+            .disabled(hole.shots == 0)
+            .accessibilityLabel("Undo last shot")
+
+            Button {
+                if hole.shots == 0 {
+                    showingSkipConfirmation = true
+                } else {
+                    beginHoleTransition()
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Text(hole.shots == 0 ? "Skip Hole" : "Hole Done")
+                        .font(.system(size: 14, weight: .bold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.74)
+                    Image(systemName: Theme.Symbol.flag)
+                        .font(.system(size: 12, weight: .bold))
+                }
+                .foregroundStyle(Color.black.opacity(0.86))
+                .frame(maxWidth: .infinity)
+                .frame(height: compact ? 36 : 46)
+                .background(Theme.fairway, in: RoundedRectangle(cornerRadius: compact ? 13 : 15))
+            }
+            .buttonStyle(RondePressStyle())
+            .accessibilityLabel(
+                hole.shots == 0
+                    ? "Skip hole \(hole.holeNumber)"
+                    : round.currentHoleIndex >= round.sortedHoleScores.count - 1
+                        ? "Finish round" : "Finish hole \(hole.holeNumber)"
+            )
+        }
+    }
+
+    private var invalidRoundView: some View {
+        VStack(spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(Theme.bunker)
+            Text("This round has no playable hole.")
+                .font(.bodyEmphasized)
+                .multilineTextAlignment(.center)
+            OutlineButton(title: "Discard Round") { discardRound() }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .fairwayBackground()
     }
 
     // MARK: - Actions
@@ -72,274 +316,124 @@ struct ShotCounterView: View {
     private func addShot(_ hole: HoleScore) {
         hole.incrementShot()
         WKInterfaceDevice.current().play(.click)
+        persistRound()
         triggerShotPulse()
     }
 
     private func undoShot(_ hole: HoleScore) {
         hole.decrementShot()
         WKInterfaceDevice.current().play(.retry)
+        persistRound()
     }
 
-    private func triggerShotPulse() {
-        shotPulse = true
-        Task {
-            try? await Task.sleep(for: .milliseconds(200))
-            shotPulse = false
+    private func beginHoleTransition() {
+        guard !showingHoleTransition, !isCommittingHole else { return }
+        WKInterfaceDevice.current().play(.success)
+        showingHoleTransition = true
+    }
+
+    private func commitHoleAndContinue(_ hole: HoleScore) {
+        guard !isCommittingHole, !isFinishingRound else { return }
+        isCommittingHole = true
+
+        captureHoleDistance(for: hole)
+        round.advanceToNextHole()
+        persistRound()
+
+        if round.isComplete {
+            finishRound()
+        } else {
+            showingHoleTransition = false
+            isCommittingHole = false
         }
     }
 
     private func finishRound() {
+        guard !isFinishingRound else { return }
+        isFinishingRound = true
         let result = PedometerService.shared.stopTracking()
         round.totalSteps = result.steps
         round.totalDistanceMeters = result.distanceMeters
+        persistRound()
         Task { await WorkoutManager.shared.endWorkout() }
         onEndRound()
     }
 
-    /// Snapshot pedometer delta into the just-completed hole and re-anchor for
-    /// the next one. Called from the hole-transition continue closure, before
-    /// `round.advanceToNextHole()` flips `currentHole`.
+    private func discardRound() {
+        guard !isFinishingRound else { return }
+        isFinishingRound = true
+        _ = PedometerService.shared.stopTracking()
+        Task { await WorkoutManager.shared.endWorkout() }
+        modelContext.delete(round)
+        persistRound()
+        onDiscard()
+    }
+
     private func captureHoleDistance(for hole: HoleScore) {
         let now = pedometer.totalDistanceMeters
         hole.distanceMeters = max(0, now - holeStartDistance)
         holeStartDistance = now
     }
 
-    private func discardRound() {
-        _ = PedometerService.shared.stopTracking()
-        Task { await WorkoutManager.shared.endWorkout() }
-        modelContext.delete(round)
-        onDiscard()
+    private var completedHoleDistance: Double {
+        round.sortedHoleScores
+            .filter(\.isComplete)
+            .reduce(0) { $0 + $1.distanceMeters }
     }
 
-    // MARK: - Main Content
-
-    private func shotCounterContent(hole: HoleScore) -> some View {
-        VStack(spacing: 0) {
-            // ── Top bar: hole + par ──
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 0) {
-                    HStack(spacing: 3) {
-                        Image(systemName: Theme.Symbol.pin)
-                            .font(.system(size: 7, weight: .bold))
-                        Text("HOLE")
-                            .font(.system(size: 8, weight: .bold, design: .rounded))
-                            .tracking(1)
-                    }
-                    .foregroundStyle(Theme.fairwayBright.opacity(0.7))
-
-                    Text("\(hole.holeNumber)")
-                        .font(.scoreNumeral(size: 26))
-                        .foregroundStyle(Theme.textPrimary)
-                }
-
-                Spacer()
-
-                // Hole progress dots — at-a-glance position in the round
-                HoleProgressDots(
-                    total: round.numberOfHoles,
-                    current: round.currentHoleIndex
-                )
-
-                Spacer()
-
-                VStack(alignment: .trailing, spacing: 0) {
-                    Text("PAR")
-                        .font(.system(size: 8, weight: .bold, design: .rounded))
-                        .foregroundStyle(Theme.mutedText)
-                        .tracking(1)
-                    Text("\(hole.par)")
-                        .font(.scoreNumeral(size: 26))
-                        .foregroundStyle(Theme.mutedText)
-                }
-            }
-            .padding(.horizontal, 10)
-
-            Spacer(minLength: 0)
-
-            // ── Hero: shot count, tap-to-add ──
-            VStack(spacing: 4) {
-                Text(hole.shots > 0 ? "\(hole.shots)" : "0")
-                    .font(.scoreNumeral(size: 84))
-                    .foregroundStyle(Theme.textPrimary)
-                    .contentTransition(.numericText())
-                    .scaleEffect(shotPulse ? 1.08 : 1.0)
-                    .animation(.spring(response: 0.2, dampingFraction: 0.45), value: shotPulse)
-                    .animation(.snappy(duration: 0.15), value: hole.shots)
-                    .minimumScaleFactor(0.5)
-                    .lineLimit(1)
-
-                if hole.shots > 0 {
-                    scoreToParBadge(for: hole)
-                        .transition(.scale.combined(with: .opacity))
-                } else {
-                    Text("TAP TO LOG SHOT")
-                        .font(.system(size: 9, weight: .bold, design: .rounded))
-                        .foregroundStyle(Theme.faintText)
-                        .tracking(1.5)
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .contentShape(Rectangle())
-            .onTapGesture { addShot(hole) }
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel(hole.shots > 0 ? "\(hole.shots) shots" : "No shots yet")
-            .accessibilityHint("Tap to add a shot")
-            .animation(.easeOut(duration: 0.2), value: hole.shots)
-
-            Spacer(minLength: 0)
-
-            // ── Bottom toolbar ──
-            HStack(spacing: 0) {
-                Button { undoShot(hole) } label: {
-                    Image(systemName: Theme.Symbol.undo)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(hole.shots > 0 ? Theme.textSecondary : Theme.faintText)
-                        .frame(width: 34, height: 34)
-                        .background(
-                            Circle().fill(Theme.textPrimary.opacity(hole.shots > 0 ? 0.06 : 0.02))
-                        )
-                }
-                .buttonStyle(.plain)
-                .disabled(hole.shots == 0)
-                .accessibilityLabel("Undo shot")
-
-                Spacer()
-
-                HStack(spacing: 3) {
-                    Image(systemName: Theme.Symbol.walking)
-                        .font(.system(size: 8))
-                    Text("\(pedometer.totalSteps.formatted())")
-                        .font(.system(size: 10, weight: .bold, design: .rounded))
-                        .monospacedDigit()
-                    Text("·")
-                        .font(.system(size: 8))
-                    Text("\(String(format: "%.1f", pedometer.totalDistanceMeters / 1000.0)) km")
-                        .font(.system(size: 10, weight: .bold, design: .rounded))
-                }
-                .foregroundStyle(Theme.dimText)
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel(
-                    "\(pedometer.totalSteps) steps, \(String(format: "%.1f", pedometer.totalDistanceMeters / 1000.0)) kilometers"
-                )
-
-                Spacer()
-
-                Button {
-                    showingHoleTransition = true
-                    WKInterfaceDevice.current().play(.success)
-                } label: {
-                    Image(systemName: Theme.Symbol.flag)
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(.white)
-                        .frame(width: 44, height: 44)
-                        .background(
-                            Circle()
-                                .fill(Theme.fairway)
-                                .shadow(color: Theme.fairway.opacity(0.35), radius: 4, y: 2)
-                        )
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(
-                    round.currentHoleIndex >= round.numberOfHoles - 1
-                        ? "Finish round" : "Finish hole"
-                )
-            }
-            .padding(.horizontal, 10)
-            .padding(.bottom, 2)
-        }
-        .padding(.top, 2)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background {
-            Theme.scoreBackdrop(forDelta: hole.scoreToPar, hasShots: hole.shots > 0)
-                .ignoresSafeArea()
-        }
-        .containerBackground(Theme.fairway.gradient, for: .navigation)
-        .animation(.easeInOut(duration: 0.5), value: hole.shots)
-        .navigationBarBackButtonHidden(true)
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button {
-                    showingEndConfirmation = true
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(Theme.fairwayDeep)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("End or discard round")
-            }
-        }
-        .confirmationDialog(
-            "End Round?",
-            isPresented: $showingEndConfirmation,
-            titleVisibility: .visible
-        ) {
-            Button("Save & Exit") {
-                round.isComplete = true
-                finishRound()
-            }
-            Button("Discard Round", role: .destructive) {
-                discardRound()
-            }
-            Button("Cancel", role: .cancel) {}
+    private func triggerShotPulse() {
+        shotPulse = true
+        Task {
+            try? await Task.sleep(for: .milliseconds(160))
+            shotPulse = false
         }
     }
 
-    // MARK: - Score Badge
+    private func handleExternalShot(_ notification: Notification) {
+        guard let holeID = notification.userInfo?["holeID"] as? UUID,
+              let shots = notification.userInfo?["shots"] as? Int,
+              let hole = round.sortedHoleScores.first(where: { $0.id == holeID }) else { return }
 
-    @ViewBuilder
-    private func scoreToParBadge(for hole: HoleScore) -> some View {
-        let diff = hole.scoreToPar
-        let color = Theme.scoreColor(forDelta: diff)
-        let text: String = {
-            if diff <= -2 { return hole.scoreLabel }
-            if diff == 0  { return "PAR" }
-            return diff > 0 ? "+\(diff)" : "\(diff)"
-        }()
-
-        Text(text)
-            .font(.system(size: 14, weight: .heavy, design: .rounded))
-            .monospacedDigit()
-            .tracking(1)
-            .foregroundStyle(color)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 3)
-            .background(Capsule().fill(color.opacity(0.18)))
-            .accessibilityLabel(accessibilityScoreLabel(diff: diff))
+        if hole.shots != shots {
+            hole.shots = shots
+        }
+        triggerShotPulse()
     }
 
-    private func accessibilityScoreLabel(diff: Int) -> String {
-        switch diff {
-        case ...(-2): return "\(abs(diff)) under par, \(Theme.scoreName(forDelta: diff))"
-        case -1:      return "1 under par, birdie"
-        case 0:       return "Even par"
-        case 1:       return "1 over par, bogey"
-        default:      return "\(diff) over par"
+    private func persistRound() {
+        do {
+            try modelContext.save()
+        } catch {
+            counterLog.error("Round save failed: \(error.localizedDescription)")
         }
     }
 }
 
-// MARK: - Hole progress dots
-
-private struct HoleProgressDots: View {
-    let total: Int
-    let current: Int
+private struct ParPickerView: View {
+    @Bindable var hole: HoleScore
+    let onDone: () -> Void
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        HStack(spacing: 3) {
-            ForEach(0..<min(total, 18), id: \.self) { index in
-                Circle()
-                    .fill(color(for: index))
-                    .frame(width: 4, height: 4)
+        VStack(spacing: 8) {
+            Text("Hole \(hole.holeNumber) Par")
+                .font(.titleSmall)
+
+            Picker("Par", selection: $hole.par) {
+                ForEach(3...5, id: \.self) { par in
+                    Text("Par \(par)").tag(par)
+                }
+            }
+            .labelsHidden()
+
+            PrimaryButton(title: "Done", icon: "checkmark") {
+                onDone()
+                dismiss()
             }
         }
-        .accessibilityHidden(true)
-    }
-
-    private func color(for index: Int) -> Color {
-        if index == current { return Theme.fairwayBright }
-        if index < current { return Theme.fairway.opacity(0.6) }
-        return Theme.faintText
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .fairwayBackground()
     }
 }

@@ -9,7 +9,7 @@ These instructions apply to the entire Ronde repository and are the starting poi
 3. Read [docs/context/README.md](docs/context/README.md) and [docs/context/CURRENT_STATE.md](docs/context/CURRENT_STATE.md).
 4. Read the relevant architecture, roadmap, operations, decision and history pages linked from the context library.
 5. Inspect the live Swift, `project.yml`, Xcode project and current working tree before changing claims or code.
-6. Run `git status --short --branch`. Ronde may contain an active uncommitted app pass; never stage or overwrite unrelated work.
+6. Run `git status --short --branch`. Preserve any active work that appeared after the current release candidate; never stage or overwrite unrelated changes without explicit scope.
 
 ## Source-of-truth boundaries
 
