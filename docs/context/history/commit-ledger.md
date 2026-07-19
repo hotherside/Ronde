@@ -2,9 +2,9 @@
 
 > Generated from Git. Git remains authoritative. Context-only refresh commits are excluded.
 
-- Source commit: `11c751c4d18b47413f742a60ab1a6d4f4c6109fe`
+- Source commit: `53ae3919190df9e50455d03154747697e3c8f252`
 - Source commit date: 2026-07-19
-- Tracked commit count: 45
+- Tracked commit count: 47
 
 | Date | Commit | Subject |
 | --- | --- | --- |
@@ -52,3 +52,4 @@
 | 2026-07-19 | `c74cbee` | docs: establish Ronde context library |
 | 2026-07-19 | `67a80ac` | Merge pull request #1 from hotherside/agent/ronde-context-library |
 | 2026-07-19 | `11c751c` | feat: harden Ronde watch experience |
+| 2026-07-19 | `53ae391` | Merge pull request #2 from hotherside/agent/ronde-watch-hardening |
