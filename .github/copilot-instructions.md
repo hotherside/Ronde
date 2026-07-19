@@ -1,0 +1,1 @@
+Read `AGENTS.md`, `PROJECT.md`, `docs/product-contract.md` and `docs/context/CURRENT_STATE.md` before changing Ronde. Preserve unrelated local work and maintain the context library for material changes.

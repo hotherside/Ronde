@@ -1,0 +1,45 @@
+name: Ronde Context Library
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - run: ./scripts/check-context-library.sh
+      - if: github.event_name == 'pull_request'
+        run: ./scripts/check-context-library.sh "${{ github.event.pull_request.base.sha }}"
+
+  refresh-generated-context:
+    if: >-
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      github.event.head_commit.message != 'chore(context): refresh generated library'
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - run: ./scripts/update-context-library.sh
+      - name: Commit generated changes
+        run: |
+          if git diff --quiet -- docs/context/generated/repository-inventory.md docs/context/history/commit-ledger.md; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/context/generated/repository-inventory.md docs/context/history/commit-ledger.md
+          git commit -m "chore(context): refresh generated library"
+          git push
