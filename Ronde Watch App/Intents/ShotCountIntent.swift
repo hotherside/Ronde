@@ -1,72 +1,139 @@
 import AppIntents
 import SwiftData
 import WatchKit
-import os.log
+import os
 
-private let log = Logger(subsystem: "com.ronde.Ronde", category: "ShotCountIntent")
+private let intentLog = Logger(subsystem: "com.ronde.Ronde", category: "ActionButton")
 
-/// Logs a golf shot for the active round's current hole.
-///
-/// Triggered by:
-/// - Apple Watch Ultra Action Button (via Shortcuts → assign this action)
-/// - Siri: "Log a shot in Ronde"
-/// - Shortcuts app
-struct ShotCountIntent: AppIntent {
-    static let title: LocalizedStringResource = "Log Golf Shot"
-    static let description = IntentDescription("Increment the shot count for the current hole.")
-    /// Runs silently in the background so the Action Button doesn't interrupt
-    /// the user mid-swing. The app's @Query updates the on-screen count
-    /// automatically if the app is already in the foreground.
-    static let openAppWhenRun: Bool = false
+extension Notification.Name {
+    static let rondeShotDidChange = Notification.Name("com.ronde.Ronde.shotDidChange")
+}
 
-    func perform() async throws -> some IntentResult & ProvidesDialog {
-        // Reuse the app's shared ModelContainer so the intent context and the
-        // app's main context share the same NSPersistentStoreCoordinator.
-        // Saves from here trigger NSManagedObjectContextDidSave on the main
-        // context, keeping @Bindable / @Query up-to-date without extra glue.
+/// The quick-start choice Ronde exposes in Settings > Action Button > Workout.
+/// The first press starts the preferred round length; later presses log shots.
+enum GolfRoundStyle: String, AppEnum {
+    case golf
+
+    static let allCases: [GolfRoundStyle] = [.golf]
+    static let typeDisplayRepresentation: TypeDisplayRepresentation = "Golf Round"
+    static let caseDisplayRepresentations: [GolfRoundStyle: DisplayRepresentation] = [
+        .golf: DisplayRepresentation(
+            title: "Golf Round",
+            subtitle: "Start your preferred round length"
+        ),
+    ]
+
+    var holeCount: Int {
+        let preferred = UserDefaults.standard.integer(forKey: "preferredHoleCount")
+        return preferred == 9 ? 9 : 18
+    }
+}
+
+struct StartGolfRoundIntent: StartWorkoutIntent {
+    static let title: LocalizedStringResource = "Start Golf Round"
+    static let suggestedWorkouts: [StartGolfRoundIntent] = [
+        StartGolfRoundIntent(style: .golf),
+    ]
+
+    @Parameter(title: "Round Length")
+    var workoutStyle: GolfRoundStyle
+
+    init() {
+        workoutStyle = .golf
+    }
+
+    var displayRepresentation: DisplayRepresentation {
+        GolfRoundStyle.caseDisplayRepresentations[workoutStyle]
+            ?? DisplayRepresentation(title: "Golf Round")
+    }
+
+    func perform() async throws -> some IntentResult {
+        guard let appModelContainer else {
+            intentLog.fault("Cannot start round because the model container is unavailable")
+            return .result()
+        }
+
         let context = ModelContext(appModelContainer)
-
         var descriptor = FetchDescriptor<Round>(
             predicate: #Predicate { $0.isComplete == false },
             sortBy: [SortDescriptor(\Round.date, order: .reverse)]
         )
         descriptor.fetchLimit = 1
 
-        let activeRounds: [Round]
         do {
-            activeRounds = try context.fetch(descriptor)
+            if try context.fetch(descriptor).isEmpty {
+                let round = Round(
+                    date: .now,
+                    courseName: nil,
+                    numberOfHoles: workoutStyle.holeCount,
+                    pars: Array(repeating: 4, count: workoutStyle.holeCount)
+                )
+                context.insert(round)
+                try context.save()
+                intentLog.info("Created a \(workoutStyle.holeCount)-hole quick round")
+            }
         } catch {
-            log.error("Fetch failed: \(error.localizedDescription)")
-            return .result(dialog: "Unable to find active round")
+            intentLog.error("Unable to create or fetch active round: \(error.localizedDescription)")
+            return .result()
         }
 
-        guard let round = activeRounds.first, let hole = round.currentHole else {
-            log.info("No active round")
-            return .result(dialog: "No active round")
-        }
-
-        hole.incrementShot()
-
-        do {
-            try context.save()
-        } catch {
-            log.error("Save failed: \(error.localizedDescription)")
-        }
-
-        let shots = hole.shots
-        let holeNumber = hole.holeNumber
-
-        await MainActor.run {
-            WKInterfaceDevice.current().play(.click)
-        }
-
-        log.debug("Shot \(shots) logged on hole \(holeNumber)")
-        return .result(dialog: "Shot \(shots) on hole \(holeNumber)")
+        await WorkoutManager.shared.startWorkout()
+        // WorkoutManager donates the shot intent after the HealthKit session is
+        // running, covering both Action Button and in-app starts.
+        return .result()
     }
 }
 
-/// Registers shortcuts so this action appears in the Shortcuts app
-/// and can be assigned to the Apple Watch Ultra Action Button.
+/// Silent, one-press shot logging for the active hole. Haptics and the live
+/// counter provide feedback without a dialog covering the score.
+struct ShotCountIntent: AppIntent {
+    static let title: LocalizedStringResource = "Log Golf Shot"
+    static let description = IntentDescription("Increment the shot count for the current hole.")
+    static let openAppWhenRun = false
+
+    func perform() async throws -> some IntentResult {
+        guard let appModelContainer else {
+            intentLog.fault("Cannot log shot because the model container is unavailable")
+            return .result()
+        }
+
+        let context = ModelContext(appModelContainer)
+        var descriptor = FetchDescriptor<Round>(
+            predicate: #Predicate { $0.isComplete == false },
+            sortBy: [SortDescriptor(\Round.date, order: .reverse)]
+        )
+        descriptor.fetchLimit = 1
+
+        do {
+            guard let round = try context.fetch(descriptor).first,
+                  let hole = round.currentHole else {
+                intentLog.info("Shot ignored because there is no active round")
+                return .result()
+            }
+
+            hole.incrementShot()
+            try context.save()
+
+            let holeID = hole.id
+            let shots = hole.shots
+            let holeNumber = hole.holeNumber
+            await MainActor.run {
+                WKInterfaceDevice.current().play(.click)
+                NotificationCenter.default.post(
+                    name: .rondeShotDidChange,
+                    object: nil,
+                    userInfo: ["holeID": holeID, "shots": shots]
+                )
+            }
+            intentLog.debug("Shot \(shots) logged on hole \(holeNumber)")
+        } catch {
+            intentLog.error("Shot logging failed: \(error.localizedDescription)")
+        }
+
+        return .result()
+    }
+}
+
 struct RondeShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(

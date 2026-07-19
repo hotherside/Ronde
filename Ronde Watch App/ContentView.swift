@@ -4,154 +4,168 @@ import SwiftData
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Round.date, order: .reverse) private var rounds: [Round]
+
     @State private var showingSetup = false
-    @State private var activeRound: Round?
-    /// Set after a round ends so we can show the post-round summary before
-    /// returning to the history list. Cleared when the user saves or discards.
+    @State private var showingActionButtonGuide = false
     @State private var showingSummaryForRound: Round?
 
-    var body: some View {
-        NavigationStack {
-            if let round = showingSummaryForRound {
-                RoundSummaryView(round: round) {
-                    showingSummaryForRound = nil
-                    activeRound = nil
-                }
-            } else if let round = activeRound, !round.isComplete {
-                ShotCounterView(
-                    round: round,
-                    onEndRound: {
-                        showingSummaryForRound = activeRound
-                    },
-                    onDiscard: {
-                        activeRound = nil
-                    }
-                )
-            } else {
-                roundsList
-            }
-        }
-        .onAppear {
-            if activeRound == nil, showingSummaryForRound == nil {
-                activeRound = rounds.first { !$0.isComplete }
-            }
-        }
+    private var activeRound: Round? {
+        rounds.first { !$0.isComplete }
     }
 
     private var completedRounds: [Round] {
         rounds.filter(\.isComplete)
     }
 
-    @ViewBuilder
-    private var roundsList: some View {
-        if completedRounds.isEmpty {
-            emptyState
-        } else {
-            populatedList
+    var body: some View {
+        NavigationStack {
+            if let round = showingSummaryForRound {
+                RoundSummaryView(round: round) {
+                    showingSummaryForRound = nil
+                }
+            } else if let round = activeRound {
+                ShotCounterView(
+                    round: round,
+                    onEndRound: { showingSummaryForRound = round },
+                    onDiscard: {}
+                )
+            } else {
+                home
+            }
         }
     }
 
-    private var emptyState: some View {
-        VStack(spacing: 14) {
-            Spacer()
+    private var home: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                homeHeader
 
-            ZStack {
-                Circle()
-                    .fill(Theme.fairway.opacity(0.18))
-                    .frame(width: 64, height: 64)
-                Image(systemName: Theme.Symbol.golfer)
-                    .font(.system(size: 30, weight: .semibold))
-                    .foregroundStyle(Theme.fairwayBright)
-            }
+                if let notice = persistenceRuntime.mode.notice {
+                    storageNotice(notice)
+                }
 
-            VStack(spacing: 4) {
-                Text("Tee it up")
-                    .font(.titleLarge)
-                    .foregroundStyle(Theme.textPrimary)
-                Text("Tap below to start your first round.")
-                    .font(.caption)
-                    .foregroundStyle(Theme.dimText)
-                    .multilineTextAlignment(.center)
-            }
-            .padding(.horizontal)
+                startPanel
 
-            Spacer()
+                actionButtonSetup
 
-            PrimaryButton(title: "New Round", icon: Theme.Symbol.pin) {
-                showingSetup = true
+                if !completedRounds.isEmpty {
+                    recentRounds
+                }
             }
             .padding(.horizontal, 12)
-            .padding(.bottom, 4)
-            .accessibilityLabel("Start a new round")
+            .padding(.top, 8)
+            .padding(.bottom, 12)
         }
+        .scrollIndicators(.hidden)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .fairwayBackground()
         .fairwayContainerBackground()
-        .navigationTitle("Ronde")
+        .toolbar(.hidden, for: .navigationBar)
         .sheet(isPresented: $showingSetup) {
-            StartView { round in
-                activeRound = round
-                showingSetup = false
-            }
+            StartView { _ in showingSetup = false }
+        }
+        .sheet(isPresented: $showingActionButtonGuide) {
+            ActionButtonGuideView()
         }
     }
 
-    private var populatedList: some View {
-        List {
-            Section {
-                Button {
-                    showingSetup = true
+    private var homeHeader: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text("RONDE")
+                .font(.micro)
+                .tracking(2.2)
+                .foregroundStyle(Theme.fairwayBright)
+            Text("Golf, counted.")
+                .font(.titleLarge)
+                .foregroundStyle(Theme.textPrimary)
+            Text("Track every shot without leaving the hole.")
+                .font(.caption)
+                .foregroundStyle(Theme.textSecondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
+    }
+
+    private var startPanel: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Quick 9, Quick 18, or choose a Sydney course.")
+                .font(.caption)
+                .foregroundStyle(Theme.textSecondary)
+
+            PrimaryButton(title: "Start Round", icon: Theme.Symbol.golfer) {
+                showingSetup = true
+            }
+            .accessibilityLabel("Start a new golf round")
+        }
+        .padding(10)
+        .cardSurface()
+    }
+
+    private var actionButtonSetup: some View {
+        Button {
+            showingActionButtonGuide = true
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: Theme.Symbol.actionButton)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Theme.action)
+                    .frame(width: 34, height: 34)
+                    .background(Theme.action.opacity(0.13), in: RoundedRectangle(cornerRadius: 11))
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Use the Action Button")
+                        .font(.bodyEmphasized)
+                        .foregroundStyle(Theme.textPrimary)
+                    Text("Start rounds and log every shot.")
+                        .font(.caption)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+
+                Spacer(minLength: 2)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(Theme.textTertiary)
+            }
+            .padding(10)
+            .background(
+                RoundedRectangle(cornerRadius: 15, style: .continuous)
+                    .fill(Theme.cardSurface)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 15, style: .continuous)
+                            .stroke(Theme.action.opacity(0.24), lineWidth: 1)
+                    }
+            )
+        }
+        .buttonStyle(RondePressStyle())
+        .accessibilityLabel("Set up Ronde for the Apple Watch Ultra Action Button")
+    }
+
+    private var recentRounds: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Recent rounds").sectionHeaderStyle()
+
+            ForEach(completedRounds.prefix(5)) { round in
+                NavigationLink {
+                    RoundSummaryView(round: round, onDone: nil)
                 } label: {
-                    HStack(spacing: 8) {
-                        ZStack {
-                            Circle()
-                                .fill(Theme.fairway)
-                                .frame(width: 26, height: 26)
-                            Image(systemName: Theme.Symbol.pin)
-                                .font(.system(size: 11, weight: .bold))
-                                .foregroundStyle(.white)
-                        }
-                        Text("New Round")
-                            .font(.bodyEmphasized)
-                            .foregroundStyle(Theme.textPrimary)
-                        Spacer()
-                    }
+                    RoundRowView(round: round)
+                        .padding(10)
+                        .background(Theme.cardSurfaceShape)
                 }
-                .buttonStyle(CardRowButtonStyle())
-                .listRowBackground(Theme.cardSurfaceShape)
-                .accessibilityLabel("Start a new round")
-            }
-
-            Section {
-                ForEach(completedRounds) { round in
-                    NavigationLink {
-                        RoundSummaryView(round: round, onDone: nil)
-                    } label: {
-                        RoundRowView(round: round)
-                    }
-                    .listRowBackground(Theme.cardSurfaceShape)
-                }
-                .onDelete(perform: deleteRounds)
-            } header: {
-                Text("Past Rounds").sectionHeaderStyle()
-            }
-        }
-        .scrollContentBackground(.hidden)
-        .background(Theme.surface)
-        .fairwayContainerBackground()
-        .navigationTitle("Ronde")
-        .sheet(isPresented: $showingSetup) {
-            StartView { round in
-                activeRound = round
-                showingSetup = false
+                .buttonStyle(RondePressStyle())
             }
         }
     }
 
-    private func deleteRounds(at offsets: IndexSet) {
-        for index in offsets {
-            modelContext.delete(completedRounds[index])
-        }
+    private func storageNotice(_ message: String) -> some View {
+        Label(message, systemImage: "externaldrive.badge.exclamationmark")
+            .font(.caption)
+            .foregroundStyle(Theme.bunker)
+            .padding(10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Theme.bunker.opacity(0.10), in: RoundedRectangle(cornerRadius: 12))
     }
 }
 
@@ -159,64 +173,105 @@ private struct RoundRowView: View {
     let round: Round
 
     var body: some View {
-        HStack(spacing: 8) {
-            // Score chip
-            ZStack {
-                RoundedRectangle(cornerRadius: 7, style: .continuous)
-                    .fill(scoreColor.opacity(0.18))
-                    .frame(width: 36, height: 32)
-                Text(scoreShortText)
-                    .font(.system(size: 13, weight: .heavy, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundStyle(scoreColor)
-            }
+        HStack(spacing: 9) {
+            Text(Theme.compactScore(round.scoreToPar, hasShots: round.totalShots > 0))
+                .font(.scoreNumeral(size: 17))
+                .foregroundStyle(scoreColor)
+                .frame(width: 38, height: 38)
+                .background(scoreColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 11))
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(round.courseName ?? "Custom Round")
+                Text(round.courseName ?? "Quick Round")
                     .font(.bodyEmphasized)
                     .foregroundStyle(Theme.textPrimary)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.9)
-                    .allowsTightening(true)
-                HStack(spacing: 4) {
-                    Text(round.date, format: .dateTime.month(.abbreviated).day())
-                    Text("·")
-                    Text("\(round.numberOfHoles)H")
-                    Text("·")
-                    Text("\(round.totalShots) shots")
-                        .monospacedDigit()
-                }
-                .font(.caption)
-                .foregroundStyle(Theme.dimText)
+                    .lineLimit(1)
+                Text(metadata)
+                    .font(.caption)
+                    .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(1)
             }
 
-            Spacer()
+            Spacer(minLength: 2)
+            Image(systemName: "chevron.right")
+                .font(.system(size: 9, weight: .bold))
+                .foregroundStyle(Theme.textTertiary)
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(rowAccessibilityLabel)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilitySummary)
     }
 
-    private var rowAccessibilityLabel: String {
-        let course = round.courseName ?? "Custom Round"
-        let score = round.scoreToPar
-        let scoreDesc = score == 0 ? "even par"
-            : score > 0 ? "\(score) over par"
-            : "\(abs(score)) under par"
-        return "\(course), \(round.numberOfHoles) holes, \(round.totalShots) shots, \(scoreDesc)"
-    }
-
-    private var scoreShortText: String {
-        let score = round.scoreToPar
-        if score == 0 { return "E" }
-        return score > 0 ? "+\(score)" : "\(score)"
+    private var metadata: String {
+        let holes = round.scoredHoleCount == round.numberOfHoles
+            ? "\(round.numberOfHoles) holes"
+            : "\(round.scoredHoleCount)/\(round.numberOfHoles) scored"
+        return "\(round.date.formatted(.dateTime.month(.abbreviated).day())) · \(holes) · \(round.totalShots) shots"
     }
 
     private var scoreColor: Color {
+        Theme.scoreColor(forDelta: round.scoreToPar, hasShots: round.totalShots > 0)
+    }
+
+    private var accessibilitySummary: String {
         let score = round.scoreToPar
-        if score <= -1 { return Theme.fairwayBright }
-        if score == 0  { return Theme.fairway }
-        if score <= 5  { return Theme.bunker }
-        return Theme.rough
+        let scoreText = score == 0 ? "even par" : score > 0 ? "\(score) over par" : "\(abs(score)) under par"
+        return "\(round.courseName ?? "Quick Round"), \(round.scoredHoleCount) holes scored, \(round.totalShots) shots, \(scoreText)"
+    }
+}
+
+private struct ActionButtonGuideView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 13) {
+                Image(systemName: Theme.Symbol.actionButton)
+                    .font(.system(size: 28, weight: .semibold))
+                    .foregroundStyle(Theme.action)
+                    .frame(width: 58, height: 58)
+                    .background(Theme.action.opacity(0.13), in: RoundedRectangle(cornerRadius: 18))
+
+                VStack(spacing: 4) {
+                    Text("One press per shot")
+                        .font(.titleSmall)
+                    Text("Set Ronde as your workout app on Apple Watch Ultra.")
+                        .font(.caption)
+                        .foregroundStyle(Theme.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    guideStep("1", "Open Settings on your Watch")
+                    guideStep("2", "Action Button → Workout")
+                    guideStep("3", "Choose Ronde")
+                }
+                .padding(11)
+                .cardSurface()
+
+                Text("The first press starts your preferred round length. Every press after that logs a shot.")
+                    .font(.caption)
+                    .foregroundStyle(Theme.textSecondary)
+                    .multilineTextAlignment(.center)
+
+                PrimaryButton(title: "Done", icon: "checkmark") { dismiss() }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+        }
+        .fairwayBackground()
+        .fairwayContainerBackground()
+    }
+
+    private func guideStep(_ number: String, _ text: String) -> some View {
+        HStack(spacing: 8) {
+            Text(number)
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .foregroundStyle(Color.black.opacity(0.85))
+                .frame(width: 22, height: 22)
+                .background(Theme.action, in: Circle())
+            Text(text)
+                .font(.caption)
+                .foregroundStyle(Theme.textPrimary)
+        }
     }
 }
 

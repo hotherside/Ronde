@@ -60,14 +60,14 @@ struct NavHeader: View {
             } label: {
                 ZStack {
                     Circle()
-                        .fill(Color.white.opacity(0.92))
+                        .fill(Theme.cardSurface)
                         .overlay(
                             Circle().stroke(Theme.textPrimary.opacity(0.06), lineWidth: 1)
                         )
                         .frame(width: 26, height: 26)
                     Image(systemName: leading == .back ? "chevron.backward" : "xmark")
                         .font(.system(size: 11, weight: .heavy))
-                        .foregroundStyle(Theme.fairway)
+                        .foregroundStyle(Theme.textPrimary)
                 }
             }
             .buttonStyle(.plain)

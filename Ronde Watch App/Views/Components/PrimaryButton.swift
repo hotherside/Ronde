@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// Filled fairway-green capsule — the main call-to-action used across setup
-/// and history screens ("Tee Off", "Browse Courses", "New Round").
+/// High-contrast primary action sized for hurried, one-handed Watch use.
 struct PrimaryButton: View {
     let title: String
     var icon: String? = nil
@@ -15,13 +14,16 @@ struct PrimaryButton: View {
                         .font(.system(size: 12, weight: .bold))
                 }
                 Text(title)
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .font(.system(size: 14, weight: .bold))
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(Color.black.opacity(0.88))
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 11)
-            .background(Capsule().fill(Theme.fairway))
+            .frame(minHeight: 48)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Theme.fairway)
+            )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RondePressStyle())
     }
 }

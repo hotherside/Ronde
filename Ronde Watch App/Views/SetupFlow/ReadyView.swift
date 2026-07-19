@@ -1,63 +1,56 @@
 import SwiftUI
 
-/// Final confirmation step after par setup. Recaps the round (course, holes,
-/// par, total distance) and waits for an explicit "Start Round" tap before
-/// the workout, pedometer, and shot counter come alive. Inserts the `Round`
-/// into SwiftData only on confirmation, so backing out leaves no orphan.
 struct ReadyView: View {
     let courseName: String?
     let numberOfHoles: Int
     let totalPar: Int
     let courseDistanceDisplay: String?
+    let onEditPars: () -> Void
     let onStart: () -> Void
 
-    private var displayName: String {
-        courseName ?? "Custom Round"
-    }
+    private var displayName: String { courseName ?? "Quick Round" }
 
     var body: some View {
-        VStack(spacing: 10) {
-            VStack(spacing: 6) {
+        VStack(spacing: 12) {
+            Spacer(minLength: 2)
+
+            Image(systemName: Theme.Symbol.course)
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(Theme.fairway)
+                .frame(width: 48, height: 48)
+                .background(Theme.fairway.opacity(0.12), in: RoundedRectangle(cornerRadius: 15))
+
+            VStack(spacing: 3) {
+                Text(displayName)
+                    .font(.titleSmall)
+                    .foregroundStyle(Theme.textPrimary)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.82)
+                    .multilineTextAlignment(.center)
                 HStack(spacing: 5) {
-                    Image(systemName: courseName == nil ? Theme.Symbol.pin : Theme.Symbol.course)
-                        .font(.system(size: 11))
-                        .foregroundStyle(Theme.fairwayBright)
-                    Text(displayName)
-                        .font(.titleSmall)
-                        .foregroundStyle(Theme.textPrimary)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.85)
-                        .multilineTextAlignment(.center)
+                    Text("\(numberOfHoles) holes")
+                    Text("·")
+                    Text("Par \(totalPar)")
+                    if let courseDistanceDisplay {
+                        Text("·")
+                        Text(courseDistanceDisplay)
+                    }
                 }
-
-                StatPair(
-                    leading: .init(value: "\(numberOfHoles)", label: "Holes"),
-                    trailing: .init(value: "\(totalPar)", label: "Par")
-                )
-                .padding(.top, 2)
-
-                if let distance = courseDistanceDisplay {
-                    Label(distance, systemImage: Theme.Symbol.walking)
-                        .font(.caption)
-                        .foregroundStyle(Theme.dimText)
-                        .accessibilityLabel("Total course distance \(distance)")
-                }
+                .font(.caption)
+                .foregroundStyle(Theme.textSecondary)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
-            .padding(.horizontal, 10)
-            .background(Theme.cardSurfaceShape)
 
-            Spacer(minLength: 4)
+            Spacer(minLength: 2)
 
             PrimaryButton(title: "Start Round", icon: Theme.Symbol.golfer, action: onStart)
-                .accessibilityLabel("Start round and begin tracking")
+            OutlineButton(title: "Review Pars", icon: "slider.horizontal.3", action: onEditPars)
         }
-        .padding(.horizontal, 10)
-        .padding(.bottom, 4)
+        .padding(.horizontal, 12)
+        .padding(.bottom, 8)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .fairwayBackground()
         .fairwayContainerBackground()
-        .navigationTitle("Ready?")
+        .navigationTitle("Ready")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }

@@ -1,5 +1,6 @@
 import Foundation
 import HealthKit
+import AppIntents
 import os.log
 
 private let log = Logger(subsystem: "com.ronde.Ronde", category: "WorkoutManager")
@@ -19,7 +20,7 @@ final class WorkoutManager: NSObject, ObservableObject {
 
     // MARK: - State
 
-    private(set) var isActive = false
+    @Published private(set) var isActive = false
 
     /// True when HealthKit is unavailable or the user denied authorization.
     /// The app still works — shot counting and pedometer function without a
@@ -32,6 +33,7 @@ final class WorkoutManager: NSObject, ObservableObject {
     private let healthStore = HKHealthStore()
     private var session: HKWorkoutSession?
     private var builder: HKLiveWorkoutBuilder?
+    private var isEnding = false
 
     private override init() {
         super.init()
@@ -40,7 +42,11 @@ final class WorkoutManager: NSObject, ObservableObject {
     // MARK: - Public API
 
     func startWorkout() async {
-        guard !isActive else { return }
+        guard !isEnding else { return }
+        if isActive {
+            await donateShotAction()
+            return
+        }
 
         guard HKHealthStore.isHealthDataAvailable() else {
             log.info("HealthKit not available on this device — skipping workout session")
@@ -97,6 +103,7 @@ final class WorkoutManager: NSObject, ObservableObject {
             isActive = true
             authorizationDenied = false
             log.info("Golf workout session started")
+            await donateShotAction()
         } catch {
             log.error("Failed to create/start workout session: \(error.localizedDescription)")
             // Clean up without calling session.end() on a session that
@@ -108,7 +115,15 @@ final class WorkoutManager: NSObject, ObservableObject {
     }
 
     func endWorkout() async {
-        guard isActive, let session, let builder else { return }
+        guard isActive, !isEnding, let session, let builder else { return }
+
+        // Claim the end operation synchronously before awaiting HealthKit. This
+        // prevents a double-tap or duplicated transition callback from ending
+        // the same builder twice and tripping its state machine.
+        isEnding = true
+        isActive = false
+        self.session = nil
+        self.builder = nil
 
         session.end()
 
@@ -120,9 +135,55 @@ final class WorkoutManager: NSObject, ObservableObject {
             log.error("Failed to end workout: \(error.localizedDescription)")
         }
 
-        self.session = nil
-        self.builder = nil
+        isEnding = false
+    }
+
+    /// Reattaches delegates and the live builder after watchOS relaunches Ronde
+    /// following a crash during an active workout.
+    func recoverActiveWorkout() async {
+        guard !isActive, !isEnding else { return }
+
+        do {
+            guard let recoveredSession = try await healthStore.recoverActiveWorkoutSession() else {
+                log.info("No active golf workout was available to recover")
+                return
+            }
+
+            let recoveredBuilder = recoveredSession.associatedWorkoutBuilder()
+            recoveredBuilder.dataSource = HKLiveWorkoutDataSource(
+                healthStore: healthStore,
+                workoutConfiguration: recoveredSession.workoutConfiguration
+            )
+            recoveredSession.delegate = self
+            recoveredBuilder.delegate = self
+
+            session = recoveredSession
+            builder = recoveredBuilder
+            isActive = true
+            authorizationDenied = false
+            log.info("Recovered active golf workout after relaunch")
+            await donateShotAction()
+        } catch {
+            log.error("Workout recovery failed: \(error.localizedDescription)")
+        }
+    }
+
+    private func donateShotAction() async {
+        do {
+            _ = try await StartGolfRoundIntent().donate(
+                result: .result(actionButtonIntent: ShotCountIntent())
+            )
+            log.debug("Donated Log Shot as the Ultra Action Button's next action")
+        } catch {
+            log.error("Unable to donate Action Button shot intent: \(error.localizedDescription)")
+        }
+    }
+
+    private func handleSessionFailure() {
+        session = nil
+        builder = nil
         isActive = false
+        isEnding = false
     }
 }
 
@@ -144,6 +205,9 @@ extension WorkoutManager: HKWorkoutSessionDelegate {
         didFailWithError error: any Error
     ) {
         log.error("Workout session failed: \(error.localizedDescription)")
+        Task { @MainActor [weak self] in
+            self?.handleSessionFailure()
+        }
     }
 }
 

@@ -21,10 +21,12 @@ struct RoundSummaryView: View {
                             .font(.system(size: 9))
                             .foregroundStyle(Theme.fairwayBright)
                         Text(round.courseName ?? "Custom Round")
-                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                            .font(.system(size: 14, weight: .bold))
                             .foregroundStyle(Theme.textPrimary)
                             .multilineTextAlignment(.center)
-                            .lineLimit(1)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.82)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                     .accessibilityAddTraits(.isHeader)
 
@@ -45,7 +47,7 @@ struct RoundSummaryView: View {
                             .frame(width: 1, height: 38)
 
                         statColumn(
-                            value: "\(round.totalPar)",
+                            value: "\(round.scoredPar)",
                             label: "PAR",
                             valueColor: Theme.mutedText,
                             valueSize: 28
@@ -65,8 +67,14 @@ struct RoundSummaryView: View {
                     .padding(.top, 2)
                     .accessibilityElement(children: .combine)
                     .accessibilityLabel(
-                        "\(round.totalShots) shots, par \(round.totalPar), \(accessibilityScoreText)"
+                        "\(round.totalShots) shots, par \(round.scoredPar), \(accessibilityScoreText)"
                     )
+
+                    if round.scoredHoleCount != round.numberOfHoles {
+                        Text("\(round.scoredHoleCount) of \(round.numberOfHoles) holes scored")
+                            .font(.system(size: 9, weight: .medium, design: .rounded))
+                            .foregroundStyle(Theme.textTertiary)
+                    }
 
                     // Steps + distance
                     if round.totalSteps > 0 {
@@ -102,18 +110,12 @@ struct RoundSummaryView: View {
                 Text("Scorecard").sectionHeaderStyle()
             }
 
-            // ── Score legend ──
-            Section {
-                ScoreLegend()
-                    .padding(.vertical, 2)
-                    .listRowBackground(cardBackground)
-            }
-
             // ── Post-round actions ──
             if isPostRound {
                 Section {
                     Button {
                         round.isComplete = true
+                        try? modelContext.save()
                         onDone?()
                     } label: {
                         HStack(spacing: 6) {
@@ -122,7 +124,7 @@ struct RoundSummaryView: View {
                             Text("Save Round")
                                 .font(.system(size: 14, weight: .bold, design: .rounded))
                         }
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Color.black.opacity(0.86))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                         .background(Capsule().fill(Theme.fairway))
@@ -143,8 +145,10 @@ struct RoundSummaryView: View {
         }
         .scrollContentBackground(.hidden)
         .background(Theme.surface)
-        .containerBackground(Theme.fairway.gradient, for: .navigation)
-        .navigationTitle(isPostRound ? "Round Complete" : "Round Details")
+        .containerBackground(Theme.surface.gradient, for: .navigation)
+        .toolbar(.visible, for: .navigationBar)
+        .navigationTitle(isPostRound ? "Complete" : "Summary")
+        .navigationBarTitleDisplayMode(.inline)
         .confirmationDialog(
             "Discard this round?",
             isPresented: $showingDiscardConfirmation,
@@ -163,7 +167,7 @@ struct RoundSummaryView: View {
             .fill(Theme.cardSurface)
             .overlay(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(Theme.textPrimary.opacity(0.05), lineWidth: 1)
+                    .stroke(Theme.separator, lineWidth: 1)
             )
     }
 

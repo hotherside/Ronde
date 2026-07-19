@@ -15,15 +15,20 @@ struct OutlineButton: View {
                         .font(.system(size: 11, weight: .semibold))
                 }
                 Text(title)
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .font(.system(size: 12, weight: .semibold))
             }
-            .foregroundStyle(Theme.textSecondary)
+            .foregroundStyle(Theme.textPrimary)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 9)
+            .frame(minHeight: 44)
             .background(
-                Capsule().stroke(Theme.textPrimary.opacity(0.18), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 15, style: .continuous)
+                    .fill(Theme.cardSurface)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 15, style: .continuous)
+                            .stroke(Theme.separator, lineWidth: 1)
+                    }
             )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RondePressStyle())
     }
 }
