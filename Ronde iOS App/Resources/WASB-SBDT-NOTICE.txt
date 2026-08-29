@@ -1,0 +1,8 @@
+GolfBallTracker is a Core ML conversion of the official WASB-SBDT tennis model.
+
+Upstream project: https://github.com/nttcom/WASB-SBDT
+Upstream model zoo: https://github.com/nttcom/WASB-SBDT/blob/main/MODEL_ZOO.md
+Official PyTorch weight SHA-256: 9d391239ab10c733f8e5bfadf16ab72838e7a8ebc88e8ae2038501c03d42b4bb
+Converted Core ML weight SHA-256: 508eec685ff6f8d20667d739ed0f3038a20d37de4121056a1b4f537c5564f8ee
+
+The model runs entirely on device. Ronde sends no uploaded video or inference data to a server.

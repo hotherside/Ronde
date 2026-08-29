@@ -16,7 +16,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "9ADBAF909A8CFAF1C869059C"
-               BuildableName = "Ronde.app"
+               BuildableName = "Ronde Shot Review.app"
                BlueprintName = "Ronde iOS"
                ReferencedContainer = "container:Ronde.xcodeproj">
             </BuildableReference>
@@ -33,13 +33,26 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "9ADBAF909A8CFAF1C869059C"
-            BuildableName = "Ronde.app"
+            BuildableName = "Ronde Shot Review.app"
             BlueprintName = "Ronde iOS"
             ReferencedContainer = "container:Ronde.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <Testables>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "2B2306C15A79BA64848C6FFD"
+               BuildableName = "Ronde AppTests.xctest"
+               BlueprintName = "Ronde iOS AppTests"
+               ReferencedContainer = "container:Ronde.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
+      <CommandLineArguments>
+      </CommandLineArguments>
    </TestAction>
    <LaunchAction
       buildConfiguration = "Debug"
@@ -56,7 +69,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "9ADBAF909A8CFAF1C869059C"
-            BuildableName = "Ronde.app"
+            BuildableName = "Ronde Shot Review.app"
             BlueprintName = "Ronde iOS"
             ReferencedContainer = "container:Ronde.xcodeproj">
          </BuildableReference>
@@ -75,7 +88,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "9ADBAF909A8CFAF1C869059C"
-            BuildableName = "Ronde.app"
+            BuildableName = "Ronde Shot Review.app"
             BlueprintName = "Ronde iOS"
             ReferencedContainer = "container:Ronde.xcodeproj">
          </BuildableReference>
