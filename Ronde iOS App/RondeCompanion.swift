@@ -9,33 +9,69 @@ import SwiftUI
 @main
 struct RondeCompanionApp: App {
     @StateObject private var store: ReviewerStore
+    @StateObject private var accountStore: RondeAccountStore
     private let isQuickReviewPreview: Bool
+    private let isMediaDetailPreview: Bool
+    private let isSignInPreview: Bool
+    private let initialTab: RondeAppTab
 
     init() {
         #if DEBUG
-        let includeFixture = ProcessInfo.processInfo.environment["RONDE_PREVIEW_SCREEN"] == "ios-quick-review"
+        let previewScreen = ProcessInfo.processInfo.environment["RONDE_PREVIEW_SCREEN"]
+        let fixtureScreens = [
+            "ios-quick-review",
+            "ios-redesign-home",
+            "ios-redesign-library",
+            "ios-redesign-profile",
+            "ios-redesign-media"
+        ]
+        let includeFixture = previewScreen.map(fixtureScreens.contains) ?? false
         let previewSourceURL = ProcessInfo.processInfo.environment["RONDE_PREVIEW_VIDEO_PATH"]
             .flatMap { $0.isEmpty ? nil : URL(fileURLWithPath: $0) }
         #else
+        let previewScreen: String? = nil
         let includeFixture = false
         let previewSourceURL: URL? = nil
         #endif
-        isQuickReviewPreview = includeFixture
+        isQuickReviewPreview = previewScreen == "ios-quick-review"
+        isMediaDetailPreview = previewScreen == "ios-redesign-media"
+        isSignInPreview = previewScreen == "ios-redesign-signin"
+        switch previewScreen {
+        case "ios-redesign-library": initialTab = .library
+        case "ios-redesign-profile": initialTab = .profile
+        default: initialTab = .home
+        }
         _store = StateObject(wrappedValue: ReviewerStore(
             includeFixtures: includeFixture,
-            previewSourceURL: previewSourceURL
+            previewSourceURL: previewSourceURL,
+            persistenceEnabled: !includeFixture
+        ))
+        _accountStore = StateObject(wrappedValue: RondeAccountStore(
+            previewAccount: includeFixture
+                ? RondeAccount(
+                    id: UUID(uuidString: "8A8299A4-E7B4-4A5D-B2B1-E5121F3A1AF2")!,
+                    displayName: "Ronde Golfer",
+                    email: "golfer@example.com"
+                )
+                : nil
         ))
     }
 
     var body: some Scene {
         WindowGroup {
             Group {
-                if isQuickReviewPreview, let session = store.selectedSession {
+                if isSignInPreview {
+                    RondeSignInView(accountStore: accountStore)
+                } else if isQuickReviewPreview, let session = store.selectedSession {
                     NavigationStack {
                         SessionWorkspaceView(store: store, session: session)
                     }
+                } else if isMediaDetailPreview, let session = store.selectedSession {
+                    NavigationStack {
+                        RondeMediaDetailRoute(store: store, accountStore: accountStore, sessionID: session.id)
+                    }
                 } else {
-                    RondeLibraryView(store: store)
+                    RondeRootView(store: store, accountStore: accountStore, initialTab: initialTab)
                 }
             }
                 .tint(RondeReviewDesign.fairway)
@@ -45,9 +81,23 @@ struct RondeCompanionApp: App {
 }
 
 #Preview("Review library") {
-    RondeLibraryView(store: ReviewerStore(includeFixtures: true))
+    RondeRootView(
+        store: ReviewerStore(includeFixtures: true),
+        accountStore: RondeAccountStore(previewAccount: RondeAccount(
+            id: UUID(),
+            displayName: "Ronde Golfer",
+            email: "golfer@example.com"
+        ))
+    )
 }
 
 #Preview("Empty library") {
-    RondeLibraryView(store: ReviewerStore(includeFixtures: false))
+    RondeRootView(
+        store: ReviewerStore(includeFixtures: false),
+        accountStore: RondeAccountStore(previewAccount: RondeAccount(
+            id: UUID(),
+            displayName: "Ronde Golfer",
+            email: nil
+        ))
+    )
 }

@@ -1,7 +1,7 @@
 import Foundation
 import SwiftUI
 
-enum ReviewMode: String, CaseIterable, Identifiable, Hashable {
+enum ReviewMode: String, CaseIterable, Identifiable, Hashable, Codable {
     case range
     case live
 
@@ -9,14 +9,14 @@ enum ReviewMode: String, CaseIterable, Identifiable, Hashable {
 
     var title: String {
         switch self {
-        case .range: return "Range Session"
+        case .range: return "Shot Review"
         case .live: return "Live Review"
         }
     }
 
     var subtitle: String {
         switch self {
-        case .range: return "Import one swing for instant tracer review, or a longer range session."
+        case .range: return "Import one shot video up to 1 minute for automatic tracer review."
         case .live: return "Set up a fixed camera and check the frame for a future live review."
         }
     }
@@ -34,7 +34,15 @@ enum ReviewImportKind: String, Hashable, Codable {
     case rangeSession
 }
 
-enum ReviewStatus: String, Hashable {
+enum ShotVideoImportPolicy {
+    static let maximumDuration: TimeInterval = 60
+
+    static func accepts(duration: TimeInterval) -> Bool {
+        duration.isFinite && duration > 0 && duration <= maximumDuration
+    }
+}
+
+enum ReviewStatus: String, Hashable, Codable {
     case ready
     case analysing
     case capturing
@@ -140,7 +148,7 @@ struct AssistedTracerPath: Codable, Hashable {
     }
 }
 
-struct ReviewCandidate: Identifiable {
+struct ReviewCandidate: Identifiable, Codable {
     let id: UUID
     var ordinal: Int
     var impactTime: TimeInterval
@@ -162,9 +170,12 @@ struct ReviewCandidate: Identifiable {
     var tracerSource: BallFlightEstimateSource
     var tracerConfidence: Double
     var observedTracerPointCount: Int
+    /// A short shot-video import is already the clip. It should play and export intact rather
+    /// than being sliced again around the internally detected impact time.
+    var usesFullSourceRange: Bool
 
-    var startTime: TimeInterval { max(0, impactTime - 5) }
-    var endTime: TimeInterval { min(sourceDuration, impactTime + 5) }
+    var startTime: TimeInterval { usesFullSourceRange ? 0 : max(0, impactTime - 5) }
+    var endTime: TimeInterval { usesFullSourceRange ? sourceDuration : min(sourceDuration, impactTime + 5) }
     var isAtSourceBoundary: Bool { startTime == 0 || endTime == sourceDuration }
 
     /// A primary shot is a classifier result that Ronde is willing to present
@@ -190,7 +201,8 @@ struct ReviewCandidate: Identifiable {
         assistedTracer: AssistedTracerPath? = nil,
         tracerSource: BallFlightEstimateSource = .unavailable,
         tracerConfidence: Double = 0,
-        observedTracerPointCount: Int = 0
+        observedTracerPointCount: Int = 0,
+        usesFullSourceRange: Bool = false
     ) {
         self.id = id
         self.ordinal = ordinal
@@ -207,13 +219,14 @@ struct ReviewCandidate: Identifiable {
         self.tracerSource = tracerSource
         self.tracerConfidence = min(max(tracerConfidence, 0), 1)
         self.observedTracerPointCount = max(0, observedTracerPointCount)
+        self.usesFullSourceRange = usesFullSourceRange
     }
 
     var hasAutomaticTracer: Bool { evidenceAnchoredPath != nil }
     var hasManualTracer: Bool { assistedTracer != nil }
 }
 
-struct ReviewSession: Identifiable {
+struct ReviewSession: Identifiable, Codable {
     let id: UUID
     var mode: ReviewMode
     var importKind: ReviewImportKind = .rangeSession
@@ -228,6 +241,10 @@ struct ReviewSession: Identifiable {
     var status: ReviewStatus
     var progress: Double
     var candidates: [ReviewCandidate]
+    var placeName: String? = nil
+    var clubName: String? = nil
+    var note: String = ""
+    var isFavourite: Bool = false
     var errorMessage: String?
 
     var keptCount: Int { candidates.filter { $0.decision == .kept }.count }
@@ -298,6 +315,7 @@ enum ReviewFixtures {
         observedPoints: sampleTrajectory.detectedPoints,
         inferredContinuation: sampleTrajectory.projectedPoints,
         observedPresentationTimes: sampleTrajectory.presentationTimes,
+        estimatedCarry: EstimatedCarryDistance(lowerMetres: 145, upperMetres: 165),
         confidence: 0.62
     )!
 
@@ -354,7 +372,7 @@ enum ReviewFixtures {
         title: "One-shot review",
         sourceName: "Portrait range clip",
         sourceURL: nil,
-        createdAt: Date(timeIntervalSince1970: 1_777_000_000),
+        createdAt: Date(timeIntervalSince1970: 1_787_992_920),
         duration: 6.618,
         sourceAspectRatio: 9.0 / 16.0,
         status: .reviewing,
@@ -375,6 +393,10 @@ enum ReviewFixtures {
                 observedTracerPointCount: sampleTrajectory.detectedPoints.count
             )
         ],
+        placeName: "Moore Park Golf",
+        clubName: "7-iron",
+        note: "Evening range session.",
+        isFavourite: true,
         errorMessage: nil
     )
 
@@ -403,6 +425,9 @@ final class ReviewerStore: ObservableObject {
     @Published private(set) var lastExportedTracerURL: URL?
 
     private let mediaStore: LocalMediaStore?
+    private var archive: ReviewSessionArchive?
+    private let persistenceEnabled: Bool
+    private var activeAccountID: UUID?
     private let metadataProbe = VideoMetadataProbe()
     private let impactAnalysisService = ImpactCandidateAnalysisService()
     private var longSessionAnalysisService: LongSessionAnalysisService
@@ -414,8 +439,11 @@ final class ReviewerStore: ObservableObject {
     init(
         includeFixtures: Bool = false,
         previewSourceURL: URL? = nil,
-        fixedSingleGolferSessionEvidence: FixedCameraSingleGolferSessionEvidence? = nil
+        fixedSingleGolferSessionEvidence: FixedCameraSingleGolferSessionEvidence? = nil,
+        persistenceEnabled: Bool = false
     ) {
+        self.persistenceEnabled = persistenceEnabled
+        archive = nil
         if let fixedSingleGolferSessionEvidence,
            fixedSingleGolferSessionEvidence.permitsAssociation {
             self.fixedSingleGolferSessionEvidence = fixedSingleGolferSessionEvidence
@@ -433,6 +461,26 @@ final class ReviewerStore: ObservableObject {
         selectedSessionID = initialSessions.first?.id
         selectedCandidateID = initialSessions.first?.defaultCandidate?.id
         mediaStore = try? LocalMediaStore()
+    }
+
+    /// Opens the local library that belongs to the signed-in Apple account. This prevents a
+    /// second account on the same device from seeing or syncing the first account's reviews.
+    func activateLibrary(for accountID: UUID) {
+        guard persistenceEnabled, activeAccountID != accountID else { return }
+        archive = try? ReviewSessionArchive(accountID: accountID)
+        activeAccountID = accountID
+        sessions = archive?.load() ?? []
+        selectedSessionID = sessions.first?.id
+        selectedCandidateID = sessions.first?.defaultCandidate?.id
+    }
+
+    func deactivateLibrary() {
+        guard persistenceEnabled else { return }
+        archive = nil
+        activeAccountID = nil
+        sessions = []
+        selectedSessionID = nil
+        selectedCandidateID = nil
     }
 
     /// Explicitly enables the narrow range-session detector path after the person reviewing the
@@ -507,8 +555,7 @@ final class ReviewerStore: ObservableObject {
     }
 
     /// Starts a recoverable manual overlay without pretending that a missed automatic track was
-    /// observed. The result is held in the current in-memory session until a durable session store
-    /// is introduced.
+    /// observed. The result is saved with the local review archive when persistence is enabled.
     @discardableResult
     func startManualTracer(for candidate: ReviewCandidate, in session: ReviewSession) -> AssistedTracerPath {
         let path = candidate.assistedTracer ?? AssistedTracerPath.default
@@ -532,6 +579,38 @@ final class ReviewerStore: ObservableObject {
         }
     }
 
+    func toggleFavourite(_ session: ReviewSession) {
+        updateSession(session) { $0.isFavourite.toggle() }
+    }
+
+    func updateDetails(
+        for session: ReviewSession,
+        title: String,
+        placeName: String,
+        clubName: String,
+        note: String
+    ) {
+        updateSession(session) { value in
+            let cleanedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+            value.title = cleanedTitle.isEmpty ? value.title : String(cleanedTitle.prefix(160))
+            value.placeName = Self.cleanOptional(placeName, limit: 120)
+            value.clubName = Self.cleanOptional(clubName, limit: 80)
+            value.note = String(note.trimmingCharacters(in: .whitespacesAndNewlines).prefix(1_000))
+        }
+    }
+
+    func delete(_ session: ReviewSession) async {
+        if let sourceURL = session.sourceURL {
+            try? await mediaStore?.delete(sourceURL)
+        }
+        sessions.removeAll { $0.id == session.id }
+        if selectedSessionID == session.id {
+            selectedSessionID = sessions.first?.id
+            selectedCandidateID = sessions.first?.defaultCandidate?.id
+        }
+        persistSessions()
+    }
+
     /// Produces a local MOV using the exact geometry already stored on the selected candidate.
     /// It is intentionally separate from analysis: sharing a video cannot rerun detection, invent
     /// missing points, or turn a manual rescue into observed flight.
@@ -551,7 +630,9 @@ final class ReviewerStore: ObservableObject {
         } else if let automaticPath = candidate.evidenceAnchoredPath,
                   let automaticGeometry = TracedVideoTracerGeometry(path: automaticPath) {
             geometry = automaticGeometry
-            revealStartTime = automaticPath.observedPresentationTimes.first ?? candidate.impactTime
+            revealStartTime = automaticPath.inferredLaunchConnector.isEmpty
+                ? (automaticPath.observedPresentationTimes.first ?? candidate.impactTime)
+                : candidate.impactTime
         } else {
             throw TracedVideoExportError.noStoredTracerGeometry
         }
@@ -593,6 +674,7 @@ final class ReviewerStore: ObservableObject {
             let session = makeSession(title: sourceName, sourceName: sourceName, sourceURL: nil, duration: 0, importKind: importKind, status: .needsAttention, progress: 0, errorMessage: "Ronde could not prepare local media storage.")
             sessions.insert(session, at: 0)
             select(session)
+            persistSessions()
             return
         }
 
@@ -602,6 +684,7 @@ final class ReviewerStore: ObservableObject {
             let session = makeSession(title: sourceName, sourceName: reference.originalFilename, sourceURL: localURL, duration: 0, importKind: importKind, status: .analysing, progress: 0, errorMessage: nil)
             sessions.insert(session, at: 0)
             select(session)
+            persistSessions()
 
             let metadata = try await metadataProbe.probe(url: localURL)
             let safeDuration = metadata.duration.isFinite && metadata.duration > 0 ? metadata.duration : 0
@@ -609,6 +692,15 @@ final class ReviewerStore: ObservableObject {
             updateSession(session) {
                 $0.duration = safeDuration
                 $0.sourceAspectRatio = sourceAspectRatio
+            }
+
+            if importKind == .oneShot, !ShotVideoImportPolicy.accepts(duration: safeDuration) {
+                updateSession(session) {
+                    $0.progress = 1
+                    $0.status = .needsAttention
+                    $0.errorMessage = "Choose one shot video that is 1 minute or shorter. Automatic session slicing is outside this MVP."
+                }
+                return
             }
 
             let reviewCandidates: [ReviewCandidate]
@@ -694,7 +786,7 @@ final class ReviewerStore: ObservableObject {
             }
         }
         let flight = trackedFlight.flatMap { $0.isDisplayable ? $0 : nil }
-        let automaticPath = flight.flatMap { flightPathExtrapolator.path(from: $0) }
+        let automaticPath = flight.flatMap { flightPathExtrapolator.path(from: $0, impactTime: impactTime) }
         var evidence = strongest.evidence.map(evidenceLabel)
         evidence.append(tracerEvidenceLabel(automaticPath?.source ?? .unavailable))
         return [ReviewCandidate(
@@ -711,7 +803,8 @@ final class ReviewerStore: ObservableObject {
             assistedTracer: nil,
             tracerSource: automaticPath?.source ?? .unavailable,
             tracerConfidence: automaticPath?.confidence ?? 0,
-            observedTracerPointCount: flight?.observedPointCount ?? 0
+            observedTracerPointCount: flight?.observedPointCount ?? 0,
+            usesFullSourceRange: true
         )]
     }
 
@@ -742,7 +835,7 @@ final class ReviewerStore: ObservableObject {
                 impactTime: shot.impactTime
             )
             let flight = trackedFlight.flatMap { $0.isDisplayable ? $0 : nil }
-            let automaticPath = flight.flatMap { flightPathExtrapolator.path(from: $0) }
+            let automaticPath = flight.flatMap { flightPathExtrapolator.path(from: $0, impactTime: shot.impactTime) }
             let progress = 0.82 + (0.17 * (Double(index + 1) / Double(max(result.acceptedShots.count, 1))))
             if let current = sessions.first(where: { $0.id == sessionID }) {
                 updateSession(current) { $0.progress = progress; $0.status = .analysing }
@@ -816,6 +909,7 @@ final class ReviewerStore: ObservableObject {
         )
         sessions.insert(session, at: 0)
         select(session)
+        persistSessions()
         return session
     }
 
@@ -856,11 +950,22 @@ final class ReviewerStore: ObservableObject {
     private func updateSession(_ session: ReviewSession, _ update: (inout ReviewSession) -> Void) {
         guard let index = sessions.firstIndex(where: { $0.id == session.id }) else { return }
         update(&sessions[index])
+        persistSessions()
     }
 
     private func updateCandidate(_ candidate: ReviewCandidate, in session: ReviewSession, _ update: (inout ReviewCandidate) -> Void) {
         guard let sessionIndex = sessions.firstIndex(where: { $0.id == session.id }),
               let candidateIndex = sessions[sessionIndex].candidates.firstIndex(where: { $0.id == candidate.id }) else { return }
         update(&sessions[sessionIndex].candidates[candidateIndex])
+        persistSessions()
+    }
+
+    private func persistSessions() {
+        try? archive?.save(sessions)
+    }
+
+    private static func cleanOptional(_ value: String, limit: Int) -> String? {
+        let cleaned = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return cleaned.isEmpty ? nil : String(cleaned.prefix(limit))
     }
 }

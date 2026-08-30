@@ -16,7 +16,9 @@ enum RondeReviewDesign {
     static let fairwayWash = Color(red: 0.855, green: 0.908, blue: 0.856)
     static let amber = Color(red: 0.510, green: 0.390, blue: 0.165)
     static let amberWash = Color(red: 0.949, green: 0.907, blue: 0.795)
-    static let tracerGold = Color(red: 0.968, green: 0.790, blue: 0.190)
+    static let tracerPurple = Color(red: 0.570, green: 0.280, blue: 0.980)
+    static let tracerPurpleSoft = Color(red: 0.740, green: 0.580, blue: 1.000)
+    static let tracerPurpleWash = Color(red: 0.930, green: 0.895, blue: 1.000)
     static let red = Color(red: 0.705, green: 0.175, blue: 0.160)
     static let redWash = Color(red: 0.990, green: 0.900, blue: 0.895)
     /// Kept as a semantic compatibility name for existing controls; visually

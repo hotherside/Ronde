@@ -437,11 +437,249 @@ struct DetectedTrajectory: Codable, Sendable, Equatable {
     }
 }
 
+/// One detector-attributed ball position at its original source presentation time.
+struct TimedTrajectorySample: Sendable, Equatable, Hashable {
+    let point: NormalizedPoint
+    let presentationTime: TimeInterval
+}
+
+/// Source-time trajectory geometry shared by review playback and traced-video export.
+///
+/// The renderer may smooth between detector observations, but time remains authoritative: a
+/// visible prefix never includes a sample after the requested source time. This prevents the
+/// tracer from leading the ball when point spacing changes under perspective.
+struct TimedTrajectoryPath: Sendable, Equatable {
+    let samples: [TimedTrajectorySample]
+
+    init?(points: [NormalizedPoint], presentationTimes: [TimeInterval]) {
+        guard points.count >= 2,
+              points.count == presentationTimes.count,
+              presentationTimes.allSatisfy(\.isFinite) else {
+            return nil
+        }
+        for index in presentationTimes.indices.dropFirst() {
+            guard presentationTimes[index] > presentationTimes[index - 1] else { return nil }
+        }
+        samples = zip(points, presentationTimes).map {
+            TimedTrajectorySample(point: $0.0, presentationTime: $0.1)
+        }
+    }
+
+    var startTime: TimeInterval { samples[0].presentationTime }
+    var endTime: TimeInterval { samples[samples.count - 1].presentationTime }
+    var duration: TimeInterval { max(0, endTime - startTime) }
+
+    /// Leaves the source ball unobscured by keeping the rendered stroke fractionally behind the
+    /// latest detector sample. The lag follows the track's own sampling interval and is capped so
+    /// high-frame-rate and sparse tracks retain the same causal, trail-like treatment.
+    var suggestedTrailLag: TimeInterval {
+        let intervals = samples.indices.dropFirst().map {
+            samples[$0].presentationTime - samples[$0 - 1].presentationTime
+        }.sorted()
+        guard !intervals.isEmpty else { return 0 }
+        let median: TimeInterval
+        let middle = intervals.count / 2
+        if intervals.count.isMultiple(of: 2) {
+            median = (intervals[middle - 1] + intervals[middle]) / 2
+        } else {
+            median = intervals[middle]
+        }
+        return min(0.050, max(1.0 / 120.0, median * 0.55))
+    }
+
+    func visibleTrailSamples(
+        at presentationTime: TimeInterval,
+        smoothingSubdivisions: Int = 4
+    ) -> [TimedTrajectorySample] {
+        visibleSamples(
+            at: presentationTime - suggestedTrailLag,
+            smoothingSubdivisions: smoothingSubdivisions
+        )
+    }
+
+    /// Returns a path that ends exactly at the requested source time. The final partial segment is
+    /// interpolated in time, so no future detector point can move the visible head ahead of video.
+    func visibleSamples(at presentationTime: TimeInterval, smoothingSubdivisions: Int = 4) -> [TimedTrajectorySample] {
+        guard presentationTime >= startTime else { return [] }
+        if presentationTime >= endTime {
+            return smoothedSamples(subdivisions: smoothingSubdivisions)
+        }
+
+        var visible = samples.prefix { $0.presentationTime <= presentationTime }.map { $0 }
+        guard let previous = visible.last,
+              let next = samples.first(where: { $0.presentationTime > presentationTime }) else {
+            return smoothed(samples: visible, subdivisions: smoothingSubdivisions)
+        }
+        let interval = max(0.000_001, next.presentationTime - previous.presentationTime)
+        let fraction = min(1, max(0, (presentationTime - previous.presentationTime) / interval))
+        visible.append(TimedTrajectorySample(
+            point: Self.interpolate(from: previous.point, to: next.point, fraction: fraction),
+            presentationTime: presentationTime
+        ))
+        return smoothed(samples: visible, subdivisions: smoothingSubdivisions)
+    }
+
+    func position(at presentationTime: TimeInterval) -> NormalizedPoint? {
+        guard presentationTime >= startTime else { return nil }
+        guard presentationTime < endTime else { return samples.last?.point }
+        guard let nextIndex = samples.firstIndex(where: { $0.presentationTime > presentationTime }),
+              nextIndex > 0 else {
+            return samples.first?.point
+        }
+        let previous = samples[nextIndex - 1]
+        let next = samples[nextIndex]
+        let interval = max(0.000_001, next.presentationTime - previous.presentationTime)
+        return Self.interpolate(
+            from: previous.point,
+            to: next.point,
+            fraction: (presentationTime - previous.presentationTime) / interval
+        )
+    }
+
+    func smoothedSamples(subdivisions: Int = 4) -> [TimedTrajectorySample] {
+        smoothed(samples: samples, subdivisions: subdivisions)
+    }
+
+    /// Values for a Core Animation `strokeEnd` keyframe. Key times are source-time fractions;
+    /// values are cumulative screen-path fractions. Their non-linear mapping is what keeps a
+    /// constant media clock attached to a perspective-compressed ball path.
+    func strokeRevealKeyframes(subdivisions: Int = 4) -> (samples: [TimedTrajectorySample], keyTimes: [Double], strokeValues: [Double]) {
+        let rendered = smoothedSamples(subdivisions: subdivisions)
+        guard rendered.count >= 2,
+              let first = rendered.first,
+              let last = rendered.last,
+              last.presentationTime > first.presentationTime else {
+            return (rendered, [0, 1], [0, 1])
+        }
+
+        var cumulative = [Double](repeating: 0, count: rendered.count)
+        for index in 1..<rendered.count {
+            let dx = rendered[index].point.x - rendered[index - 1].point.x
+            let dy = rendered[index].point.y - rendered[index - 1].point.y
+            cumulative[index] = cumulative[index - 1] + hypot(dx, dy)
+        }
+        let totalLength = max(0.000_001, cumulative.last ?? 0)
+        let timeDuration = last.presentationTime - first.presentationTime
+        return (
+            rendered,
+            rendered.map { ($0.presentationTime - first.presentationTime) / timeDuration },
+            cumulative.map { $0 / totalLength }
+        )
+    }
+
+    func presentationTime(for point: NormalizedPoint) -> TimeInterval? {
+        samples.first(where: { $0.point == point })?.presentationTime
+    }
+
+    private func smoothed(
+        samples input: [TimedTrajectorySample],
+        subdivisions: Int
+    ) -> [TimedTrajectorySample] {
+        guard input.count >= 3 else { return input }
+        let steps = max(1, subdivisions)
+        var result: [TimedTrajectorySample] = [input[0]]
+        result.reserveCapacity(((input.count - 1) * steps) + 1)
+
+        for segment in 0..<(input.count - 1) {
+            let p0 = input[max(0, segment - 1)].point
+            let p1 = input[segment].point
+            let p2 = input[segment + 1].point
+            let p3 = input[min(input.count - 1, segment + 2)].point
+            let startTime = input[segment].presentationTime
+            let endTime = input[segment + 1].presentationTime
+
+            for step in 1...steps {
+                let fraction = Double(step) / Double(steps)
+                let point = Self.boundedCatmullRom(
+                    p0: p0,
+                    p1: p1,
+                    p2: p2,
+                    p3: p3,
+                    fraction: fraction
+                )
+                result.append(TimedTrajectorySample(
+                    point: point,
+                    presentationTime: startTime + ((endTime - startTime) * fraction)
+                ))
+            }
+        }
+        return result
+    }
+
+    private static func interpolate(
+        from start: NormalizedPoint,
+        to end: NormalizedPoint,
+        fraction: Double
+    ) -> NormalizedPoint {
+        let t = min(1, max(0, fraction))
+        return NormalizedPoint(
+            x: start.x + ((end.x - start.x) * t),
+            y: start.y + ((end.y - start.y) * t)
+        )
+    }
+
+    /// A modest, renderer-only Catmull-Rom interpolation. Bounding each interval prevents sparse
+    /// detector points from creating loops or overshoot that would look like invented evidence.
+    private static func boundedCatmullRom(
+        p0: NormalizedPoint,
+        p1: NormalizedPoint,
+        p2: NormalizedPoint,
+        p3: NormalizedPoint,
+        fraction: Double
+    ) -> NormalizedPoint {
+        let t = min(1, max(0, fraction))
+        let t2 = t * t
+        let t3 = t2 * t
+        func coordinate(_ a: Double, _ b: Double, _ c: Double, _ d: Double) -> Double {
+            0.5 * (
+                (2 * b)
+                    + ((-a + c) * t)
+                    + (((2 * a) - (5 * b) + (4 * c) - d) * t2)
+                    + ((-a + (3 * b) - (3 * c) + d) * t3)
+            )
+        }
+        let padding = 0.006
+        let minimumX = max(0, min(p1.x, p2.x) - padding)
+        let maximumX = min(1, max(p1.x, p2.x) + padding)
+        let minimumY = max(0, min(p1.y, p2.y) - padding)
+        let maximumY = min(1, max(p1.y, p2.y) + padding)
+        return NormalizedPoint(
+            x: min(maximumX, max(minimumX, coordinate(p0.x, p1.x, p2.x, p3.x))),
+            y: min(maximumY, max(minimumY, coordinate(p0.y, p1.y, p2.y, p3.y)))
+        )
+    }
+}
+
+/// A deliberately broad carry estimate from an uncalibrated single-camera fit.
+///
+/// A range is used instead of a precise value because multiple launch speeds, camera distances
+/// and elevations can explain the same short two-dimensional track. It is presentation guidance,
+/// not launch-monitor measurement.
+struct EstimatedCarryDistance: Codable, Sendable, Equatable, Hashable {
+    let lowerMetres: Int
+    let upperMetres: Int
+
+    init(lowerMetres: Int, upperMetres: Int) {
+        let lower = max(0, min(lowerMetres, upperMetres))
+        let upper = max(lower, max(lowerMetres, upperMetres))
+        self.lowerMetres = lower
+        self.upperMetres = upper
+    }
+
+    var displayText: String {
+        lowerMetres == upperMetres
+            ? "~\(lowerMetres) m"
+            : "\(lowerMetres)–\(upperMetres) m"
+    }
+}
+
 /// A drawable automatic tracer split into the evidence that was actually seen in source frames
-/// and a deliberately lighter continuation. The continuation begins at the final observed point;
-/// it is presentation geometry only and is never distance, carry or a claim that the ball was
-/// observed after that point.
+/// and distinctly styled estimated geometry before and after it. A verified mid-air fragment may
+/// be fitted back to impact and forward through apex and landing, but none of those inferred
+/// positions become observed evidence.
 struct EvidenceAnchoredFlightPath: Codable, Sendable, Equatable, Hashable {
+    /// Estimated geometry from impact to the first detector-attributed point.
+    let inferredLaunchConnector: [NormalizedPoint]
     /// Screen-space points from detector-attributed source frames, in chronological order.
     let observedPoints: [NormalizedPoint]
     /// Presentation geometry after `observedPoints.last`. The shared endpoint is exposed through
@@ -450,36 +688,62 @@ struct EvidenceAnchoredFlightPath: Codable, Sendable, Equatable, Hashable {
     /// Source presentation timestamps matching `observedPoints`, when supplied by the tracker.
     /// The value is empty rather than guessed when an older detector does not provide them.
     let observedPresentationTimes: [TimeInterval]
+    /// Source-time span from impact to the first observed point.
+    let inferredLaunchPresentationDuration: TimeInterval
     /// Animation-only duration of the inferred segment. It is not a physical flight-time claim.
     let inferredPresentationDuration: TimeInterval
+    /// Estimated total time from impact to the modelled landing.
+    let estimatedFlightDuration: TimeInterval?
+    /// Broad, uncalibrated carry range derived from similarly plausible model fits.
+    let estimatedCarry: EstimatedCarryDistance?
+    /// Normalised image-space fit error for diagnostics and confidence presentation.
+    let fitError: Double?
     let confidence: Double
 
     init?(
+        inferredLaunchConnector: [NormalizedPoint] = [],
         observedPoints: [NormalizedPoint],
         inferredContinuation: [NormalizedPoint] = [],
         observedPresentationTimes: [TimeInterval] = [],
+        inferredLaunchPresentationDuration: TimeInterval = 0,
         inferredPresentationDuration: TimeInterval = 0.36,
+        estimatedFlightDuration: TimeInterval? = nil,
+        estimatedCarry: EstimatedCarryDistance? = nil,
+        fitError: Double? = nil,
         confidence: Double
     ) {
         guard observedPoints.count >= 3,
+              inferredLaunchConnector.allSatisfy({ $0.x.isFinite && $0.y.isFinite }),
               observedPoints.allSatisfy({ $0.x.isFinite && $0.y.isFinite }),
               inferredContinuation.allSatisfy({ $0.x.isFinite && $0.y.isFinite }),
               (observedPresentationTimes.isEmpty || observedPresentationTimes.count == observedPoints.count),
-              observedPresentationTimes.allSatisfy(\.isFinite) else {
+              observedPresentationTimes.allSatisfy(\.isFinite),
+              estimatedFlightDuration.map({ $0.isFinite && $0 > 0 }) ?? true,
+              fitError.map({ $0.isFinite && $0 >= 0 }) ?? true else {
             return nil
         }
+        self.inferredLaunchConnector = inferredLaunchConnector
         self.observedPoints = observedPoints
         self.inferredContinuation = inferredContinuation
         self.observedPresentationTimes = observedPresentationTimes
+        self.inferredLaunchPresentationDuration = max(0, inferredLaunchPresentationDuration)
         self.inferredPresentationDuration = max(0.01, inferredPresentationDuration)
+        self.estimatedFlightDuration = estimatedFlightDuration
+        self.estimatedCarry = estimatedCarry
+        self.fitError = fitError
         self.confidence = min(max(confidence, 0), 1)
     }
 
     var source: BallFlightEstimateSource {
-        inferredContinuation.isEmpty ? .observed : .observedAndInferred
+        inferredLaunchConnector.isEmpty && inferredContinuation.isEmpty ? .observed : .observedAndInferred
     }
 
-    var hasInferredContinuation: Bool { !inferredContinuation.isEmpty }
+    var hasInferredGeometry: Bool { !inferredLaunchConnector.isEmpty || !inferredContinuation.isEmpty }
+
+    var inferredLaunchSegmentPoints: [NormalizedPoint] {
+        guard let firstObserved = observedPoints.first, !inferredLaunchConnector.isEmpty else { return [] }
+        return inferredLaunchConnector + [firstObserved]
+    }
 
     /// The inferred segment includes the final observed point solely to connect the strokes. That
     /// shared point remains observed evidence and must not be counted as inferred flight.
@@ -489,7 +753,13 @@ struct EvidenceAnchoredFlightPath: Codable, Sendable, Equatable, Hashable {
     }
 
     var allDisplayPoints: [NormalizedPoint] {
-        observedPoints + inferredContinuation
+        inferredLaunchConnector + observedPoints + inferredContinuation
+    }
+
+    /// Highest point of the complete displayed path. This is an estimated image-space apex when
+    /// it lies outside the observed segment.
+    var apexPoint: NormalizedPoint? {
+        allDisplayPoints.min { $0.y < $1.y }
     }
 
     /// The highest point of the inferred presentation curve. In top-left video coordinates a
@@ -499,7 +769,8 @@ struct EvidenceAnchoredFlightPath: Codable, Sendable, Equatable, Hashable {
     }
 
     /// The final bounded image-space point of the inferred presentation curve. It is not a
-    /// measured landing location and must never be converted into numerical distance.
+    /// measured landing location. A separate broad, uncalibrated carry range may come from the
+    /// perspective fit, but this normalised screen point is never a distance measurement.
     var inferredLanding: NormalizedPoint? {
         inferredContinuation.last
     }

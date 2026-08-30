@@ -16,6 +16,7 @@
 		159100B732F02F600A34E3BF /* LocationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E45D61C32F937D85FE79428F /* LocationService.swift */; };
 		1911323E1B257074EFD0B3F9 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4DBDE7FEBF4BC187761D9AA6 /* Preview Assets.xcassets */; };
 		24B2C9F49A149A4FA9CA12B1 /* GolfBallTrajectoryAnalysisTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13F0F57A83513C4DF7D7B5F1 /* GolfBallTrajectoryAnalysisTests.swift */; };
+		27E0F2999F9709B0B0989666 /* ReviewSessionArchive.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C660F6A3785B56D7977826C /* ReviewSessionArchive.swift */; };
 		288B63617B43508CC8DFA78C /* LiveReviewStabilityMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAF69FBF1F6FA4E8B82F987B /* LiveReviewStabilityMonitor.swift */; };
 		2C060F859A101B331B9E2B65 /* PrimaryButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = C87DB1EA56FC28663DBDF716 /* PrimaryButton.swift */; };
 		2F0BA0F2B959D68F703CB1A9 /* ShotCountIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = F64D15FB7F7003989F11E89E /* ShotCountIntent.swift */; };
@@ -24,6 +25,7 @@
 		33010098A0E221C1E69E4FFB /* CourseDetectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09A5C9310E44B604F305E12A /* CourseDetectView.swift */; };
 		45EF218913DF3A551DA5B13D /* ReadyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E71C79723FA45A813CEF6B5 /* ReadyView.swift */; };
 		4702DB68E080F3316150066D /* VideoMetadataProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1CEFDCD1CDD3C0CF8ADCA04 /* VideoMetadataProbe.swift */; };
+		4984A1D431808C752FFD63DF /* RondeRedesignTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76FFB9E40F8CB9A6FBB9220F /* RondeRedesignTests.swift */; };
 		4D80DFB282075D1EE3D8367E /* RoundSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363796FB0A12F80183A0AC3A /* RoundSummaryView.swift */; };
 		4F000FF48E866D8680A3FFDC /* CourseData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4ED8D963FBF1F472838BBCAB /* CourseData.swift */; };
 		505831E0180CCAF329D47D7D /* WASBGolfBallTrackingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FD9CB2A5152001250E97091 /* WASBGolfBallTrackingService.swift */; };
@@ -45,6 +47,7 @@
 		8507BE34DFFE2494888DB33E /* TracedVideoExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84601EA61D05723C5B1DC8F3 /* TracedVideoExporter.swift */; };
 		8569F4657A0B1AFC418FCC28 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 91CCFA754A74F1F2D7B0207C /* Assets.xcassets */; };
 		8C921CAA14673DD9BF3D3049 /* ExactClipExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C3160A301B48E8A9CF856B0 /* ExactClipExporter.swift */; };
+		8EDD92D2317E6A96D3AD7533 /* RondeAppShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BF91880FE819486AEB75796 /* RondeAppShell.swift */; };
 		901B6DED0FD643ECF1F22D99 /* OutlineButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E845C36C019F485045EA61D /* OutlineButton.swift */; };
 		96A02A48AC29E648FEB7CEAB /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9AE7A2C60C226C9F154BDCD /* Theme.swift */; };
 		96CAC2B7776DEF0F726B3B05 /* StartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45D9D2A748520C4A8F3F6288 /* StartView.swift */; };
@@ -57,11 +60,14 @@
 		BBA5AF22398AE2000970C731 /* LiveReviewModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B628C334237165847DCB3872 /* LiveReviewModels.swift */; };
 		BBE2CA27DE4C1B3227213C17 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B797484472D0173569100EB /* ContentView.swift */; };
 		BCD74EB0462CCA254F71256A /* StatPair.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AC41B819E914E324853FEAC /* StatPair.swift */; };
+		C1ED29FDA24781E78A160091 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 559D0E5059FECF5E6F6EA65C /* Supabase */; };
+		C30522F5314EE7A567A31936 /* AppleSignInNonce.swift in Sources */ = {isa = PBXBuildFile; fileRef = B13981078ACD881109808F68 /* AppleSignInNonce.swift */; };
 		C777CD29A4CD2583B334D61C /* ReviewViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55562334A5512A11E95F2091 /* ReviewViews.swift */; };
 		CBD6099CF6FE7126D35641BF /* HoleScore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25B36E8588FDD130C83288BC /* HoleScore.swift */; };
 		D17D5C582C234F7736867AC7 /* ShotReviewDomainTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51257492B5D94AECBFAE36E0 /* ShotReviewDomainTests.swift */; };
 		D253EAB635EEF4827A675B0F /* GolfBallTrackSelector.swift in Sources */ = {isa = PBXBuildFile; fileRef = B058B2FA96AEC83EC88AF26F /* GolfBallTrackSelector.swift */; };
 		D8E10FBA9F5273807AE5B5FF /* ImpactCandidateAnalysisService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E21EEA2D449A612CFDDBC694 /* ImpactCandidateAnalysisService.swift */; };
+		DC3DEBF25BC6C301853C029D /* RondeCloud.swift in Sources */ = {isa = PBXBuildFile; fileRef = D28BFF5985919921DA66C2C1 /* RondeCloud.swift */; };
 		DDFDE0FA9A0E7995EAB89EE3 /* WASB-SBDT-NOTICE.txt in Resources */ = {isa = PBXBuildFile; fileRef = 9A8E23A4123E6D76431D4521 /* WASB-SBDT-NOTICE.txt */; };
 		E211EA86872A63046B4FEE10 /* PedometerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7D70D0ECCA83D8F27B122AA /* PedometerService.swift */; };
 		E21C377208791E8D6244A791 /* AudioImpactAnalysisService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1418F98C8707C5C535FF8135 /* AudioImpactAnalysisService.swift */; };
@@ -118,6 +124,7 @@
 		12D53C04BF6C0BE0B04EA0BD /* HoleTransitionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleTransitionView.swift; sourceTree = "<group>"; };
 		13F0F57A83513C4DF7D7B5F1 /* GolfBallTrajectoryAnalysisTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GolfBallTrajectoryAnalysisTests.swift; sourceTree = "<group>"; };
 		1418F98C8707C5C535FF8135 /* AudioImpactAnalysisService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioImpactAnalysisService.swift; sourceTree = "<group>"; };
+		1C660F6A3785B56D7977826C /* ReviewSessionArchive.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewSessionArchive.swift; sourceTree = "<group>"; };
 		1F54A9309A32E0A2785AF337 /* ReviewModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewModels.swift; sourceTree = "<group>"; };
 		25B36E8588FDD130C83288BC /* HoleScore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleScore.swift; sourceTree = "<group>"; };
 		2FDB5AFDE4D9F8A0B24F51F0 /* AssistedTracerEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistedTracerEditor.swift; sourceTree = "<group>"; };
@@ -126,6 +133,7 @@
 		363796FB0A12F80183A0AC3A /* RoundSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundSummaryView.swift; sourceTree = "<group>"; };
 		370DEAC4A634A339B883914A /* LiveReviewCaptureController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveReviewCaptureController.swift; sourceTree = "<group>"; };
 		37A05ED5D9576609287DD243 /* Ronde.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Ronde.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3BF91880FE819486AEB75796 /* RondeAppShell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RondeAppShell.swift; sourceTree = "<group>"; };
 		45D9D2A748520C4A8F3F6288 /* StartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartView.swift; sourceTree = "<group>"; };
 		46D17BA512F515A4D94EACFC /* BodyMotionAnalysisService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyMotionAnalysisService.swift; sourceTree = "<group>"; };
 		4AC41B819E914E324853FEAC /* StatPair.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatPair.swift; sourceTree = "<group>"; };
@@ -143,6 +151,7 @@
 		6BA2E9D310791562F643695E /* ShotReviewModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShotReviewModels.swift; sourceTree = "<group>"; };
 		6C3DA62630410A61FBC055EC /* WorkoutManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutManager.swift; sourceTree = "<group>"; };
 		76E520658DB75C1BBF690FE6 /* RondeCompanion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RondeCompanion.swift; sourceTree = "<group>"; };
+		76FFB9E40F8CB9A6FBB9220F /* RondeRedesignTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RondeRedesignTests.swift; sourceTree = "<group>"; };
 		77D255E8BB9305A6CA1420B6 /* GolfBallTrackSelectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GolfBallTrackSelectorTests.swift; sourceTree = "<group>"; };
 		7BAA0764B6F6FFDAF45E4DE1 /* DateRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DateRow.swift; sourceTree = "<group>"; };
 		84601EA61D05723C5B1DC8F3 /* TracedVideoExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TracedVideoExporter.swift; sourceTree = "<group>"; };
@@ -157,6 +166,7 @@
 		A5101A5E458C1DA558F9FFF1 /* ProvisionalSwingCandidateService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProvisionalSwingCandidateService.swift; sourceTree = "<group>"; };
 		A9D8C25EE04CCB64E5BDC81A /* GolfBallTracker.mlpackage */ = {isa = PBXFileReference; path = GolfBallTracker.mlpackage; sourceTree = "<group>"; };
 		B058B2FA96AEC83EC88AF26F /* GolfBallTrackSelector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GolfBallTrackSelector.swift; sourceTree = "<group>"; };
+		B13981078ACD881109808F68 /* AppleSignInNonce.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSignInNonce.swift; sourceTree = "<group>"; };
 		B2605B86C53FA779EFF34F35 /* Ronde Shot Review.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "Ronde Shot Review.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		B628C334237165847DCB3872 /* LiveReviewModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveReviewModels.swift; sourceTree = "<group>"; };
 		B7D70D0ECCA83D8F27B122AA /* PedometerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PedometerService.swift; sourceTree = "<group>"; };
@@ -164,6 +174,7 @@
 		C0A270661807EA0DA3D5BDFD /* Ronde AppTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = "Ronde AppTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		C87DB1EA56FC28663DBDF716 /* PrimaryButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrimaryButton.swift; sourceTree = "<group>"; };
 		CD79C5309D88A036FBE2A9BD /* GolfBallTrajectoryAnalysisService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GolfBallTrajectoryAnalysisService.swift; sourceTree = "<group>"; };
+		D28BFF5985919921DA66C2C1 /* RondeCloud.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RondeCloud.swift; sourceTree = "<group>"; };
 		D8BB00D40C6812E77B11B671 /* WASB-SBDT-LICENSE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "WASB-SBDT-LICENSE.txt"; sourceTree = "<group>"; };
 		D9AE7A2C60C226C9F154BDCD /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		DAD381B11516C06704E99B29 /* TrajectoryAnalysisService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrajectoryAnalysisService.swift; sourceTree = "<group>"; };
@@ -176,9 +187,21 @@
 		F0A000D606AB95064B1317E3 /* DatePickerDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatePickerDetailView.swift; sourceTree = "<group>"; };
 		F54CE09121B68FC06184F17B /* ReviewClipService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewClipService.swift; sourceTree = "<group>"; };
 		F64D15FB7F7003989F11E89E /* ShotCountIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShotCountIntent.swift; sourceTree = "<group>"; };
+		F786F02475ED4C46E0BDF22C /* Ronde.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Ronde.entitlements; sourceTree = "<group>"; };
 		F7FA48D8977AA031830FC54E /* CourseRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseRow.swift; sourceTree = "<group>"; };
 		FAF69FBF1F6FA4E8B82F987B /* LiveReviewStabilityMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveReviewStabilityMonitor.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		6C123AD6943DE7025B01C910 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C1ED29FDA24781E78A160091 /* Supabase in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		12BF184128484D41650568FA /* Intents */ = {
@@ -197,6 +220,14 @@
 				C722551ECEE5289495ACA5F4 /* Ronde Watch App */,
 				6A1CE76B3C907F3F51E6E483 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		3F2B0979C9EB8226F00F92A3 /* Persistence */ = {
+			isa = PBXGroup;
+			children = (
+				1C660F6A3785B56D7977826C /* ReviewSessionArchive.swift */,
+			);
+			path = Persistence;
 			sourceTree = "<group>";
 		};
 		4DC00F3910F3CB9A49408747 /* Domain */ = {
@@ -312,13 +343,17 @@
 			isa = PBXGroup;
 			children = (
 				11FB7A0186F2D427A996681D /* Assets.xcassets */,
+				F786F02475ED4C46E0BDF22C /* Ronde.entitlements */,
 				76E520658DB75C1BBF690FE6 /* RondeCompanion.swift */,
 				FB7DC5DA1D6255324D912001 /* Analysis */,
+				B46EF12791832A26BE52CAE8 /* App */,
+				94372314B9A196E6F3ECAF7F /* Auth */,
 				FAEA80F851447F0CE327885E /* Capture */,
 				6785D47979D536E35C25A29A /* Design */,
 				4DC00F3910F3CB9A49408747 /* Domain */,
 				6B93B312CAE736119C44482D /* Features */,
 				7D514C9744CAC4B5B720AC38 /* Media */,
+				3F2B0979C9EB8226F00F92A3 /* Persistence */,
 				70910ADFA8454AFA817630D7 /* Resources */,
 			);
 			path = "Ronde iOS App";
@@ -344,6 +379,7 @@
 				13F0F57A83513C4DF7D7B5F1 /* GolfBallTrajectoryAnalysisTests.swift */,
 				0DD757FFE4F5F4E641C87165 /* LiveReviewCaptureTests.swift */,
 				57A57F561392E5134F489906 /* LocalMediaStoreTests.swift */,
+				76FFB9E40F8CB9A6FBB9220F /* RondeRedesignTests.swift */,
 				51257492B5D94AECBFAE36E0 /* ShotReviewDomainTests.swift */,
 			);
 			path = "Ronde iOS AppTests";
@@ -369,6 +405,15 @@
 			path = "Preview Content";
 			sourceTree = "<group>";
 		};
+		94372314B9A196E6F3ECAF7F /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				B13981078ACD881109808F68 /* AppleSignInNonce.swift */,
+				D28BFF5985919921DA66C2C1 /* RondeCloud.swift */,
+			);
+			path = Auth;
+			sourceTree = "<group>";
+		};
 		A9CB3A699F993B4A38FEFDC7 /* Services */ = {
 			isa = PBXGroup;
 			children = (
@@ -378,6 +423,14 @@
 				6C3DA62630410A61FBC055EC /* WorkoutManager.swift */,
 			);
 			path = Services;
+			sourceTree = "<group>";
+		};
+		B46EF12791832A26BE52CAE8 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				3BF91880FE819486AEB75796 /* RondeAppShell.swift */,
+			);
+			path = App;
 			sourceTree = "<group>";
 		};
 		C722551ECEE5289495ACA5F4 /* Ronde Watch App */ = {
@@ -470,6 +523,7 @@
 			buildPhases = (
 				38C37F86E7CB5A52CE599F78 /* Sources */,
 				1F857DC8EC22003EE3DEB2E7 /* Resources */,
+				6C123AD6943DE7025B01C910 /* Frameworks */,
 				7674EFE65304823D785FA7BF /* Embed Watch Content */,
 			);
 			buildRules = (
@@ -479,6 +533,7 @@
 			);
 			name = "Ronde iOS";
 			packageProductDependencies = (
+				559D0E5059FECF5E6F6EA65C /* Supabase */,
 			);
 			productName = "Ronde iOS";
 			productReference = B2605B86C53FA779EFF34F35 /* Ronde Shot Review.app */;
@@ -501,6 +556,11 @@
 					};
 					9ADBAF909A8CFAF1C869059C = {
 						DevelopmentTeam = WCJ787853P;
+						SystemCapabilities = {
+							com.apple.SignInWithApple = {
+								enabled = 1;
+							};
+						};
 					};
 				};
 			};
@@ -514,6 +574,9 @@
 			);
 			mainGroup = 36A76A54612B0ABC872D16D9;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				4F47FC0F5E4E3BFE966B29E9 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
@@ -560,6 +623,7 @@
 				24B2C9F49A149A4FA9CA12B1 /* GolfBallTrajectoryAnalysisTests.swift in Sources */,
 				EC63DBAEF3AF38B613D85B5A /* LiveReviewCaptureTests.swift in Sources */,
 				9E0ACE3A968C775E1BE64E32 /* LocalMediaStoreTests.swift in Sources */,
+				4984A1D431808C752FFD63DF /* RondeRedesignTests.swift in Sources */,
 				D17D5C582C234F7736867AC7 /* ShotReviewDomainTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -568,6 +632,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C30522F5314EE7A567A31936 /* AppleSignInNonce.swift in Sources */,
 				62984751E1F675A3473F4F32 /* AssistedTracerEditor.swift in Sources */,
 				E21C377208791E8D6244A791 /* AudioImpactAnalysisService.swift in Sources */,
 				E251DBA39DA547BCBFA788ED /* BodyMotionAnalysisService.swift in Sources */,
@@ -585,7 +650,10 @@
 				65BB7333083958BA6566FD77 /* ProvisionalSwingCandidateService.swift in Sources */,
 				7DFBDBC6FD38A20165006543 /* ReviewClipService.swift in Sources */,
 				10473B2F0FDF018141B71FBF /* ReviewModels.swift in Sources */,
+				27E0F2999F9709B0B0989666 /* ReviewSessionArchive.swift in Sources */,
 				C777CD29A4CD2583B334D61C /* ReviewViews.swift in Sources */,
+				8EDD92D2317E6A96D3AD7533 /* RondeAppShell.swift in Sources */,
+				DC3DEBF25BC6C301853C029D /* RondeCloud.swift in Sources */,
 				0C5894C5F0464F14E40D2314 /* RondeCompanion.swift in Sources */,
 				F2C805B7917CF0C0C1204477 /* RondeReviewDesign.swift in Sources */,
 				BB24DC84BA905D64A1825C59 /* ShotReviewModels.swift in Sources */,
@@ -867,6 +935,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = "Ronde iOS App/Ronde.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -900,6 +969,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = "Ronde iOS App/Ronde.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -969,6 +1039,25 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		4F47FC0F5E4E3BFE966B29E9 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift.git";
+			requirement = {
+				kind = exactVersion;
+				version = 2.55.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		559D0E5059FECF5E6F6EA65C /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4F47FC0F5E4E3BFE966B29E9 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 3ADFB5A07FC5D95634EAF8D9 /* Project object */;
 }

@@ -14,7 +14,7 @@ enum ReviewLaunchIntent: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .oneShot: return "One Shot"
+        case .oneShot: return "Shot Video"
         case .range: return "Range Session"
         case .live: return "Hands-free Review"
         }
@@ -22,7 +22,7 @@ enum ReviewLaunchIntent: String, CaseIterable, Identifiable {
 
     var subtitle: String {
         switch self {
-        case .oneShot: return "Import a short clip for instant playback and tracer."
+        case .oneShot: return "Import one shot video up to 1 minute for automatic tracer review."
         case .range: return "Review potential moments in a longer recording."
         case .live: return "Keep the phone fixed and review moments as you hit."
         }
@@ -183,11 +183,11 @@ struct SessionLibraryHome: View {
                 .font(.reviewerSection)
                 .tracking(1.7)
                 .foregroundStyle(RondeReviewDesign.fairway)
-            Text("Find the shot.")
+            Text("Trace the shot.")
                 .font(.reviewerDisplay)
                 .foregroundStyle(RondeReviewDesign.graphite)
                 .fixedSize(horizontal: false, vertical: true)
-            Text("Bring a single swing into focus, then keep the moments worth another look.")
+            Text("Import one short shot video. Ronde finds the launch and builds the flight path locally.")
                 .font(.body)
                 .foregroundStyle(RondeReviewDesign.graphiteMuted)
                 .fixedSize(horizontal: false, vertical: true)
@@ -205,7 +205,7 @@ struct SessionLibraryHome: View {
 
             // Live capture is intentionally not offered as a peer action until
             // the end-to-end capture and association loop is ready.
-            ForEach([ReviewLaunchIntent.oneShot, .range]) { intent in
+            ForEach([ReviewLaunchIntent.oneShot]) { intent in
                 Button { onChooseMode(intent) } label: {
                     ModeLaunchRow(intent: intent)
                 }
@@ -215,7 +215,7 @@ struct SessionLibraryHome: View {
             HStack(spacing: 7) {
                 Image(systemName: "camera.metering.unknown")
                     .font(.caption.weight(.semibold))
-                Text("Hands-free review is coming later. Import a recording for now.")
+                Text("MVP scope: one shot per video, up to 1 minute. Session slicing comes later.")
                     .font(.caption)
             }
             .foregroundStyle(RondeReviewDesign.graphiteFaint)
@@ -260,7 +260,7 @@ struct ModeLaunchRow: View {
             ModeMedallion(intent: intent)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(intent == .oneShot ? "RECOMMENDED" : "FOR A SESSION")
+                Text(intent == .oneShot ? "SHOT VIDEO · UP TO 1 MINUTE" : "FOR A SESSION")
                     .font(.reviewerSection)
                     .tracking(1.1)
                     .foregroundStyle(intent == .oneShot ? RondeReviewDesign.amber : RondeReviewDesign.fairway)
@@ -288,9 +288,9 @@ struct ModeLaunchRow: View {
         )
         .overlay {
             RoundedRectangle(cornerRadius: RondeReviewDesign.cardRadius, style: .continuous)
-                .stroke(intent == .oneShot ? RondeReviewDesign.tracerGold.opacity(0.62) : RondeReviewDesign.border, lineWidth: intent == .oneShot ? 1.1 : 0.8)
+                .stroke(intent == .oneShot ? RondeReviewDesign.tracerPurple.opacity(0.62) : RondeReviewDesign.border, lineWidth: intent == .oneShot ? 1.1 : 0.8)
         }
-        .shadow(color: intent == .oneShot ? RondeReviewDesign.tracerGold.opacity(0.09) : .clear, radius: 12, y: 5)
+        .shadow(color: intent == .oneShot ? RondeReviewDesign.tracerPurple.opacity(0.12) : .clear, radius: 12, y: 5)
         .contentShape(RoundedRectangle(cornerRadius: RondeReviewDesign.cardRadius, style: .continuous))
         .accessibilityElement(children: .combine)
         .accessibilityHint("Opens \(intent.title)")
@@ -377,7 +377,7 @@ struct EmptySessionsView: View {
                 Text("Your imported clips will appear here.")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(RondeReviewDesign.graphite)
-                Text("Start with One Shot above for the quickest review.")
+                Text("Import a shot video above to begin.")
                     .font(.caption)
                     .foregroundStyle(RondeReviewDesign.graphiteMuted)
             }
@@ -416,7 +416,7 @@ private struct RangeFlightMotif: View {
             )
             context.stroke(
                 arc,
-                with: .color(RondeReviewDesign.amber),
+                with: .color(RondeReviewDesign.tracerPurple),
                 style: StrokeStyle(lineWidth: 2, lineCap: .round, dash: [5, 5])
             )
 
@@ -511,7 +511,7 @@ struct RangeSessionEntryView: View {
                 .frame(maxWidth: .infinity, alignment: .top)
             }
             .reviewCanvasBackground()
-            .navigationTitle(intent == .oneShot ? "One Shot" : "Range Session")
+            .navigationTitle(intent == .oneShot ? "Shot Video" : "Range Session")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -537,17 +537,17 @@ struct RangeSessionEntryView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 Image(systemName: intent == .oneShot ? "play.rectangle.fill" : "film.stack")
-                    .foregroundStyle(RondeReviewDesign.tracerGold)
-                Text(intent == .oneShot ? "One shot" : "Range session")
+                    .foregroundStyle(RondeReviewDesign.tracerPurple)
+                Text(intent == .oneShot ? "Shot video" : "Range session")
             }
             .font(.reviewerSection)
             .tracking(1.2)
             .foregroundStyle(RondeReviewDesign.fairway)
-            Text(intent == .oneShot ? "Make the swing the hero." : "Review the session that matters.")
+            Text(intent == .oneShot ? "One video. One shot." : "Review the session that matters.")
                 .font(.reviewerTitle)
                 .foregroundStyle(RondeReviewDesign.graphite)
             Text(intent == .oneShot
-                 ? "Choose a short clip. Ronde keeps the original footage and draws a tracer only when the frames support it."
+                 ? "Choose a shot video up to 1 minute. Ronde keeps the complete clip and finds impact timing automatically."
                  : "Potential moments are reviewed locally. Only supported shots earn a tracer; the rest stay in the queue.")
                 .font(.subheadline)
                 .foregroundStyle(RondeReviewDesign.graphiteMuted)
@@ -679,7 +679,7 @@ struct RangeSessionEntryView: View {
         case ..<0.2:
             return ("Preparing", "Keeping the original recording on this device.")
         case ..<0.72:
-            return ("Finding impact", "Locating the swing timing in the original recording.")
+            return ("Finding launch", "Locating impact and the first visible ball movement.")
         case ..<0.99:
             return ("Tracking the ball", "Following the launch frame by frame on this device.")
         default:
@@ -1143,7 +1143,6 @@ struct RangeReviewWorkspace: View {
     let session: ReviewSession
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var isTimingEditorExpanded = false
     @State private var isReviewQueueExpanded = false
     @State private var hasAutoPlayedSingleShot = false
     @State private var assistedTracerPoints = AssistedTracerPoints.default
@@ -1307,8 +1306,14 @@ struct RangeReviewWorkspace: View {
                             PlayerSynchronizedTracer(
                                 player: playback.player,
                                 points: $assistedTracerPoints,
+                                inferredLaunchPoints: inferredLaunchTracerPoints(for: selectedCandidate),
                                 observedPoints: observedTracerPoints(for: selectedCandidate),
+                                observedPresentationTimes: selectedCandidate.evidenceAnchoredPath?.observedPresentationTimes
+                                    ?? selectedCandidate.trajectory?.presentationTimes
+                                    ?? [],
                                 inferredPoints: inferredTracerPoints(for: selectedCandidate),
+                                automaticApex: selectedCandidate.evidenceAnchoredPath?.apexPoint,
+                                estimatedCarry: selectedCandidate.evidenceAnchoredPath?.estimatedCarry,
                                 fallbackPlaybackTime: playback.player == nil && session.sourceURL == nil
                                     ? tracerRevealStartTime + tracerFlightDuration
                                     : playback.currentTime,
@@ -1368,7 +1373,7 @@ struct RangeReviewWorkspace: View {
                     .font(.caption.weight(.bold))
                     .foregroundStyle(RondeReviewDesign.graphite)
                     .frame(width: 30, height: 30)
-                    .background(RondeReviewDesign.tracerGold, in: Circle())
+                    .background(RondeReviewDesign.tracerPurple, in: Circle())
             }
             .buttonStyle(.plain)
             .disabled(playback.player == nil)
@@ -1383,7 +1388,7 @@ struct RangeReviewWorkspace: View {
                 in: candidate.startTime...max(candidate.startTime + 0.1, candidate.endTime),
                 step: 0.05
             )
-            .tint(RondeReviewDesign.tracerGold)
+            .tint(RondeReviewDesign.tracerPurple)
             .disabled(playback.player == nil)
             .accessibilityLabel("Shot playback position")
 
@@ -1400,6 +1405,9 @@ struct RangeReviewWorkspace: View {
     private var tracerFlightDuration: TimeInterval {
         guard let selectedCandidate else { return TracerRevealTimeline.defaultFlightDuration }
         if let anchored = selectedCandidate.evidenceAnchoredPath {
+            if let estimatedFlightDuration = anchored.estimatedFlightDuration {
+                return max(0.18, estimatedFlightDuration)
+            }
             let observedDuration: TimeInterval
             if let first = anchored.observedPresentationTimes.first,
                let last = anchored.observedPresentationTimes.last,
@@ -1420,10 +1428,14 @@ struct RangeReviewWorkspace: View {
     }
 
     private var tracerRevealStartTime: TimeInterval {
-        selectedCandidate?.evidenceAnchoredPath?.observedPresentationTimes.first
-            ?? selectedCandidate?.trajectory?.presentationTimes.first
-            ?? selectedCandidate?.impactTime
-            ?? 0
+        guard let selectedCandidate else { return 0 }
+        if let path = selectedCandidate.evidenceAnchoredPath,
+           !path.inferredLaunchConnector.isEmpty {
+            return selectedCandidate.impactTime
+        }
+        return selectedCandidate.evidenceAnchoredPath?.observedPresentationTimes.first
+            ?? selectedCandidate.trajectory?.presentationTimes.first
+            ?? selectedCandidate.impactTime
     }
 
     @ViewBuilder
@@ -1522,45 +1534,6 @@ struct RangeReviewWorkspace: View {
             Text(tracerExplanation(for: candidate))
                 .font(.caption)
                 .foregroundStyle(RondeReviewDesign.graphiteMuted)
-
-            Button {
-                withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) {
-                    isTimingEditorExpanded.toggle()
-                }
-            } label: {
-                HStack {
-                    Label("Shot timing", systemImage: "scope")
-                    Spacer()
-                    Text(formatTimestamp(candidate.impactTime))
-                        .font(.reviewerTimestamp)
-                    Image(systemName: "chevron.down")
-                        .font(.caption.weight(.bold))
-                        .rotationEffect(.degrees(isTimingEditorExpanded ? 180 : 0))
-                }
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(RondeReviewDesign.graphiteMuted)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-
-            if isTimingEditorExpanded {
-                VStack(alignment: .leading, spacing: 8) {
-                    Slider(
-                        value: Binding(
-                            get: { candidate.impactTime },
-                            set: { store.updateImpactTime($0, for: candidate, in: session) }
-                        ),
-                        in: 0...max(session.duration, 1),
-                        step: 0.1
-                    )
-                    .tint(RondeReviewDesign.fairway)
-                    .accessibilityLabel("Shot impact position")
-                    Text("Move this only if the replay starts around the wrong moment.")
-                        .font(.caption)
-                        .foregroundStyle(RondeReviewDesign.graphiteMuted)
-                }
-                .transition(.opacity.combined(with: .move(edge: .top)))
-            }
         }
         .padding(.horizontal, 4)
         .padding(.vertical, 4)
@@ -1834,7 +1807,7 @@ struct RangeReviewWorkspace: View {
         switch candidate.tracerSource {
         case .unavailable: return "Ball flight not tracked"
         case .observed: return "Tracked ball flight"
-        case .observedAndInferred: return "Observed launch · estimated flight"
+        case .observedAndInferred: return "Observed ball · estimated full flight"
         case .inferred: return "Estimated shot tracer"
         }
     }
@@ -1846,7 +1819,7 @@ struct RangeReviewWorkspace: View {
         switch candidate.tracerSource {
         case .unavailable: return "No tracer"
         case .observed: return "Observed"
-        case .observedAndInferred: return "Observed + estimated"
+        case .observedAndInferred: return "Tracked + estimated"
         case .inferred: return "Estimated"
         }
     }
@@ -1869,9 +1842,9 @@ struct RangeReviewWorkspace: View {
         }
         switch candidate.tracerSource {
         case .unavailable: return RondeReviewDesign.graphiteMuted
-        case .observed: return RondeReviewDesign.fairway
-        case .observedAndInferred: return RondeReviewDesign.fairway
-        case .inferred: return RondeReviewDesign.amber
+        case .observed: return RondeReviewDesign.tracerPurple
+        case .observedAndInferred: return RondeReviewDesign.tracerPurple
+        case .inferred: return RondeReviewDesign.tracerPurpleSoft
         }
     }
 
@@ -1883,11 +1856,14 @@ struct RangeReviewWorkspace: View {
         case .unavailable:
             return "Ronde could not verify enough ball points in these frames, so it has not drawn a misleading line."
         case .observed:
-            return "Ball flight tracked from the uploaded frames. No distance estimate."
+            return "Ball flight tracked from the uploaded frames."
         case .observedAndInferred:
-            return "Observed launch · estimated flight. The dashed segment is inferred and no distance is estimated."
+            if let carry = candidate.evidenceAnchoredPath?.estimatedCarry {
+                return "Purple solid points were tracked from the video. Dashed launch, apex and landing geometry is estimated. Carry \(carry.displayText) is a rough uncalibrated range, not launch-monitor measurement."
+            }
+            return "Purple solid points were tracked from the video. Dashed launch, apex and landing geometry is estimated."
         case .inferred:
-            return "The ball was not reliably visible after impact, so this flight path is estimated. No distance estimate."
+            return "This is estimated presentation geometry, not observed ball flight or a distance measurement."
         }
     }
 
@@ -1900,7 +1876,7 @@ struct RangeReviewWorkspace: View {
             } else {
                 tracer = selectedCandidate?.tracerAvailable == true ? "tracked tracer" : "no verified tracer"
             }
-            return "\(duration) · one shot · \(tracer)"
+            return "\(duration) · shot video · \(tracer)"
         }
         let shots = session.acceptedShots.count == 1 ? "1 likely shot" : "\(session.acceptedShots.count) likely shots"
         return "\(duration) · \(shots)"
@@ -1951,6 +1927,10 @@ struct RangeReviewWorkspace: View {
         candidate.evidenceAnchoredPath?.observedPoints ?? candidate.trajectory?.detectedPoints ?? []
     }
 
+    private func inferredLaunchTracerPoints(for candidate: ReviewCandidate) -> [NormalizedPoint] {
+        candidate.evidenceAnchoredPath?.inferredLaunchConnector ?? []
+    }
+
     private func inferredTracerPoints(for candidate: ReviewCandidate) -> [NormalizedPoint] {
         candidate.evidenceAnchoredPath?.inferredContinuation ?? candidate.trajectory?.projectedPoints ?? []
     }
@@ -1970,11 +1950,11 @@ struct RangeReviewWorkspace: View {
             return AssistedTracerPoints(path: path)
         }
         guard let automatic = candidate.evidenceAnchoredPath,
-              let launch = automatic.observedPoints.first,
+              let launch = (automatic.inferredLaunchConnector.first ?? automatic.observedPoints.first),
               let endpoint = (automatic.inferredContinuation.last ?? automatic.observedPoints.last) else {
             return .default
         }
-        let apex = automatic.observedPoints.min { $0.y < $1.y } ?? launch
+        let apex = automatic.apexPoint ?? launch
         return AssistedTracerPoints(
             launch: CGPoint(x: launch.x, y: launch.y),
             apex: CGPoint(x: apex.x, y: apex.y),
@@ -2060,7 +2040,7 @@ struct TrajectoryOverlay: View {
                 drawPath(
                     projected,
                     in: &context,
-                    colour: RondeReviewDesign.amber,
+                    colour: RondeReviewDesign.tracerPurpleSoft,
                     width: 3,
                     dash: [7, 6]
                 )
@@ -2071,7 +2051,7 @@ struct TrajectoryOverlay: View {
                 }
                 if let end = projected.last ?? detected.last {
                     context.fill(Circle().path(in: CGRect(x: end.x - 5, y: end.y - 5, width: 10, height: 10)), with: .color(.white))
-                    context.fill(Circle().path(in: CGRect(x: end.x - 3, y: end.y - 3, width: 6, height: 6)), with: .color(RondeReviewDesign.amber))
+                    context.fill(Circle().path(in: CGRect(x: end.x - 3, y: end.y - 3, width: 6, height: 6)), with: .color(RondeReviewDesign.tracerPurple))
                 }
             }
             .overlay(alignment: .topTrailing) {
@@ -2086,7 +2066,7 @@ struct TrajectoryOverlay: View {
                     .accessibilityElement(children: .combine)
                     .accessibilityLabel(trajectory.projectedPoints.isEmpty
                         ? "Observed ball flight from the uploaded frames."
-                        : "Observed launch followed by an estimated flight continuation. No distance is estimated.")
+                        : "Observed launch followed by an estimated flight continuation.")
             }
         }
     }
@@ -2130,7 +2110,7 @@ struct CandidateQueueCard: View {
         VStack(alignment: .leading, spacing: 7) {
             HStack(spacing: 7) {
                 Capsule()
-                    .fill(isSelected ? RondeReviewDesign.tracerGold : RondeReviewDesign.classificationColor(for: candidate.classification))
+                    .fill(isSelected ? RondeReviewDesign.tracerPurple : RondeReviewDesign.classificationColor(for: candidate.classification))
                     .frame(width: 24, height: 4)
                 Spacer(minLength: 4)
                 Image(systemName: candidate.classification.icon)
