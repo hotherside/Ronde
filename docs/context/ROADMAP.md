@@ -2,7 +2,7 @@
 
 ## Now: secure the core round and reviewer foundation
 
-- Publish the reliability and visual release candidate to `main`.
+- Run the remaining physical-device and footage-validation gates against the merged `main` release candidate.
 - Verify persistence fallback and active-round restoration.
 - Verify workout recovery and idempotent ending.
 - Verify the Action Button setup and shot action on Apple Watch Ultra.
