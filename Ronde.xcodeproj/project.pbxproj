@@ -48,6 +48,7 @@
 		8569F4657A0B1AFC418FCC28 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 91CCFA754A74F1F2D7B0207C /* Assets.xcassets */; };
 		8C921CAA14673DD9BF3D3049 /* ExactClipExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C3160A301B48E8A9CF856B0 /* ExactClipExporter.swift */; };
 		8EDD92D2317E6A96D3AD7533 /* RondeAppShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BF91880FE819486AEB75796 /* RondeAppShell.swift */; };
+		8F5CCCEF5F10C75E631ECDC0 /* FullScreenTracerEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABB5A8AB9AE066FF80ED1B47 /* FullScreenTracerEditor.swift */; };
 		901B6DED0FD643ECF1F22D99 /* OutlineButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E845C36C019F485045EA61D /* OutlineButton.swift */; };
 		96A02A48AC29E648FEB7CEAB /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9AE7A2C60C226C9F154BDCD /* Theme.swift */; };
 		96CAC2B7776DEF0F726B3B05 /* StartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45D9D2A748520C4A8F3F6288 /* StartView.swift */; };
@@ -165,6 +166,7 @@
 		A05A9A9343E377F071036F4B /* LocalMediaStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalMediaStore.swift; sourceTree = "<group>"; };
 		A5101A5E458C1DA558F9FFF1 /* ProvisionalSwingCandidateService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProvisionalSwingCandidateService.swift; sourceTree = "<group>"; };
 		A9D8C25EE04CCB64E5BDC81A /* GolfBallTracker.mlpackage */ = {isa = PBXFileReference; path = GolfBallTracker.mlpackage; sourceTree = "<group>"; };
+		ABB5A8AB9AE066FF80ED1B47 /* FullScreenTracerEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FullScreenTracerEditor.swift; sourceTree = "<group>"; };
 		B058B2FA96AEC83EC88AF26F /* GolfBallTrackSelector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GolfBallTrackSelector.swift; sourceTree = "<group>"; };
 		B13981078ACD881109808F68 /* AppleSignInNonce.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSignInNonce.swift; sourceTree = "<group>"; };
 		B2605B86C53FA779EFF34F35 /* Ronde Shot Review.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "Ronde Shot Review.app"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -319,6 +321,7 @@
 			isa = PBXGroup;
 			children = (
 				2FDB5AFDE4D9F8A0B24F51F0 /* AssistedTracerEditor.swift */,
+				ABB5A8AB9AE066FF80ED1B47 /* FullScreenTracerEditor.swift */,
 				8D741B7AF1328356DFA57F62 /* LiveCaptureAdapter.swift */,
 				1F54A9309A32E0A2785AF337 /* ReviewModels.swift */,
 				55562334A5512A11E95F2091 /* ReviewViews.swift */,
@@ -638,6 +641,7 @@
 				E251DBA39DA547BCBFA788ED /* BodyMotionAnalysisService.swift in Sources */,
 				129D168E8904C7667BF5BDC4 /* EvidenceAnchoredFlightPathExtrapolator.swift in Sources */,
 				8C921CAA14673DD9BF3D3049 /* ExactClipExporter.swift in Sources */,
+				8F5CCCEF5F10C75E631ECDC0 /* FullScreenTracerEditor.swift in Sources */,
 				D253EAB635EEF4827A675B0F /* GolfBallTrackSelector.swift in Sources */,
 				82DEFCE31266A6CB5F1D9EE0 /* GolfBallTracker.mlpackage in Sources */,
 				F0DBF29AE89129B8DDF446C2 /* GolfBallTrajectoryAnalysisService.swift in Sources */,

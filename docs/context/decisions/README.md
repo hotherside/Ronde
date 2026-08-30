@@ -13,3 +13,4 @@ Each record states status, date, context, decision, alternatives and consequence
 - [0007: Evidence-anchored complete tracers](0007-evidence-anchored-complete-tracer.md)
 - [0008: Short-shot-video MVP and perspective flight estimate](0008-short-shot-video-mvp-and-perspective-flight-estimate.md)
 - [0009: Local-first reviewer library and private metadata sync](0009-local-first-library-and-private-metadata-sync.md)
+- [0010: Immersive review and full-screen manual trace editing](0010-immersive-review-and-manual-trace-editor.md)

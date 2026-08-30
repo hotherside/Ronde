@@ -1028,12 +1028,19 @@ final class PreviewContainerView: UIView {
 struct SessionWorkspaceView: View {
     @ObservedObject var store: ReviewerStore
     let session: ReviewSession
+    var onEditDetails: (() -> Void)? = nil
+    var onToggleFavourite: (() -> Void)? = nil
 
     var body: some View {
         Group {
             switch session.mode {
             case .range:
-                RangeReviewWorkspace(store: store, session: session)
+                RangeReviewWorkspace(
+                    store: store,
+                    session: session,
+                    onEditDetails: onEditDetails,
+                    onToggleFavourite: onToggleFavourite
+                )
             case .live:
                 LiveSessionSummaryView(store: store, session: session)
             }
@@ -1141,12 +1148,14 @@ final class ClipPlaybackController: NSObject, ObservableObject {
 struct RangeReviewWorkspace: View {
     @ObservedObject var store: ReviewerStore
     let session: ReviewSession
+    var onEditDetails: (() -> Void)? = nil
+    var onToggleFavourite: (() -> Void)? = nil
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isReviewQueueExpanded = false
     @State private var hasAutoPlayedSingleShot = false
     @State private var assistedTracerPoints = AssistedTracerPoints.default
-    @State private var isTracerEditing = false
+    @State private var isTracerEditorPresented = false
     @State private var isExportingTracer = false
     @State private var exportError: String?
     @State private var exportedTracerURL: URL?
@@ -1165,8 +1174,8 @@ struct RangeReviewWorkspace: View {
                 }
             }
             .frame(maxWidth: 1100, alignment: .leading)
-            .padding(.horizontal, horizontalSizeClass == .regular ? 24 : 12)
-            .padding(.vertical, 14)
+            .padding(.horizontal, isSingleShotReview ? 0 : (horizontalSizeClass == .regular ? 24 : 12))
+            .padding(.vertical, isSingleShotReview ? 0 : 14)
             .frame(maxWidth: .infinity, alignment: .top)
         }
         .scrollIndicators(.hidden)
@@ -1178,15 +1187,15 @@ struct RangeReviewWorkspace: View {
             autoPlaySingleShotIfReady()
         }
         .onChange(of: store.selectedCandidateID) { _, _ in
-            isTracerEditing = false
+            isTracerEditorPresented = false
             seekToSelectedCandidate()
             restoreAssistedTracer()
             autoPlaySingleShotIfReady()
         }
-        .onChange(of: assistedTracerPoints) { _, points in
-            guard let selectedCandidate else { return }
-            guard isTracerEditing || selectedCandidate.assistedTracer != nil else { return }
-            store.updateAssistedTracer(points.path, for: selectedCandidate, in: session)
+        .onChange(of: isTracerEditorPresented) { _, isPresented in
+            if !isPresented {
+                restoreAssistedTracer()
+            }
         }
         .onChange(of: store.playheadTime) { _, _ in
             if let selectedCandidate {
@@ -1205,6 +1214,11 @@ struct RangeReviewWorkspace: View {
                     .presentationDetents([.medium, .large])
             }
         }
+        .fullScreenCover(isPresented: $isTracerEditorPresented) {
+            if let candidate = selectedCandidate {
+                FullScreenTracerEditor(store: store, session: session, candidate: candidate)
+            }
+        }
     }
 
     private var compactWorkspace: some View {
@@ -1214,6 +1228,8 @@ struct RangeReviewWorkspace: View {
                 workspaceHeader
             }
             detailColumn
+                .padding(.horizontal, isSingleShotReview ? 20 : 0)
+                .padding(.bottom, isSingleShotReview ? 28 : 0)
         }
     }
 
@@ -1302,7 +1318,7 @@ struct RangeReviewWorkspace: View {
 
                         if let selectedCandidate,
                            tracerIsVisible(for: selectedCandidate),
-                           (isSingleShotReview || selectedCandidate.isAcceptedShot || isTracerEditing) {
+                           (isSingleShotReview || selectedCandidate.isAcceptedShot) {
                             PlayerSynchronizedTracer(
                                 player: playback.player,
                                 points: $assistedTracerPoints,
@@ -1321,9 +1337,10 @@ struct RangeReviewWorkspace: View {
                                 modelFlightDuration: selectedCandidate.evidenceAnchoredPath?
                                     .estimatedFlightDuration,
                                 flightDuration: tracerFlightDuration,
-                                isEditing: isTracerEditing,
+                                isEditing: false,
                                 isManual: selectedCandidate.hasManualTracer,
-                                onFinishEditing: finishTracerEditing
+                                onFinishEditing: {},
+                                showsEvidenceChrome: !isSingleShotReview
                             )
                         }
                     }
@@ -1331,14 +1348,23 @@ struct RangeReviewWorkspace: View {
                 }
             }
             .frame(height: mediaStageHeight)
-            .clipShape(RoundedRectangle(cornerRadius: RondeReviewDesign.largeRadius, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: isSingleShotReview ? 0 : RondeReviewDesign.largeRadius, style: .continuous))
             .overlay {
-                RoundedRectangle(cornerRadius: RondeReviewDesign.largeRadius, style: .continuous)
-                    .stroke(.white.opacity(0.24), lineWidth: 0.8)
+                if !isSingleShotReview {
+                    RoundedRectangle(cornerRadius: RondeReviewDesign.largeRadius, style: .continuous)
+                        .stroke(.white.opacity(0.24), lineWidth: 0.8)
+                }
             }
-            .shadow(color: RondeReviewDesign.graphite.opacity(0.12), radius: 18, y: 7)
+            .shadow(color: RondeReviewDesign.graphite.opacity(isSingleShotReview ? 0 : 0.12), radius: 18, y: 7)
+            .overlay(alignment: .bottom) {
+                if isSingleShotReview, let selectedCandidate {
+                    playbackRail(for: selectedCandidate)
+                        .padding(.horizontal, 14)
+                        .padding(.bottom, 12)
+                }
+            }
 
-            if let selectedCandidate {
+            if !isSingleShotReview, let selectedCandidate {
                 playbackRail(for: selectedCandidate)
             }
 
@@ -1400,7 +1426,15 @@ struct RangeReviewWorkspace: View {
                 .monospacedDigit()
                 .frame(minWidth: 52, alignment: .trailing)
         }
-        .padding(.horizontal, 3)
+        .padding(.horizontal, isSingleShotReview ? 12 : 3)
+        .frame(minHeight: isSingleShotReview ? 48 : nil)
+        .background {
+            if isSingleShotReview {
+                Color.black.opacity(0.34)
+            }
+        }
+        .clipShape(Capsule())
+        .rondeConditionalGlass(isEnabled: isSingleShotReview, cornerRadius: 24)
         .accessibilityElement(children: .contain)
     }
 
@@ -1526,31 +1560,84 @@ struct RangeReviewWorkspace: View {
     }
 
     private func quickReviewPanel(for candidate: ReviewCandidate) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .center, spacing: 12) {
-                Label(tracerTitle(for: candidate), systemImage: "point.topleft.down.curvedto.point.bottomright.up")
-                    .font(.headline)
+        VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 5) {
+                HStack(spacing: 8) {
+                    Text("ONE SHOT · \((session.clubName ?? "CLUB NOT ADDED").uppercased())")
+                        .font(.reviewerSection)
+                        .tracking(1.3)
+                        .foregroundStyle(RondeReviewDesign.fairway)
+                    Spacer(minLength: 6)
+                    ReviewTag(
+                        tracerSourceTitle(for: candidate),
+                        systemImage: tracerSourceIcon(for: candidate),
+                        tint: tracerSourceTint(for: candidate)
+                    )
+                    if let onToggleFavourite {
+                        Button(action: onToggleFavourite) {
+                            Image(systemName: session.isFavourite ? "heart.fill" : "heart")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(session.isFavourite ? RondeReviewDesign.tracerPurple : RondeReviewDesign.graphite)
+                                .frame(width: 36, height: 32)
+                                .background(RondeReviewDesign.surface, in: Capsule())
+                                .overlay { Capsule().stroke(RondeReviewDesign.border, lineWidth: 0.8) }
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(session.isFavourite ? "Remove from favourites" : "Add to favourites")
+                    }
+                }
+                Text(session.placeName ?? "Place not added")
+                    .font(.title3.weight(.semibold))
                     .foregroundStyle(RondeReviewDesign.graphite)
-                Spacer(minLength: 12)
-                ReviewTag(
-                    tracerSourceTitle(for: candidate),
-                    systemImage: tracerSourceIcon(for: candidate),
-                    tint: tracerSourceTint(for: candidate)
-                )
+                Text(session.createdAt, format: .dateTime.day().month(.wide).hour().minute())
+                    .font(.subheadline)
+                    .foregroundStyle(RondeReviewDesign.graphiteMuted)
             }
 
-            tracerActionRow(for: candidate)
+            RondeReviewEvidenceStrip(candidate: candidate)
 
-            if candidate.hasAutomaticTracer || candidate.hasManualTracer {
-                exportActions(for: candidate)
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 10) { quickReviewActions(for: candidate) }
+                VStack(spacing: 10) { quickReviewActions(for: candidate) }
+            }
+
+            if let exportError {
+                Label(exportError, systemImage: "exclamationmark.triangle")
+                    .font(.caption)
+                    .foregroundStyle(RondeReviewDesign.red)
             }
 
             Text(tracerExplanation(for: candidate))
                 .font(.caption)
                 .foregroundStyle(RondeReviewDesign.graphiteMuted)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(.horizontal, 4)
-        .padding(.vertical, 4)
+        .padding(.top, 4)
+    }
+
+    @ViewBuilder
+    private func quickReviewActions(for candidate: ReviewCandidate) -> some View {
+        RondeReviewActionButton(
+            title: candidate.hasManualTracer ? "Edit trace" : "Place trace",
+            systemImage: "hand.draw",
+            tint: RondeReviewDesign.fairway,
+            action: { beginTracerEditing(for: candidate) }
+        )
+
+        RondeReviewActionButton(
+            title: "Details",
+            systemImage: "info.circle",
+            tint: RondeReviewDesign.graphite,
+            action: { onEditDetails?() }
+        )
+
+        RondeReviewActionButton(
+            title: isExportingTracer ? "Rendering…" : "Share trace",
+            systemImage: "square.and.arrow.up",
+            tint: RondeReviewDesign.tracerPurple,
+            isDisabled: isExportingTracer || (!candidate.hasAutomaticTracer && !candidate.hasManualTracer),
+            action: { Task { await exportTracer(for: candidate) } }
+        )
     }
 
     private func tracerActionRow(for candidate: ReviewCandidate) -> some View {
@@ -1560,12 +1647,11 @@ struct RangeReviewWorkspace: View {
                 beginTracerEditing(for: candidate)
             } label: {
                 Label(
-                    isTracerEditing ? "Adjusting" : actionTitle,
-                    systemImage: isTracerEditing ? "hand.draw.fill" : "pencil.and.outline"
+                    actionTitle,
+                    systemImage: "hand.draw"
                 )
             }
             .buttonStyle(ReviewSecondaryButtonStyle(tint: RondeReviewDesign.fairway))
-            .disabled(isTracerEditing)
             .accessibilityHint(candidate.hasManualTracer ? "Adjust your manual trace" : "Place a manual trace over the video")
 
             Spacer(minLength: 8)
@@ -1840,7 +1926,7 @@ struct RangeReviewWorkspace: View {
 
     private func tracerSourceIcon(for candidate: ReviewCandidate) -> String {
         if candidate.hasManualTracer {
-            return "pencil.and.outline"
+            return "hand.draw"
         }
         switch candidate.tracerSource {
         case .unavailable: return "eye.slash"
@@ -1864,20 +1950,20 @@ struct RangeReviewWorkspace: View {
 
     private func tracerExplanation(for candidate: ReviewCandidate) -> String {
         if candidate.hasManualTracer {
-            return "Manual trace placed by you. It is a visual aid, not observed ball flight or a distance estimate."
+            return "Placed by you as a visual aid. It does not replace Ronde’s tracking evidence or claim a measured distance."
         }
         switch candidate.tracerSource {
         case .unavailable:
-            return "Ronde could not verify enough ball points in these frames, so it has not drawn a misleading line."
+            return "No reliable ball flight was found. Place a manual trace if you want a visual guide."
         case .observed:
-            return "Ball flight tracked from the uploaded frames."
+            return "Purple follows the ball evidence Ronde could verify in this video."
         case .observedAndInferred:
             if let carry = candidate.evidenceAnchoredPath?.estimatedCarry {
-                return "Purple solid points were tracked from the video. Dashed launch, apex and landing geometry is estimated. Carry \(carry.displayText) is a rough uncalibrated range, not launch-monitor measurement."
+                return "Purple follows tracked evidence, with lighter sections completing the flight. The \(carry.displayText) carry is modelled, not a launch-monitor reading."
             }
-            return "Purple solid points were tracked from the video. Dashed launch, apex and landing geometry is estimated."
+            return "Purple follows tracked evidence, with lighter sections completing the flight."
         case .inferred:
-            return "This is estimated presentation geometry, not observed ball flight or a distance measurement."
+            return "This is estimated presentation geometry, not observed ball flight or measured distance."
         }
     }
 
@@ -1934,7 +2020,7 @@ struct RangeReviewWorkspace: View {
     }
 
     private func tracerIsVisible(for candidate: ReviewCandidate) -> Bool {
-        isTracerEditing || candidate.hasAutomaticTracer || candidate.hasManualTracer
+        candidate.hasAutomaticTracer || candidate.hasManualTracer
     }
 
     private func observedTracerPoints(for candidate: ReviewCandidate) -> [NormalizedPoint] {
@@ -1953,31 +2039,84 @@ struct RangeReviewWorkspace: View {
         if store.selectedCandidateID != candidate.id {
             store.selectCandidate(candidate)
         }
-        assistedTracerPoints = manualTracerPoints(for: candidate)
-        isTracerEditing = true
-        store.updateAssistedTracer(assistedTracerPoints.path, for: candidate, in: session)
         playback.pause()
+        isTracerEditorPresented = true
     }
 
-    private func manualTracerPoints(for candidate: ReviewCandidate) -> AssistedTracerPoints {
-        if let path = candidate.assistedTracer {
-            return AssistedTracerPoints(path: path)
+}
+
+private struct RondeReviewEvidenceStrip: View {
+    let candidate: ReviewCandidate
+
+    var body: some View {
+        HStack(spacing: 0) {
+            metric(value: "\(candidate.observedTracerPointCount)", label: "Observed points")
+            Divider().frame(height: 38)
+            metric(value: confidenceLabel, label: "Track confidence")
+            Divider().frame(height: 38)
+            metric(value: candidate.evidenceAnchoredPath?.estimatedCarry?.displayText ?? "—", label: "Model carry")
         }
-        guard let automatic = candidate.evidenceAnchoredPath,
-              let launch = (automatic.inferredLaunchConnector.first ?? automatic.observedPoints.first),
-              let endpoint = (automatic.inferredContinuation.last ?? automatic.observedPoints.last) else {
-            return .default
+        .padding(.vertical, 13)
+        .background(RondeReviewDesign.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(RondeReviewDesign.border, lineWidth: 0.8)
         }
-        let apex = automatic.apexPoint ?? launch
-        return AssistedTracerPoints(
-            launch: CGPoint(x: launch.x, y: launch.y),
-            apex: CGPoint(x: apex.x, y: apex.y),
-            landing: CGPoint(x: endpoint.x, y: endpoint.y)
-        )
     }
 
-    private func finishTracerEditing() {
-        isTracerEditing = false
+    private var confidenceLabel: String {
+        guard candidate.hasAutomaticTracer else { return "—" }
+        return "\(Int((candidate.tracerConfidence * 100).rounded()))%"
+    }
+
+    private func metric(value: String, label: String) -> some View {
+        VStack(spacing: 3) {
+            Text(value)
+                .font(.headline.weight(.semibold))
+                .foregroundStyle(RondeReviewDesign.graphite)
+                .monospacedDigit()
+                .minimumScaleFactor(0.66)
+                .lineLimit(1)
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(RondeReviewDesign.graphiteMuted)
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+        }
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+private struct RondeReviewActionButton: View {
+    let title: String
+    let systemImage: String
+    let tint: Color
+    var isDisabled = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 7) {
+                Image(systemName: systemImage)
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(tint)
+                Text(title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(RondeReviewDesign.graphite)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(minHeight: 66)
+            .background(RondeReviewDesign.surface, in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 15, style: .continuous)
+                    .stroke(RondeReviewDesign.border, lineWidth: 0.8)
+            }
+        }
+        .buttonStyle(.plain)
+        .disabled(isDisabled)
+        .opacity(isDisabled ? 0.42 : 1)
     }
 }
 
