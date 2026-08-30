@@ -21,7 +21,7 @@ The durable information architecture should be:
 Opening a library item should push directly into a video-first review:
 
 1. Playback uses source presentation time and keeps the media visually dominant.
-2. A compact provenance label distinguishes the solid observed segment from the dashed estimated continuation.
+2. A compact provenance label and subtle opacity change distinguish observed evidence from estimated ranges within one solid-purple ribbon.
 3. `Trim`, `Edit trace` and `Details` live in a bottom control sheet rather than permanently covering the video.
 4. Trim remains non-destructive and defaults to impact minus five seconds through impact plus five seconds.
 5. Editing the displayed path creates a separately labelled `Manual trace`. Automatic observed points remain immutable evidence.

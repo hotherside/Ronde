@@ -61,10 +61,10 @@ The current working tree was also exercised against the original Landscape A sou
 
 - Audio impact: `1.6320 s`.
 - Diagnostic cost: 28 decoded frames, 27 sampled frames, 15 model windows, 30 tile predictions and 12 candidates.
-- Observed evidence: 11 selected points, confidence `0.417`, from approximately `(0.532, 0.273)` to `(0.522, 0.131)`.
-- Estimated completion: 16-point impact connector, 138-point continuation, image-space apex around `(0.521, 0.131)` and bounded landing around `(0.470, 0.508)`.
-- Carry presentation: `95–155 m`, labelled `MODEL CARRY` and `ESTIMATE · UNCALIBRATED`. This is a prior-driven model range, not a validated measurement.
-- Rendered output: 3,840 x 2,160, 190 frames at 30 fps, duration 6.333 seconds. Full-resolution inspection at 30 fps confirmed that the solid purple trail stays behind the visible ball during the 1.9 to 2.5 second observed span. The dashed connector/continuation, rasterised carry/provenance labels and `EST. APEX` appear only after that observed trail completes.
+- Observed evidence: 11 selected mid-air points, confidence `0.417`, from approximately `(0.532, 0.273)` to `(0.522, 0.131)`. A separate compact-object disappearance check anchored launch at `(0.524, 0.752)`; the manually labelled stationary ball was approximately `(0.523, 0.755)`, an error of roughly six source pixels on the 3,840 x 2,160 frame.
+- Estimated completion: 16-point launch connector, 250-point continuation, image-space apex around `(0.515, 0.122)` and bounded landing around `(0.488, 0.494)`. The same observed path formerly produced a foreground-return landing around `x = 0.404` because it carried the final join residual unchanged; the residual now reaches zero and lateral displacement remains within the observed-direction cap.
+- Carry presentation: `150–220 m`, labelled `MODEL CARRY` and `ESTIMATE · UNCALIBRATED`. This is a prior-driven model range, not a validated measurement.
+- Rendered output: 3,840 x 2,160, 190 frames at 30 fps, duration 6.333 seconds. The run demonstrates source-time, ordering and bounded-corridor invariants: original model time was preserved through apex, only descent compressed, and `EST. LANDING` plus carry appeared only at completion with a 120 ms final hold. The latest owner frame review still rejects the visible apex, path and landing placement as off. This is therefore not validation of visual flight, modelled landing or carry accuracy.
 - Export runtime boundary: the exact production sources complete this 4K export in a macOS harness. The iOS 26.5 Simulator compositor terminates in its Core Animation IOSurface/XPC path during exporter integration, so a signed physical-iPhone traced export remains required.
 
 This is one owner-supplied positive and one rendered-output inspection. It does not validate distance accuracy, physical-device performance, other framing or the required positive/negative matrix.

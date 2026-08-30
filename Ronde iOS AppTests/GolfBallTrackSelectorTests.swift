@@ -5,6 +5,76 @@ import Testing
 private final class GolfBallTrackerTestBundleMarker: NSObject {}
 
 struct GolfBallTrackSelectorTests {
+    @Test func launchAnchorDetectorFindsTheUniqueDepartingBall() throws {
+        let width = 120
+        let height = 100
+        var before = [Float](repeating: 34, count: width * height)
+        let after = [Float](repeating: 34, count: width * height)
+        for y in 77...83 {
+            for x in 59...65 {
+                before[(y * width) + x] = 225
+            }
+        }
+        let initial = GolfBallLaunchLuminancePlane(
+            sourceWidth: width,
+            sourceHeight: height,
+            width: width,
+            height: height,
+            values: before
+        )
+        let departed = GolfBallLaunchLuminancePlane(
+            sourceWidth: width,
+            sourceHeight: height,
+            width: width,
+            height: height,
+            values: after
+        )
+
+        let detection = try #require(GolfBallLaunchAnchorDetector().detect(
+            before: initial,
+            after: departed,
+            firstObservedPoint: NormalizedPoint(x: 0.53, y: 0.27)
+        ))
+
+        #expect(abs(detection.point.x - (62.0 / 120.0)) < 0.015)
+        #expect(abs(detection.point.y - 0.80) < 0.015)
+        #expect(detection.confidence >= 0.55)
+    }
+
+    @Test func launchAnchorDetectorRejectsAmbiguousDepartingObjects() {
+        let width = 160
+        let height = 120
+        var before = [Float](repeating: 30, count: width * height)
+        let after = [Float](repeating: 30, count: width * height)
+        for centre in [(x: 75, y: 92), (x: 95, y: 92)] {
+            for y in (centre.y - 3)...(centre.y + 3) {
+                for x in (centre.x - 3)...(centre.x + 3) {
+                    before[(y * width) + x] = 220
+                }
+            }
+        }
+        let initial = GolfBallLaunchLuminancePlane(
+            sourceWidth: width,
+            sourceHeight: height,
+            width: width,
+            height: height,
+            values: before
+        )
+        let departed = GolfBallLaunchLuminancePlane(
+            sourceWidth: width,
+            sourceHeight: height,
+            width: width,
+            height: height,
+            values: after
+        )
+
+        #expect(GolfBallLaunchAnchorDetector().detect(
+            before: initial,
+            after: departed,
+            firstObservedPoint: NormalizedPoint(x: 0.53, y: 0.28)
+        ) == nil)
+    }
+
     @Test(.enabled(if: ProcessInfo.processInfo.environment["RONDE_RUN_EXTERNAL_VIDEO_MATRIX"] == "1"))
     func optionalExternalVideoMatrixTracksTheLabelledBall() async throws {
         let specs: [(resource: String, impact: TimeInterval, launchX: ClosedRange<Double>, launchY: ClosedRange<Double>)] = [

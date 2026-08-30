@@ -3,8 +3,9 @@ import SwiftUI
 
 /// A screen-space tracer for the review surface.
 ///
-/// Automatic geometry is split into observed and estimated segments. User
-/// rescue geometry stays explicitly labelled as a Manual trace.
+/// Automatic geometry renders as one chronological ribbon whose opacity ranges retain
+/// observed-versus-estimated provenance. User rescue geometry stays explicitly labelled
+/// as a Manual trace.
 struct AssistedTracerPoints: Equatable {
     var launch: CGPoint
     var apex: CGPoint
@@ -80,6 +81,9 @@ struct AssistedTracerEditor: View {
     let estimatedCarry: EstimatedCarryDistance?
     let playbackTime: TimeInterval
     let impactTime: TimeInterval
+    /// Original fitted impact-to-landing duration. `flightDuration` may be shorter solely to fit
+    /// the remaining source while preserving the model-timed ascent.
+    let modelFlightDuration: TimeInterval?
     let flightDuration: TimeInterval
     let isEditing: Bool
     let isManual: Bool
@@ -98,20 +102,31 @@ struct AssistedTracerEditor: View {
         )
     }
 
-    private var estimatedGeometryRevealTime: TimeInterval {
-        timedObservedPath.map { $0.endTime + $0.suggestedTrailLag }
-            ?? (impactTime + flightDuration)
+    private var fullFlightTimeline: FullFlightRevealTimeline? {
+        guard !isManual else { return nil }
+        return FullFlightRevealTimeline(
+            impactTime: impactTime,
+            inferredLaunchConnector: inferredLaunchPoints,
+            observedPoints: observedPoints,
+            observedPresentationTimes: observedPresentationTimes,
+            inferredContinuation: inferredPoints,
+            estimatedFlightDuration: modelFlightDuration ?? flightDuration,
+            presentationFlightDuration: flightDuration
+        )
     }
 
-    private var estimatedGeometryOpacity: Double {
-        guard !isEditing, !isManual,
-              !inferredLaunchPoints.isEmpty || !inferredPoints.isEmpty else {
+    private var carryOpacity: Double {
+        guard !isEditing,
+              estimatedCarry != nil,
+              let fullFlightTimeline,
+              fullFlightTimeline.revealsEstimatedLanding else {
             return 0
         }
-        if reducesMotion {
-            return playbackTime >= estimatedGeometryRevealTime ? 1 : 0
-        }
-        return min(1, max(0, (playbackTime - estimatedGeometryRevealTime) / 0.18))
+        let visibleDistance = fullFlightTimeline.visibleDistance(
+            at: playbackTime,
+            reducesMotion: reducesMotion
+        )
+        return visibleDistance >= 1 - 0.000_001 ? 1 : 0
     }
 
     var body: some View {
@@ -122,15 +137,19 @@ struct AssistedTracerEditor: View {
             ZStack {
                 tracerPath(
                     in: geometry.size,
-                    manualProgress: manualProgress,
-                    estimatedOpacity: estimatedGeometryOpacity
+                    manualProgress: manualProgress
                 )
 
                 if !isEditing,
                    !isManual,
                    let automaticApex,
                    automaticApexOpacity > 0 {
-                    VStack(spacing: 3) {
+                    ZStack {
+                        ZStack {
+                            Circle().fill(.white).frame(width: 17, height: 17)
+                            Circle().fill(RondeReviewDesign.tracerPurple).frame(width: 10, height: 10)
+                        }
+                        .shadow(color: RondeReviewDesign.tracerPurple.opacity(0.9), radius: 8)
                         Text(hasEstimatedGeometry ? "EST. APEX" : "APEX")
                             .font(.system(size: 9, weight: .heavy, design: .rounded))
                             .tracking(0.8)
@@ -138,11 +157,7 @@ struct AssistedTracerEditor: View {
                             .padding(.horizontal, 7)
                             .padding(.vertical, 4)
                             .background(.black.opacity(0.66), in: Capsule())
-                        ZStack {
-                            Circle().fill(.white).frame(width: 17, height: 17)
-                            Circle().fill(RondeReviewDesign.tracerPurple).frame(width: 10, height: 10)
-                        }
-                        .shadow(color: RondeReviewDesign.tracerPurple.opacity(0.9), radius: 8)
+                            .offset(y: -25)
                     }
                     .position(canvasPoint(automaticApex, in: geometry.size))
                     .opacity(automaticApexOpacity)
@@ -150,8 +165,32 @@ struct AssistedTracerEditor: View {
                 }
 
                 if !isEditing,
+                   !isManual,
+                   let automaticLanding = inferredPoints.last,
+                   carryOpacity > 0 {
+                    ZStack {
+                        ZStack {
+                            Circle().fill(.white).frame(width: 15, height: 15)
+                            Circle().fill(RondeReviewDesign.tracerPurple).frame(width: 8, height: 8)
+                        }
+                        .shadow(color: RondeReviewDesign.tracerPurple.opacity(0.8), radius: 7)
+                        Text("EST. LANDING")
+                            .font(.system(size: 9, weight: .heavy, design: .rounded))
+                            .tracking(0.7)
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 4)
+                            .background(.black.opacity(0.66), in: Capsule())
+                            .offset(y: 24)
+                    }
+                    .position(canvasPoint(automaticLanding, in: geometry.size))
+                    .opacity(carryOpacity)
+                    .accessibilityLabel("Estimated landing position")
+                }
+
+                if !isEditing,
                    let estimatedCarry,
-                   estimatedGeometryOpacity > 0 {
+                   carryOpacity > 0 {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("MODEL CARRY")
                             .font(.system(size: 9, weight: .heavy, design: .rounded))
@@ -170,7 +209,7 @@ struct AssistedTracerEditor: View {
                     .background(.black.opacity(0.62), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
                     .padding(12)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                    .opacity(estimatedGeometryOpacity)
+                    .opacity(carryOpacity)
                     .accessibilityElement(children: .combine)
                     .accessibilityLabel("Modelled uncalibrated carry estimate, \(estimatedCarry.displayText)")
                 }
@@ -243,8 +282,12 @@ struct AssistedTracerEditor: View {
 
     private var automaticApexOpacity: Double {
         guard let automaticApex else { return 0 }
-        if hasEstimatedGeometry {
-            return estimatedGeometryOpacity
+        if let fullFlightTimeline {
+            guard let apexRevealTime = fullFlightTimeline.revealTime(for: automaticApex) else {
+                return 0
+            }
+            let revealThreshold = reducesMotion ? impactTime : apexRevealTime
+            return playbackTime >= revealThreshold ? 1 : 0
         }
         guard let timedObservedPath,
               let apexTime = timedObservedPath.presentationTime(for: automaticApex) else {
@@ -257,26 +300,33 @@ struct AssistedTracerEditor: View {
         if isEditing || isManual {
             return revealTimeline.accessibilityValue(at: playbackTime, reducesMotion: reducesMotion)
         }
-        guard let timedObservedPath else {
+        guard let fullFlightTimeline else {
             return playbackTime >= impactTime + flightDuration
                 ? "Completed ball path visible"
                 : "Ball path waiting for source timing"
         }
-        if playbackTime < timedObservedPath.startTime {
-            return "Tracer hidden until the first tracked ball frame"
+        if playbackTime < impactTime {
+            return "Tracer hidden until impact"
         }
-        if playbackTime <= timedObservedPath.endTime {
+        let visibleDistance = fullFlightTimeline.visibleDistance(
+            at: playbackTime,
+            reducesMotion: reducesMotion
+        )
+        if visibleDistance >= 1 - 0.000_001 {
+            return "Complete chronological ball path visible"
+        }
+        if visibleDistance < fullFlightTimeline.observedRange.lowerBound {
+            return "Estimated launch path revealing from impact"
+        }
+        if visibleDistance < fullFlightTimeline.observedRange.upperBound {
             return "Observed tracer following the tracked ball"
         }
-        return hasEstimatedGeometry
-            ? "Observed tracer complete with estimated flight visible"
-            : "Observed tracer complete"
+        return "Estimated continuation revealing towards landing"
     }
 
     private func tracerPath(
         in size: CGSize,
-        manualProgress: CGFloat,
-        estimatedOpacity: Double
+        manualProgress: CGFloat
     ) -> some View {
         Canvas { context, canvasSize in
             let launch = canvasPoint(points.launch, in: canvasSize)
@@ -296,46 +346,46 @@ struct AssistedTracerEditor: View {
                 manualArc.addQuadCurve(to: landing, control: control)
                 let revealedArc = manualArc.trimmedPath(from: 0, to: manualProgress)
                 strokeObserved(revealedArc, in: &context)
-            } else if observedPoints.count >= 3 {
-                if estimatedOpacity > 0,
-                   !inferredLaunchPoints.isEmpty,
-                   let firstObserved = observedPoints.first {
-                    let connectorPath = makePath(
-                        from: inferredLaunchPoints + [firstObserved],
-                        in: canvasSize
-                    )
-                    strokeInferred(
-                        connectorPath,
-                        in: &context,
-                        opacity: estimatedOpacity
-                    )
-                }
+            } else if let fullFlightTimeline {
+                let fullPath = makePath(
+                    from: fullFlightTimeline.smoothedSamples.map(\.point),
+                    in: canvasSize
+                )
+                let visibleDistance = fullFlightTimeline.visibleDistance(
+                    at: playbackTime,
+                    reducesMotion: reducesMotion
+                )
 
-                let visibleObservedPoints: [NormalizedPoint]
-                if let timedObservedPath {
-                    visibleObservedPoints = timedObservedPath
-                        .visibleTrailSamples(at: playbackTime)
-                        .map(\.point)
-                } else if playbackTime >= impactTime + flightDuration {
-                    visibleObservedPoints = observedPoints
-                } else {
-                    visibleObservedPoints = []
-                }
-                if visibleObservedPoints.count >= 2 {
-                    strokeObserved(makePath(from: visibleObservedPoints, in: canvasSize), in: &context)
-                }
-
-                if estimatedOpacity > 0, !inferredPoints.isEmpty {
-                    var continuationPoints = [observedPoints.last!]
-                    continuationPoints.append(contentsOf: inferredPoints)
-                    let continuationPath = makePath(from: continuationPoints, in: canvasSize)
-                    strokeInferred(
-                        continuationPath,
-                        in: &context,
-                        opacity: estimatedOpacity
+                if let launchRange = fullFlightTimeline.launchRange?.visibleRange(
+                    through: visibleDistance
+                ) {
+                    strokeFlightRibbon(
+                        fullPath,
+                        range: launchRange,
+                        provenanceOpacity: 0.74,
+                        in: &context
                     )
                 }
-
+                if let observedRange = fullFlightTimeline.observedRange.visibleRange(
+                    through: visibleDistance
+                ) {
+                    strokeFlightRibbon(
+                        fullPath,
+                        range: observedRange,
+                        provenanceOpacity: 1,
+                        in: &context
+                    )
+                }
+                if let continuationRange = fullFlightTimeline.continuationRange?.visibleRange(
+                    through: visibleDistance
+                ) {
+                    strokeFlightRibbon(
+                        fullPath,
+                        range: continuationRange,
+                        provenanceOpacity: 0.74,
+                        in: &context
+                    )
+                }
             } else {
                 guard manualProgress > 0 else { return }
                 var manualArc = Path()
@@ -367,6 +417,69 @@ struct AssistedTracerEditor: View {
         return path
     }
 
+    /// Draws one solid broadcast-style ribbon. Small overlapping trims vary width gradually along
+    /// the complete path; provenance changes opacity only, so it cannot create a geometric seam
+    /// or a second reveal order.
+    private func strokeFlightRibbon(
+        _ fullPath: Path,
+        range: ClosedRange<Double>,
+        provenanceOpacity: Double,
+        in context: inout GraphicsContext
+    ) {
+        let length = max(0, range.upperBound - range.lowerBound)
+        let sliceCount = max(1, Int(ceil(length * 40)))
+        let visiblePath = fullPath.trimmedPath(
+            from: CGFloat(range.lowerBound),
+            to: CGFloat(range.upperBound)
+        )
+        let rangeMidpoint = (range.lowerBound + range.upperBound) / 2
+        let averageWidth = 6.4 - (3.2 * pow(rangeMidpoint, 1.08))
+
+        context.drawLayer { layer in
+            layer.addFilter(.shadow(
+                color: RondeReviewDesign.tracerPurple.opacity(0.70 * provenanceOpacity),
+                radius: 9
+            ))
+            layer.stroke(
+                visiblePath,
+                with: .color(RondeReviewDesign.tracerPurple.opacity(0.42 * provenanceOpacity)),
+                style: StrokeStyle(
+                    lineWidth: averageWidth * 1.9,
+                    lineCap: .round,
+                    lineJoin: .round
+                )
+            )
+        }
+
+        for index in 0..<sliceCount {
+            let start = range.lowerBound + (length * Double(index) / Double(sliceCount))
+            let end = range.lowerBound + (length * Double(index + 1) / Double(sliceCount))
+            let midpoint = (start + end) / 2
+            let lineWidth = 6.4 - (3.2 * pow(midpoint, 1.08))
+            let segment = fullPath.trimmedPath(from: CGFloat(start), to: CGFloat(end))
+
+            context.stroke(
+                segment,
+                with: .color(.black.opacity(0.34 * provenanceOpacity)),
+                style: StrokeStyle(
+                    lineWidth: lineWidth + 2.4,
+                    lineCap: .butt,
+                    lineJoin: .round
+                )
+            )
+            context.stroke(
+                segment,
+                with: .color(RondeReviewDesign.tracerPurple.opacity(provenanceOpacity)),
+                style: StrokeStyle(lineWidth: lineWidth, lineCap: .butt, lineJoin: .round)
+            )
+        }
+        context.stroke(
+            visiblePath,
+            with: .color(.white.opacity(0.64 * provenanceOpacity)),
+            style: StrokeStyle(lineWidth: 0.9, lineCap: .round, lineJoin: .round)
+        )
+    }
+
     private func strokeObserved(_ path: Path, in context: inout GraphicsContext) {
         context.drawLayer { layer in
             layer.addFilter(.shadow(color: RondeReviewDesign.tracerPurple.opacity(0.78), radius: 10))
@@ -379,23 +492,6 @@ struct AssistedTracerEditor: View {
         context.stroke(path, with: .color(.black.opacity(0.42)), style: StrokeStyle(lineWidth: 8, lineCap: .round, lineJoin: .round))
         context.stroke(path, with: .color(RondeReviewDesign.tracerPurple), style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
         context.stroke(path, with: .color(.white.opacity(0.82)), style: StrokeStyle(lineWidth: 1.4, lineCap: .round, lineJoin: .round))
-    }
-
-    private func strokeInferred(
-        _ path: Path,
-        in context: inout GraphicsContext,
-        opacity: Double = 1
-    ) {
-        context.stroke(
-            path,
-            with: .color(RondeReviewDesign.tracerPurpleSoft.opacity(opacity)),
-            style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round, dash: [9, 7])
-        )
-        context.stroke(
-            path,
-            with: .color(.white.opacity(0.80 * opacity)),
-            style: StrokeStyle(lineWidth: 1.2, lineCap: .round, lineJoin: .round, dash: [9, 7])
-        )
     }
 
     private func handle(for label: String, systemImage: String, point: Binding<CGPoint>, in size: CGSize) -> some View {
@@ -479,6 +575,7 @@ struct PlayerSynchronizedTracer: View {
     let estimatedCarry: EstimatedCarryDistance?
     let fallbackPlaybackTime: TimeInterval
     let impactTime: TimeInterval
+    let modelFlightDuration: TimeInterval?
     let flightDuration: TimeInterval
     let isEditing: Bool
     let isManual: Bool
@@ -496,6 +593,7 @@ struct PlayerSynchronizedTracer: View {
                 estimatedCarry: estimatedCarry,
                 playbackTime: player.map { max(0, $0.currentTime().seconds) } ?? fallbackPlaybackTime,
                 impactTime: impactTime,
+                modelFlightDuration: modelFlightDuration,
                 flightDuration: flightDuration,
                 isEditing: isEditing,
                 isManual: isManual,

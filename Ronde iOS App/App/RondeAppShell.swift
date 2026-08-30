@@ -563,9 +563,7 @@ private struct RondeMediaArtwork: View {
             context.stroke(horizon, with: .color(.white.opacity(0.18)), lineWidth: 1)
 
             if let path = session.defaultCandidate?.evidenceAnchoredPath {
-                draw(points: path.inferredLaunchSegmentPoints, in: size, context: &context, dashed: true)
-                draw(points: path.observedPoints, in: size, context: &context, dashed: false)
-                draw(points: path.inferredSegmentPoints, in: size, context: &context, dashed: true)
+                draw(points: path.allDisplayPoints, in: size, context: &context, dashed: false)
             } else if let manual = session.defaultCandidate?.assistedTracer {
                 draw(points: [
                     NormalizedPoint(x: manual.launch.x, y: manual.launch.y),
