@@ -437,6 +437,83 @@ struct DetectedTrajectory: Codable, Sendable, Equatable {
     }
 }
 
+/// A drawable automatic tracer split into the evidence that was actually seen in source frames
+/// and a deliberately lighter continuation. The continuation begins at the final observed point;
+/// it is presentation geometry only and is never distance, carry or a claim that the ball was
+/// observed after that point.
+struct EvidenceAnchoredFlightPath: Codable, Sendable, Equatable, Hashable {
+    /// Screen-space points from detector-attributed source frames, in chronological order.
+    let observedPoints: [NormalizedPoint]
+    /// Presentation geometry after `observedPoints.last`. The shared endpoint is exposed through
+    /// `inferredSegmentPoints`, so renderers can use a different visual treatment without a seam.
+    let inferredContinuation: [NormalizedPoint]
+    /// Source presentation timestamps matching `observedPoints`, when supplied by the tracker.
+    /// The value is empty rather than guessed when an older detector does not provide them.
+    let observedPresentationTimes: [TimeInterval]
+    /// Animation-only duration of the inferred segment. It is not a physical flight-time claim.
+    let inferredPresentationDuration: TimeInterval
+    let confidence: Double
+
+    init?(
+        observedPoints: [NormalizedPoint],
+        inferredContinuation: [NormalizedPoint] = [],
+        observedPresentationTimes: [TimeInterval] = [],
+        inferredPresentationDuration: TimeInterval = 0.36,
+        confidence: Double
+    ) {
+        guard observedPoints.count >= 3,
+              observedPoints.allSatisfy({ $0.x.isFinite && $0.y.isFinite }),
+              inferredContinuation.allSatisfy({ $0.x.isFinite && $0.y.isFinite }),
+              (observedPresentationTimes.isEmpty || observedPresentationTimes.count == observedPoints.count),
+              observedPresentationTimes.allSatisfy(\.isFinite) else {
+            return nil
+        }
+        self.observedPoints = observedPoints
+        self.inferredContinuation = inferredContinuation
+        self.observedPresentationTimes = observedPresentationTimes
+        self.inferredPresentationDuration = max(0.01, inferredPresentationDuration)
+        self.confidence = min(max(confidence, 0), 1)
+    }
+
+    var source: BallFlightEstimateSource {
+        inferredContinuation.isEmpty ? .observed : .observedAndInferred
+    }
+
+    var hasInferredContinuation: Bool { !inferredContinuation.isEmpty }
+
+    /// The inferred segment includes the final observed point solely to connect the strokes. That
+    /// shared point remains observed evidence and must not be counted as inferred flight.
+    var inferredSegmentPoints: [NormalizedPoint] {
+        guard let lastObserved = observedPoints.last, !inferredContinuation.isEmpty else { return [] }
+        return [lastObserved] + inferredContinuation
+    }
+
+    var allDisplayPoints: [NormalizedPoint] {
+        observedPoints + inferredContinuation
+    }
+
+    /// The highest point of the inferred presentation curve. In top-left video coordinates a
+    /// smaller `y` is higher. It is explicitly inference, never a measured physical apex.
+    var inferredApex: NormalizedPoint? {
+        inferredContinuation.min { $0.y < $1.y }
+    }
+
+    /// The final bounded image-space point of the inferred presentation curve. It is not a
+    /// measured landing location and must never be converted into numerical distance.
+    var inferredLanding: NormalizedPoint? {
+        inferredContinuation.last
+    }
+
+    var observedDuration: TimeInterval? {
+        guard let first = observedPresentationTimes.first,
+              let last = observedPresentationTimes.last,
+              last >= first else {
+            return nil
+        }
+        return last - first
+    }
+}
+
 enum BallFlightEstimateSource: String, Codable, Sendable, Equatable {
     /// No ball-specific track met the evidence threshold, so no tracer can be drawn.
     case unavailable

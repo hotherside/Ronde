@@ -1,6 +1,41 @@
 # Context Changelog
 
+## 30 August 2026
+
+### Physical-device memory-pressure correction
+
+- Reproduced the One Shot termination as an unbounded inference-allocation problem: the tracker created a new 5.3 MB `MLMultiArray` for every tile prediction. The supplied Landscape B clip evaluated 3,217 tiles and reached a measured 19.19 GB peak process footprint in the macOS production-code diagnostic, which would exceed an iPhone's memory budget.
+- Changed tiled inference to allocate and refill one input tensor per analysed three-frame model window, drain Core ML's Objective-C prediction temporaries after every tile and keep per-tile cancellation. Progress now advances about four times per model window without flooding the main actor.
+- Kept the selected paths unchanged while reducing Landscape B's measured peak footprint from 19.19 GB to 699 MB and maximum resident memory from 13.96 GB to 1.04 GB. Landscape A and Portrait C peaked at 235 MB and 678 MB respectively in the same local diagnostic.
+- Made Vision body-pose analysis a true fallback when audio finds no usable impact candidate, avoiding a second full video decode for the common audio-backed One Shot path. Replaced the ambiguous analysis message with distinct `Finding impact` and `Tracking the ball` stages.
+- Added deterministic fallback-policy coverage. The clean iOS Simulator suite now contains 52 checks: 50 passed, two optional external-video/audio probes skipped and zero failed. Physical-iPhone confirmation remains required before declaring the termination resolved on hardware.
+- Re-ran the opt-in three-video matrix through the corrected exact iOS production path on iPhone 17 Pro iOS 26.0 Simulator: one matrix test passed, zero skipped and zero failed in 1,397.075 seconds. All temporary private-video copies and the opt-in scheme setting were removed afterwards.
+
+### Real-video false-acquisition correction
+
+- Reproduced an intermittent wrong tracer in the exact iOS Core ML path: the overlay coordinates were correct, but the tracker could narrow around the first coherent high-confidence moving speck before the ball became visible.
+- Changed post-impact acquisition so alternate full-frame paths compete through the launch window and eight linked observations are required before local-ROI tracking begins or any later shortened path may be displayed. Full-frame acquisition is evaluated every other sampled window to bound the added inference cost.
+- Added post-selection detector hand-off trimming so early club/body motion cannot be labelled as observed ball flight when the model later joins the real ball.
+- Added an optional external-video regression matrix plus a deterministic club/body-to-ball hand-off test. Private originals remain outside the repository.
+- Passed all three owner-supplied positive originals through the exact production tracker on macOS and iPhone 17 Pro iOS 26.0 Simulator. The final observed results were 7, 86 and 82 points respectively; the portrait path begins at the visible ball rather than through the golfer.
+- The false-acquisition exact-code three-video Simulator matrix passed in 1,290.760 seconds before the later memory-pressure correction. Physical-iPhone latency, memory and thermal behaviour remain open gates.
+
 ## 29 August 2026
+
+### Evidence-anchored tracer and reviewer product reset
+
+- Replaced nominal-frame assumptions with sequential source-PTS decoding and a timestamp-based 30 Hz analysis cadence that accepts 25, 30, 50, 60, 120 and 240 fps sources without changing time windows.
+- Reworked the model loop into full-frame acquisition/reacquisition plus predicted local-ROI tracking, with a four-second analysis cap and instrumentation for decoded, skipped and sampled frames, model windows, tiles, search modes, candidates and selected points.
+- Removed the short-clip 52%-of-duration impact guess. One Shot timing now prefers impact audio, falls back to observed body motion for silent clips and lets the ball tracker acquire from that source time; clips with neither signal require a manual marker.
+- Added a complete consumer tracer only after a real observed launch passes the ball-specific gate. The observed line is solid; the bounded screen-space continuation is dashed and labelled `Observed launch · estimated flight`. Unsupported footage still receives no automatic curve.
+- Added labelled manual tracer rescue/editing, restored automatic geometry after clearing a manual edit, and connected local MOV rendering plus native sharing to the exact reviewed geometry without rerunning detection. Export preserves common source cadences from 24 through 240 fps rather than forcing every derivative to 30 fps.
+- Added an opt-in fixed-camera single-golfer Range adapter. Automatic Range acceptance requires explicit confirmation of a fixed camera, selected target golfer and no other golfer in frame; it otherwise fails closed.
+- Rebuilt the reviewer hierarchy and visual system across iPhone and iPad with compact typography, a dominant One Shot path, secondary Range workflow, video-led review, restrained controls, clearer provenance and Dynamic Type, accessibility and Reduced Motion support.
+- Strengthened live-capture readiness with a 60 fps target, focus/exposure/white-balance settlement and locking where supported, Core Motion stability classification and actionable framing guidance. The rolling writer and automatic replay loop remain separate open work.
+- Added deterministic tests for evidence-anchored flight completion, provenance, manual rescue, Range opt-in, capture stability and selector invariance across common presentation rates. Representative footage accuracy and physical-device performance remain release gates in `TRACER_VALIDATION.md`.
+- The complete iPhone 17 Pro iOS 26.5 Simulator run executed 47 checks: 46 passed, one optional external-file probe was skipped and zero failed.
+- Completed fresh deterministic visual passes on iPhone 17 Pro iOS 26.0 and iPad Pro 11-inch iOS 17.5 Simulators. The passes verified the current solid/dashed treatment, compact control hierarchy and adaptive two-column layout; they do not prove real-video detection accuracy.
+- Recorded ADR 0007. Numerical carry distance and apex height remain unavailable without calibrated ground truth.
 
 ### Reviewer delivery validation
 

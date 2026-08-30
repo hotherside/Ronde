@@ -30,6 +30,8 @@ enum LiveCaptureState: Equatable {
 protocol LiveReviewCaptureControlling: AnyObject {
     var state: LiveCaptureState { get }
     var statePublisher: AnyPublisher<LiveCaptureState, Never> { get }
+    var captureQuality: LiveReviewCaptureQuality { get }
+    var captureQualityPublisher: AnyPublisher<LiveReviewCaptureQuality, Never> { get }
     var previewLayer: AVCaptureVideoPreviewLayer? { get }
     func start() async throws
     func stop()
@@ -55,6 +57,17 @@ final class UnavailableLiveReviewCaptureController: LiveReviewCaptureControlling
 
     var state: LiveCaptureState { .unavailable }
     var statePublisher: AnyPublisher<LiveCaptureState, Never> { subject.eraseToAnyPublisher() }
+    var captureQuality: LiveReviewCaptureQuality {
+        LiveReviewCaptureQuality(
+            framesPerSecond: 0,
+            focusExposureState: .unavailable,
+            stability: .unavailable,
+            framingGuidance: "Live capture is unavailable on this device."
+        )
+    }
+    var captureQualityPublisher: AnyPublisher<LiveReviewCaptureQuality, Never> {
+        Just(captureQuality).eraseToAnyPublisher()
+    }
     var previewLayer: AVCaptureVideoPreviewLayer? { nil }
 
     func start() async throws { throw LiveCaptureAdapterError.controllerUnavailable }
@@ -67,19 +80,28 @@ final class UnavailableLiveReviewCaptureController: LiveReviewCaptureControlling
 final class TerraLiveReviewCaptureAdapter: LiveReviewCaptureControlling {
     private let terra: LiveReviewCaptureController
     private let subject: CurrentValueSubject<LiveCaptureState, Never>
+    private let qualitySubject: CurrentValueSubject<LiveReviewCaptureQuality, Never>
     private var stateTask: AnyCancellable?
+    private var qualityTask: AnyCancellable?
 
     init(controller: LiveReviewCaptureController? = nil) {
         let resolved = controller ?? LiveReviewCaptureController()
         terra = resolved
         subject = CurrentValueSubject(Self.map(resolved.state))
+        qualitySubject = CurrentValueSubject(resolved.captureQuality)
         stateTask = resolved.$state
             .map(Self.map)
             .sink { [weak subject] value in subject?.send(value) }
+        qualityTask = resolved.$captureQuality
+            .sink { [weak qualitySubject] value in qualitySubject?.send(value) }
     }
 
     var state: LiveCaptureState { Self.map(terra.state) }
     var statePublisher: AnyPublisher<LiveCaptureState, Never> { subject.eraseToAnyPublisher() }
+    var captureQuality: LiveReviewCaptureQuality { terra.captureQuality }
+    var captureQualityPublisher: AnyPublisher<LiveReviewCaptureQuality, Never> {
+        qualitySubject.eraseToAnyPublisher()
+    }
     var previewLayer: AVCaptureVideoPreviewLayer? { terra.previewLayer }
 
     func start() async throws {
@@ -117,16 +139,22 @@ final class TerraLiveReviewCaptureAdapter: LiveReviewCaptureControlling {
 @MainActor
 final class LiveCaptureControllerAdapter: ObservableObject {
     @Published private(set) var state: LiveCaptureState = .ready
+    @Published private(set) var captureQuality: LiveReviewCaptureQuality = .preparing
     private let controller: LiveReviewCaptureControlling
     private var stateTask: AnyCancellable?
+    private var qualityTask: AnyCancellable?
 
     init(controller: LiveReviewCaptureControlling? = nil) {
         let resolved = controller ?? TerraLiveReviewCaptureAdapter()
         self.controller = resolved
         state = resolved.state
+        captureQuality = resolved.captureQuality
         stateTask = resolved.statePublisher
             .receive(on: DispatchQueue.main)
             .sink { [weak self] value in self?.state = value }
+        qualityTask = resolved.captureQualityPublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] value in self?.captureQuality = value }
     }
 
     var isConnected: Bool {

@@ -9,12 +9,15 @@ final class LiveReviewCaptureController: NSObject, ObservableObject {
     @Published private(set) var state: LiveReviewState = .idle
     @Published private(set) var replaySchedule: LiveReviewReplaySchedule?
     @Published private(set) var latestFinalizedSegments: [FinalizedCaptureSegment] = []
+    @Published private(set) var captureQuality: LiveReviewCaptureQuality = .preparing
 
     let captureSession = AVCaptureSession()
     let previewLayer: AVCaptureVideoPreviewLayer
 
     private let sessionQueue = DispatchQueue(label: "com.ronde.live-review.capture")
+    private let stabilityMonitor = LiveReviewStabilityMonitor()
     private var videoOutput: AVCaptureVideoDataOutput?
+    private var activeCamera: AVCaptureDevice?
     private var ledger = RollingSegmentLedger()
     private var postRollTask: Task<Void, Never>?
     private var observers: [NSObjectProtocol] = []
@@ -23,6 +26,9 @@ final class LiveReviewCaptureController: NSObject, ObservableObject {
         previewLayer = AVCaptureVideoPreviewLayer(session: captureSession)
         previewLayer.videoGravity = .resizeAspectFill
         super.init()
+        stabilityMonitor.onChange = { [weak self] stability in
+            self?.captureQuality.stability = stability
+        }
         observeCaptureInterruptions()
     }
 
@@ -42,6 +48,9 @@ final class LiveReviewCaptureController: NSObject, ObservableObject {
         state = .preparing
         do {
             try await configureAndStartSessionIfNeeded()
+            stabilityMonitor.start()
+            try? await Task.sleep(for: .milliseconds(650))
+            lockFocusAndExposureIfSupported()
             state = .armed
         } catch {
             state = .failed(message: error.localizedDescription)
@@ -51,10 +60,12 @@ final class LiveReviewCaptureController: NSObject, ObservableObject {
     func stop() {
         postRollTask?.cancel()
         postRollTask = nil
+        stabilityMonitor.stop()
         sessionQueue.async { [captureSession] in
             if captureSession.isRunning { captureSession.stopRunning() }
         }
         replaySchedule = nil
+        captureQuality = .preparing
         state = .idle
     }
 
@@ -145,6 +156,7 @@ final class LiveReviewCaptureController: NSObject, ObservableObject {
         guard let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) else {
             throw LiveReviewCaptureError.noCamera
         }
+        try configureCameraForReview(camera)
         let cameraInput = try AVCaptureDeviceInput(device: camera)
         guard session.canAddInput(cameraInput) else { throw LiveReviewCaptureError.cannotAddInput }
         session.addInput(cameraInput)
@@ -154,6 +166,85 @@ final class LiveReviewCaptureController: NSObject, ObservableObject {
         guard session.canAddOutput(output) else { throw LiveReviewCaptureError.cannotAddOutput }
         session.addOutput(output)
         videoOutput = output
+        activeCamera = camera
+    }
+
+    /// Live capture intentionally targets 60 Hz. Higher source rates remain supported for imports,
+    /// but 60 Hz is the balanced default for exposure, thermals and a useful motion baseline.
+    private func configureCameraForReview(_ camera: AVCaptureDevice) throws {
+        try camera.lockForConfiguration()
+        defer { camera.unlockForConfiguration() }
+
+        let targetFPS = 60.0
+        let compatible = camera.formats.filter { format in
+            let dimensions = CMVideoFormatDescriptionGetDimensions(format.formatDescription)
+            let isUsefulResolution = dimensions.width >= 1_920 && dimensions.height >= 1_080
+            let supportsRate = format.videoSupportedFrameRateRanges.contains { range in
+                range.minFrameRate <= targetFPS && range.maxFrameRate >= targetFPS
+            }
+            return isUsefulResolution && supportsRate
+        }
+
+        if let format = compatible.min(by: { lhs, rhs in
+            let left = CMVideoFormatDescriptionGetDimensions(lhs.formatDescription)
+            let right = CMVideoFormatDescriptionGetDimensions(rhs.formatDescription)
+            return Int(left.width) * Int(left.height) < Int(right.width) * Int(right.height)
+        }) {
+            camera.activeFormat = format
+            let duration = CMTime(value: 1, timescale: CMTimeScale(targetFPS))
+            camera.activeVideoMinFrameDuration = duration
+            camera.activeVideoMaxFrameDuration = duration
+        }
+
+        if camera.isSmoothAutoFocusSupported {
+            camera.isSmoothAutoFocusEnabled = true
+        }
+        if camera.isFocusModeSupported(.continuousAutoFocus) {
+            camera.focusMode = .continuousAutoFocus
+        }
+        if camera.isExposureModeSupported(.continuousAutoExposure) {
+            camera.exposureMode = .continuousAutoExposure
+        }
+        if camera.isWhiteBalanceModeSupported(.continuousAutoWhiteBalance) {
+            camera.whiteBalanceMode = .continuousAutoWhiteBalance
+        }
+
+        let configuredFPS = camera.activeVideoMinFrameDuration.seconds > 0
+            ? 1 / camera.activeVideoMinFrameDuration.seconds
+            : 0
+        captureQuality = LiveReviewCaptureQuality(
+            framesPerSecond: configuredFPS,
+            focusExposureState: .settling,
+            stability: .checking,
+            framingGuidance: "Keep the ball, golfer and expected flight corridor inside the guide."
+        )
+    }
+
+    private func lockFocusAndExposureIfSupported() {
+        guard let camera = activeCamera else {
+            captureQuality.focusExposureState = .unavailable
+            return
+        }
+
+        do {
+            try camera.lockForConfiguration()
+            defer { camera.unlockForConfiguration() }
+            var didLock = false
+            if camera.isFocusModeSupported(.locked) {
+                camera.focusMode = .locked
+                didLock = true
+            }
+            if camera.isExposureModeSupported(.locked) {
+                camera.exposureMode = .locked
+                didLock = true
+            }
+            if camera.isWhiteBalanceModeSupported(.locked) {
+                camera.whiteBalanceMode = .locked
+            }
+            captureQuality.focusExposureState = didLock ? .locked : .unavailable
+        } catch {
+            captureQuality.focusExposureState = .unavailable
+        }
     }
 
     private func observeCaptureInterruptions() {

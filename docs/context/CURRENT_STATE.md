@@ -1,6 +1,6 @@
 # Current State
 
-**Reviewed:** 29 August 2026
+**Reviewed:** 30 August 2026
 
 **Release branch:** `codex/ronde-shot-reviewer-v1`; this branch is the active reviewer implementation lane. `main` currently points to `823c10d`.
 
@@ -8,7 +8,7 @@
 
 ## Stage
 
-Ronde is in pre-release product hardening and reviewer usability testing. The release candidate contains the core watch golf round flow plus the substantial reliability and visual pass. The iPhone reviewer has an automatically playing video-first one-shot path, audio-led impact timing, an integrated free on-device sports-ball tracker and a fail-closed long-session decision pipeline. The fabricated estimated tracer has been removed: real uploads now draw the model's observed source-timed segment only when its temporal evidence gate passes, otherwise they draw nothing. One supplied clip passed end to end; held-out accuracy, long-session target-golfer association, physical-device performance, capture automation and distribution remain open gates.
+Ronde is in pre-release product hardening and reviewer validation. The release candidate contains the core Watch round flow plus its reliability and visual pass. The iPhone/iPad reviewer now has an automatically playing video-first one-shot path, timestamp-based acquire-and-track ball analysis, evidence-anchored complete tracer, manual rescue, rendered video export and a materially refined adaptive interface. Observed geometry is solid; the bounded continuation is dashed and labelled estimated. Unsupported clips still fail closed with `Ball flight not tracked`. Range automatic analysis is opt-in and requires explicit fixed-camera, target-golfer and no-other-golfer confirmation. Held-out footage accuracy, physical-device performance, complete hands-free rolling capture and distribution remain open gates.
 
 ## Capability status
 
@@ -16,19 +16,19 @@ Ronde is in pre-release product hardening and reviewer usability testing. The re
 | --- | --- | --- |
 | watchOS product | Implemented | Standalone watchOS 10+ SwiftUI app; it remains the independent core shot counter. |
 | iPhone/iPad reviewer contract | Accepted | Universal light-theme reviewer with direct single-shot playback, evidence-backed tracer gating, multi-shot Range Session segmentation, Live Review, editable impact-5/+5 clips and local-only processing. See ADR 0006. |
-| iPhone/iPad reviewer vertical slice | Implemented locally | Local Photos/Files import, explicit One Shot/Range Session routing, audio/body-motion proposal cues, logical impact-5/+5 playback and portrait-safe video are present. One Shot reviews autoplay once. A tracer renders only for a displayable observed track; otherwise the surface says `Ball flight not tracked`. Range reviews prioritise a compact accepted-shot filmstrip and keep uncertain moments in a collapsed no-tracer queue. Share is withheld until rendered derivative export exists. No persistent session library yet. |
+| iPhone/iPad reviewer | Implemented locally | Local Photos/Files import, explicit One Shot/Range routing, audio/body-motion proposal cues, logical impact-5/+5 playback and portrait-safe video are present. One Shot reviews autoplay once. A passing observed launch seeds a bounded complete tracer whose observed and estimated portions are visually and verbally distinct; unsupported clips fail closed. Manual placement/editing and local traced-video export/share are connected. No persistent session library yet. |
 | Live Review automatic loop | Missing | In-app Range recording, rolling segment writer, fused hands-free detection, automatic post-roll replay and temporary-buffer cleanup are not implemented. |
-| Automatic segmentation and tracer quality | One-shot tracker integrated; release validation open | One Shot uses the packaged MIT WASB-SBDT Core ML model over source-resolution tiles plus a seven-point single-ball linker. The supplied private clip passed the exact signed Swift path. Long-session target-golfer and launch-evidence adapters still report model unavailable, so real Range imports cannot automatically accept shots. Held-out positive/negative metrics and physical-device performance are missing. |
+| Automatic segmentation and tracer quality | Functional; release validation open | The tracker decodes sequentially by source presentation timestamp, samples at a 30 Hz analysis cadence, lets competing full-frame paths establish a launch before local-ROI tracking, trims early detector hand-offs and reports cost instrumentation. Tiled inference now reuses one input tensor per model window and drains prediction temporaries per tile. A displayable observed launch may seed an evidence-anchored estimated continuation. Three supplied private positive originals pass the exact production path, but representative positive/negative metrics and physical-device performance are still missing. |
 | Round setup | Implemented | Quick 9, Quick 18, manual par and bundled Sydney course selection exist. |
 | Shot counting | Implemented | Add, undo and hole transitions exist; Action Button uses App Intents. |
 | Local history | Implemented in release candidate | SwiftData stores rounds and hole scores, with recovery and degraded storage modes. |
 | Workout session | Implemented in release candidate | HealthKit golf workout supports long-running rounds, recovery and safer ending. |
 | Location and walking | Implemented foundation | Nearby-course detection and pedometer support exist; permission and real-device behaviour need validation. |
 | Preview routing | Implemented in release candidate | `RONDE_PREVIEW_SCREEN` supports deterministic debug routing. |
-| Automated tests | Implemented | `Ronde iOS AppTests` covers impact clustering/cooldown, body motion, clip windows, local media, orientation, non-displayable inferred geometry, source-time tracer reveal/reset, explicit import routing and real-shot gating. The 24 August simulator result is recorded below. |
-| Simulator build | Verified 21 August 2026 | Both generic Watch and iOS simulator schemes built. The iOS test target passed on iPhone 17 Pro iOS 26.0. |
-| iPhone visual review | Prior layout evidence only | The 22 August pass proved portrait playback layout but displayed the now-removed fixed estimated fallback. It is not tracer-quality evidence. A fresh no-tracer and later observed-tracer visual pass is required. The private clip was not copied into the repository or app bundle. |
-| iPad visual review | Verified 22 August 2026 | Fresh iPad Pro 11-inch visual pass completed for the adaptive two-column deterministic Shot Review fixture. |
+| Automated tests | Implemented | `Ronde iOS AppTests` covers impact clustering/cooldown, body motion, clip windows, local media, orientation, evidence-anchored completion, manual provenance, explicit Range opt-in, capture stability, source-time tracer reveal/reset, real-shot gating and selector invariance at 25/30/50/60/120/240 fps. The current simulator result is recorded below. |
+| Simulator build | Verified 29 August 2026 | The generic iOS Simulator scheme, embedded Watch app, Core ML package and generated project build successfully. |
+| iPhone visual review | Verified 29 August 2026 | Fresh iPhone 17 Pro iOS 26.0 fixture review passed after removing redundant provenance and dead export presentation. The solid observed and dashed estimated segments, compact controls and labels are visible. This is layout evidence, not detector accuracy. |
+| iPad visual review | Verified 29 August 2026 | Fresh iPad Pro 11-inch iOS 17.5 fixture review passed for the adaptive two-column surface. The video remains dominant, controls and provenance stay grouped, and no clipping was observed. |
 | Hardware validation | Unverified | Action Button, HealthKit recovery and outdoor legibility need a real Apple Watch pass. |
 | Distribution packaging | Archive verified 21 August 2026 | A generic-device archive completed successfully with compiled iPhone/iPad icons and the embedded Watch app. It is development-signed; App Store Connect record selection, distribution signing, upload and TestFlight availability remain unverified. |
 
@@ -39,22 +39,26 @@ Ronde is in pre-release product hardening and reviewer usability testing. The re
 - Simulator success cannot prove Action Button or HealthKit behaviour on hardware.
 - Location, HealthKit and motion data increase privacy and permission-copy obligations.
 - Xcode project changes and `project.yml` must remain synchronised.
-- Long video processing, temporary rolling capture and on-device models may expose memory, battery, thermal and storage limits.
-- The integrated tracker has one positive private-clip result only. It may still miss different ball colours, daylight, camera angles or resolutions, or falsely follow range clutter. Release requires representative positives and negatives.
-- The long-session orchestration is functional but intentionally accepts no production shots while the detector adapter reports model unavailable. This prevents false clips today but does not yet satisfy competitive automatic segmentation.
+- The measured per-tile allocation runaway is corrected locally, but the remaining roughly 235 to 699 MB macOS diagnostic footprints are not physical-iPhone evidence. Long video processing, temporary rolling capture and on-device models may still expose memory, battery, thermal and storage limits.
+- The integrated tracker passes three private positive originals across daylight/night, landscape/portrait and H.264/HEVC. This remains too small and has no negative clips, so it may still miss other balls or falsely follow clutter. Release requires representative positives and negatives.
+- Range analysis depends on honest setup confirmation. The fixed-camera associator deliberately does not attempt general multi-golfer identity tracking.
+- The complete automatic path is a screen-space estimate anchored to observed launch evidence. It is not measured distance, apex height or an observed full flight.
 
-## Delivery validation refreshed on 29 August 2026
+## Delivery validation refreshed on 30 August 2026
 
-- Regenerated `Ronde.xcodeproj` from `project.yml` and built the `Ronde iOS` scheme for the generic iOS Simulator. The embedded Watch app, universal AppIcon and packaged Core ML model all compiled successfully.
-- Ran the `Ronde iOS` suite on an iPhone 17 Pro running iOS 26.0 Simulator: 32 passed, zero failed and one optional external-file test skipped. This is source and Simulator evidence only; it does not validate physical-device capture, held-out tracker accuracy or tracer reliability.
+- Regenerated `Ronde.xcodeproj` from `project.yml` and built the `Ronde iOS` scheme for the generic iOS Simulator. The embedded Watch app, universal AppIcon, motion permission copy and packaged Core ML model all compiled successfully.
+- Ran the clean `Ronde iOS` suite on an iPhone 17 Pro running iOS 26.0 Simulator after the memory correction: 52 checks executed, 50 passed, two optional external-video/audio probes skipped and zero failed.
+- Re-ran the exact macOS production-code diagnostics without changing the selected paths. Landscape A reached a 235 MB peak footprint, Landscape B 699 MB and Portrait C 678 MB; Landscape B previously reached 19.19 GB because it allocated a 5.3 MB input tensor for every one of its 3,217 tile predictions.
+- Re-ran the optional exact-production external matrix after the memory correction with temporary copies of all three private originals: one matrix test passed, zero skipped and zero failed in 1,397.075 seconds. The clips remained outside Git; the temporary copies and opt-in scheme setting were removed after testing.
+- This is source and Simulator evidence only. It does not validate physical-device latency, memory, thermal behaviour or held-out accuracy.
 
 ## Immediate gate
 
-1. Implement in-app Range recording and persistent local session library behaviour.
-2. Implement Live Review rolling segments, fused detection, automatic post-roll replay and re-arm flow.
-3. Collect consented long-session footage with labelled target-golfer real shots, practice swings, neighbouring golfers and range noise; validate accepted-shot precision and missed-shot rate on a physical iPhone, including 30 to 50-minute thermal and storage behaviour.
-4. Validate the integrated zero-fee WASB-SBDT Core ML tracker on the held-out matrix, tune or fine-tune only if required, and connect its launch evidence to the target-golfer long-session gate. Do not claim production tracking or numerical distance before held-out and physical-device validation.
-5. Continue the existing Watch hardware and release gates.
+1. Run the documented 20 to 30 clip validation matrix, reporting acquisition recall, false-tracer rate, target association and per-clip cost separately.
+2. Validate the current tracker and 60 fps capture-quality foundation on physical iPhones, including latency, memory, battery, thermal and storage behaviour over 30 to 50 minutes.
+3. Complete the Live Review rolling writer, fused detection, automatic post-roll replay, interruption recovery and persistent local session library.
+4. Fine-tune only if the matrix proves it necessary and a licensed, consented golf dataset and reproducible training path exist. Do not claim training support from the upstream WASB repository while its training instructions remain unavailable.
+5. Keep numerical carry and apex height unavailable until calibrated, known-ground-truth evidence exists, and continue the existing Watch hardware and release gates.
 
 ## Tracer incident diagnosed and replacement integrated on 24 August 2026
 

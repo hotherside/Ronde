@@ -1,9 +1,10 @@
 import AVFoundation
 import SwiftUI
 
-/// A deliberately honest, screen-space tracer for the review MVP.
+/// A screen-space tracer for the review surface.
 ///
-/// It is never presented as observed ball tracking.
+/// Automatic geometry is split into observed and estimated segments. User
+/// rescue geometry stays explicitly labelled as a Manual trace.
 struct AssistedTracerPoints: Equatable {
     var launch: CGPoint
     var apex: CGPoint
@@ -72,10 +73,12 @@ struct TracerRevealTimeline: Equatable {
 struct AssistedTracerEditor: View {
     @Binding var points: AssistedTracerPoints
     let observedPoints: [NormalizedPoint]
+    let inferredPoints: [NormalizedPoint]
     let playbackTime: TimeInterval
     let impactTime: TimeInterval
     let flightDuration: TimeInterval
     let isEditing: Bool
+    let isManual: Bool
     let onFinishEditing: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reducesMotion
@@ -117,12 +120,41 @@ struct AssistedTracerEditor: View {
                     .padding(12)
                     .frame(maxWidth: .infinity, alignment: .topTrailing)
                 }
+
+                if !isEditing {
+                    Text(sourceLabel)
+                        .font(.system(.caption2, design: .rounded).weight(.bold))
+                        .tracking(0.8)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 7)
+                        .background(.black.opacity(0.58), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        .padding(12)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel(sourceAccessibilityLabel)
+                }
             }
             .allowsHitTesting(isEditing)
             .accessibilityElement(children: .contain)
-            .accessibilityLabel(isEditing ? "Tracer editor. Drag the launch, apex and landing handles to place the arc." : "Tracer overlay")
+            .accessibilityLabel(isEditing ? "Tracer editor. Drag the launch, apex and landing handles to place the arc." : sourceAccessibilityLabel)
             .accessibilityValue(revealTimeline.accessibilityValue(at: playbackTime, reducesMotion: reducesMotion))
         }
+    }
+
+    private var sourceLabel: String {
+        if isManual { return "MANUAL TRACE" }
+        return inferredPoints.isEmpty ? "OBSERVED" : "OBSERVED LAUNCH · ESTIMATED FLIGHT"
+    }
+
+    private var sourceAccessibilityLabel: String {
+        if isManual {
+            return "Manual trace placed by you. It is a visual aid, not observed ball flight."
+        }
+        if inferredPoints.isEmpty {
+            return "Observed ball flight from the uploaded frames."
+        }
+        return "Observed launch followed by an estimated flight continuation."
     }
 
     private func tracerPath(in size: CGSize, progress: CGFloat) -> some View {
@@ -139,33 +171,48 @@ struct AssistedTracerEditor: View {
                 y: (2 * apex.y) - ((launch.y + landing.y) / 2)
             )
 
-            var arc = Path()
-            if observedPoints.count >= 3 {
-                let observed = observedPoints.map {
-                    CGPoint(x: CGFloat($0.x) * canvasSize.width, y: CGFloat($0.y) * canvasSize.height)
-                }
-                arc.move(to: observed[0])
-                for point in observed.dropFirst() { arc.addLine(to: point) }
-            } else {
-                arc.move(to: launch)
-                arc.addQuadCurve(to: landing, control: control)
-            }
-            let revealedArc = arc.trimmedPath(from: 0, to: progress)
-            context.drawLayer { layer in
-                layer.addFilter(.shadow(color: RondeReviewDesign.tracerGold.opacity(0.72), radius: 10))
-                layer.stroke(
-                    revealedArc,
-                    with: .color(RondeReviewDesign.tracerGold.opacity(0.62)),
-                    style: StrokeStyle(lineWidth: 10, lineCap: .round, lineJoin: .round)
-                )
-            }
-            context.stroke(revealedArc, with: .color(.black.opacity(0.42)), style: StrokeStyle(lineWidth: 8, lineCap: .round, lineJoin: .round))
-            context.stroke(revealedArc, with: .color(RondeReviewDesign.tracerGold), style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
-            context.stroke(revealedArc, with: .color(.white.opacity(0.82)), style: StrokeStyle(lineWidth: 1.4, lineCap: .round, lineJoin: .round))
+            if isEditing || isManual || (observedPoints.count < 3 && inferredPoints.isEmpty) {
+                var manualArc = Path()
+                manualArc.move(to: launch)
+                manualArc.addQuadCurve(to: landing, control: control)
+                let revealedArc = manualArc.trimmedPath(from: 0, to: progress)
+                strokeObserved(revealedArc, in: &context)
+            } else if observedPoints.count >= 3 {
+                let observedPath = makePath(from: observedPoints, in: canvasSize)
+                let observedFraction = inferredPoints.isEmpty
+                    ? 1.0
+                    : min(0.86, max(0.54, CGFloat(observedPoints.count) / CGFloat(observedPoints.count + inferredPoints.count)))
+                let observedProgress = min(1, progress / observedFraction)
+                strokeObserved(observedPath.trimmedPath(from: 0, to: observedProgress), in: &context)
 
-            let flightHead = observedPoints.count >= 3
-                ? observedPoint(at: progress, in: canvasSize)
-                : quadraticPoint(from: launch, control: control, to: landing, progress: progress)
+                if !inferredPoints.isEmpty, progress > observedFraction {
+                    var continuationPoints = [observedPoints.last!]
+                    continuationPoints.append(contentsOf: inferredPoints)
+                    let continuationPath = makePath(from: continuationPoints, in: canvasSize)
+                    let inferredProgress = min(1, max(0, (progress - observedFraction) / max(0.01, 1 - observedFraction)))
+                    strokeInferred(continuationPath.trimmedPath(from: 0, to: inferredProgress), in: &context)
+                }
+            } else {
+                var manualArc = Path()
+                manualArc.move(to: launch)
+                manualArc.addQuadCurve(to: landing, control: control)
+                strokeObserved(manualArc.trimmedPath(from: 0, to: progress), in: &context)
+            }
+
+            let flightHead: CGPoint
+            if isEditing || isManual || observedPoints.count < 3 {
+                flightHead = quadraticPoint(from: launch, control: control, to: landing, progress: progress)
+            } else if inferredPoints.isEmpty {
+                flightHead = observedPoint(at: progress, in: canvasSize)
+            } else {
+                let observedFraction = min(0.86, max(0.54, CGFloat(observedPoints.count) / CGFloat(observedPoints.count + inferredPoints.count)))
+                if progress <= observedFraction {
+                    flightHead = observedPoint(at: progress / observedFraction, in: canvasSize)
+                } else {
+                    let continuationProgress = min(1, max(0, (progress - observedFraction) / max(0.01, 1 - observedFraction)))
+                    flightHead = inferredPoint(at: continuationProgress, in: canvasSize)
+                }
+            }
             marker(at: flightHead, colour: .white, in: &context, size: progress < 1 ? 10 : 6)
 
             if isEditing {
@@ -174,6 +221,43 @@ struct AssistedTracerEditor: View {
             }
         }
         .allowsHitTesting(false)
+    }
+
+    private func makePath(from points: [NormalizedPoint], in size: CGSize) -> Path {
+        var path = Path()
+        guard let first = points.first else { return path }
+        path.move(to: canvasPoint(first, in: size))
+        for point in points.dropFirst() {
+            path.addLine(to: canvasPoint(point, in: size))
+        }
+        return path
+    }
+
+    private func strokeObserved(_ path: Path, in context: inout GraphicsContext) {
+        context.drawLayer { layer in
+            layer.addFilter(.shadow(color: RondeReviewDesign.tracerGold.opacity(0.72), radius: 10))
+            layer.stroke(
+                path,
+                with: .color(RondeReviewDesign.tracerGold.opacity(0.62)),
+                style: StrokeStyle(lineWidth: 10, lineCap: .round, lineJoin: .round)
+            )
+        }
+        context.stroke(path, with: .color(.black.opacity(0.42)), style: StrokeStyle(lineWidth: 8, lineCap: .round, lineJoin: .round))
+        context.stroke(path, with: .color(RondeReviewDesign.tracerGold), style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
+        context.stroke(path, with: .color(.white.opacity(0.82)), style: StrokeStyle(lineWidth: 1.4, lineCap: .round, lineJoin: .round))
+    }
+
+    private func strokeInferred(_ path: Path, in context: inout GraphicsContext) {
+        context.stroke(
+            path,
+            with: .color(RondeReviewDesign.amber),
+            style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round, dash: [9, 7])
+        )
+        context.stroke(
+            path,
+            with: .color(.white.opacity(0.80)),
+            style: StrokeStyle(lineWidth: 1.2, lineCap: .round, lineJoin: .round, dash: [9, 7])
+        )
     }
 
     private func handle(for label: String, systemImage: String, point: Binding<CGPoint>, in size: CGSize) -> some View {
@@ -214,6 +298,10 @@ struct AssistedTracerEditor: View {
         CGPoint(x: point.x * size.width, y: point.y * size.height)
     }
 
+    private func canvasPoint(_ point: NormalizedPoint, in size: CGSize) -> CGPoint {
+        CGPoint(x: CGFloat(point.x) * size.width, y: CGFloat(point.y) * size.height)
+    }
+
     private func normalised(_ point: CGPoint, in size: CGSize) -> CGPoint {
         CGPoint(
             x: min(0.96, max(0.04, point.x / max(1, size.width))),
@@ -245,6 +333,22 @@ struct AssistedTracerEditor: View {
         )
     }
 
+    private func inferredPoint(at progress: CGFloat, in size: CGSize) -> CGPoint {
+        let points = ([observedPoints.last].compactMap { $0 } + inferredPoints).map {
+            CGPoint(x: CGFloat($0.x) * size.width, y: CGFloat($0.y) * size.height)
+        }
+        guard let first = points.first else { return .zero }
+        guard points.count > 1 else { return first }
+        let position = min(1, max(0, progress)) * CGFloat(points.count - 1)
+        let lowerIndex = min(points.count - 1, Int(position.rounded(.down)))
+        let upperIndex = min(points.count - 1, lowerIndex + 1)
+        let fraction = position - CGFloat(lowerIndex)
+        return CGPoint(
+            x: points[lowerIndex].x + ((points[upperIndex].x - points[lowerIndex].x) * fraction),
+            y: points[lowerIndex].y + ((points[upperIndex].y - points[lowerIndex].y) * fraction)
+        )
+    }
+
     private func marker(at point: CGPoint, colour: Color, in context: inout GraphicsContext, size: CGFloat = 14) {
         let outer = CGRect(x: point.x - (size / 2), y: point.y - (size / 2), width: size, height: size)
         let innerSize = max(3, size * 0.43)
@@ -262,10 +366,12 @@ struct PlayerSynchronizedTracer: View {
     let player: AVPlayer?
     @Binding var points: AssistedTracerPoints
     let observedPoints: [NormalizedPoint]
+    let inferredPoints: [NormalizedPoint]
     let fallbackPlaybackTime: TimeInterval
     let impactTime: TimeInterval
     let flightDuration: TimeInterval
     let isEditing: Bool
+    let isManual: Bool
     let onFinishEditing: () -> Void
 
     var body: some View {
@@ -273,10 +379,12 @@ struct PlayerSynchronizedTracer: View {
             AssistedTracerEditor(
                 points: $points,
                 observedPoints: observedPoints,
+                inferredPoints: inferredPoints,
                 playbackTime: player.map { max(0, $0.currentTime().seconds) } ?? fallbackPlaybackTime,
                 impactTime: impactTime,
                 flightDuration: flightDuration,
                 isEditing: isEditing,
+                isManual: isManual,
                 onFinishEditing: onFinishEditing
             )
         }

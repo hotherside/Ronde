@@ -2,7 +2,7 @@
 
 **Status:** current working contract
 
-**Reviewed:** 24 August 2026
+**Reviewed:** 29 August 2026
 
 ## Product
 
@@ -35,10 +35,12 @@ The essential loop is:
 - Only accepted real shots enter the primary shot rail, receive a non-destructive clip plan and become tracer eligible. Uncertain moments remain in a collapsed correction queue without tracers; rejected background events, generic motion and different-golfer events are hidden from the primary workflow.
 - An accepted shot clip defaults to impact minus five seconds through impact plus five seconds. Validated target-golfer impact time is canonical once available; a coarser proposal timestamp must not drive clipping, playback or tracer reveal. The source range is clamped at recording boundaries, trimming is non-destructive, and the original media is retained until the user explicitly removes it.
 - Live Review may use a temporary rolling capture buffer for hands-free one-shot feedback. It retains the candidate clip only after an impact-like event, plays it automatically after post-roll and processing, and discards unrelated buffer segments.
-- The MVP must never fabricate a tracer. A short review without enough ball-specific points remains playable and says `Ball flight not tracked`; it does not receive default launch, apex or landing geometry.
+- The MVP must never fabricate an automatic tracer. A short review without enough ball-specific observations remains playable and says `Ball flight not tracked`; audio, body motion, generic Vision motion and fixed fallback geometry cannot create a visible automatic line.
 - Uploaded files are processed using their own presentation timestamps and orientation. No specific recording frame rate is required; lower temporal or spatial quality may reduce tracking confidence and result in no tracer.
-- Native Vision trajectory analysis may be used as a constrained diagnostic baseline, but generic moving-shape points cannot accept a real shot, enable a tracer or earn an `Observed` golf-ball label. A one-shot review may show an observed segment only when the packaged sports-ball model produces a temporally consistent post-impact track. Long-session shot acceptance additionally requires target-golfer association.
-- An automatic tracer may show only the confidence-gated two-dimensional model observations and must use their source presentation times. Generic parabolic Vision observations, fixed fallbacks and geometric projections must not create a visible tracer. Held-out positive and negative footage, false-tracer measurement and physical-device performance remain release gates rather than prerequisites for keeping the current evidence-gated prototype available.
+- Native Vision trajectory analysis may be used as a constrained diagnostic baseline, but generic moving-shape points cannot accept a real shot, enable a tracer or earn an `Observed` golf-ball label. A one-shot review may show an automatic tracer only when the packaged sports-ball model produces a temporally consistent post-impact track. Long-session shot acceptance additionally requires target-golfer association.
+- A confidence-gated two-dimensional ball track may seed a deterministic estimated continuation through a screen-space apex and bounded landing. The observed and estimated portions must use the source presentation timeline, render distinctly and be labelled `Observed launch · estimated flight`. A generic trajectory or an unanchored projection cannot seed this path.
+- A person may rescue or correct a path with the assisted editor. User-authored geometry must be labelled `Manual trace` and must not be presented as automatic observation.
+- Playback and traced-video export use the same saved geometry. Export does not rerun analysis, and the original source remains unchanged.
 - Numerical distance is a later experiment requiring a saved calibration setup and validation against known ground truth. It is not an MVP promise.
 - Reviewer media and analysis stay on-device for MVP. No cloud upload, remote round storage, analytics, or background location is part of this scope.
 
@@ -52,6 +54,7 @@ The essential loop is:
 - Core Location and the bundled Sydney course library support nearby-course selection.
 - App Intents supplies the Action Button-compatible shot action, but real hardware configuration and invocation require manual verification.
 - AVFoundation, Vision human-body pose and Core ML are the preferred Apple-native foundations for capture, candidate segmentation and detector execution. The free perception lane packages the MIT-licensed WASB-SBDT three-frame sports-ball model, evaluates source-resolution tiles and applies purpose-built single-ball temporal association. SAM-style models are labelling aids rather than an iPhone runtime dependency. Impact-like audio is preferred for timing, with body motion as a fallback when audio is absent or unreadable.
+- In-app reviewer capture targets a stable rear-camera view at 60 fps, settles then locks focus and exposure where hardware permits, and guides the golfer to include the address position and expected flight corridor. Higher-frame-rate imports remain eligible; 240 fps is an optional quality input rather than a requirement.
 
 ## Release gate
 

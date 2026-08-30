@@ -35,6 +35,135 @@ struct ModelUnavailableGolfBallLaunchDetector: GolfBallLaunchDetecting {
     }
 }
 
+/// A deliberately narrow opt-in for a tripod-style range session. It is not person recognition
+/// and it must not be inferred from proximity: the person running the review explicitly confirms
+/// the fixed, single-golfer conditions before this evidence can associate a ball launch.
+struct FixedCameraSingleGolferSessionEvidence: Codable, Sendable, Equatable {
+    var cameraWasFixedForSession: Bool
+    var targetGolferWasExplicitlyConfirmed: Bool
+    var noOtherGolferWasConfirmedInFrame: Bool
+    var confirmationDescription: String
+
+    init(
+        cameraWasFixedForSession: Bool,
+        targetGolferWasExplicitlyConfirmed: Bool,
+        noOtherGolferWasConfirmedInFrame: Bool,
+        confirmationDescription: String = "Single-golfer range session confirmed by the reviewer."
+    ) {
+        self.cameraWasFixedForSession = cameraWasFixedForSession
+        self.targetGolferWasExplicitlyConfirmed = targetGolferWasExplicitlyConfirmed
+        self.noOtherGolferWasConfirmedInFrame = noOtherGolferWasConfirmedInFrame
+        self.confirmationDescription = confirmationDescription
+    }
+
+    var permitsAssociation: Bool {
+        cameraWasFixedForSession
+            && targetGolferWasExplicitlyConfirmed
+            && noOtherGolferWasConfirmedInFrame
+    }
+}
+
+/// Associates body-motion proposals only in an explicitly confirmed single-golfer session. A
+/// missing confirmation fails closed, and this adapter does not attempt face recognition or use
+/// a nearby person as a target-golfer proxy.
+struct FixedCameraSingleGolferAssociator: TargetGolferAssociating {
+    let sessionEvidence: FixedCameraSingleGolferSessionEvidence
+
+    func swingImpactEvidence(for proposal: ShotEventProposal, in _: URL) async -> TargetGolferSwingImpactEvidence {
+        guard sessionEvidence.permitsAssociation else {
+            return TargetGolferSwingImpactEvidence(
+                state: .unavailable,
+                sourceDescription: "Target-golfer association is disabled until a fixed, single-golfer session is explicitly confirmed."
+            )
+        }
+        guard proposal.signals.contains(.targetBodyMotion) else {
+            return TargetGolferSwingImpactEvidence(
+                state: .absent,
+                sourceDescription: "The confirmed golfer did not have a body-motion proposal at this time."
+            )
+        }
+        return TargetGolferSwingImpactEvidence(
+            state: .supported,
+            impactTime: proposal.sourceTime,
+            confidence: proposal.confidence,
+            sourceDescription: sessionEvidence.confirmationDescription
+        )
+    }
+}
+
+/// Uses the golf-ball-specific temporal tracker for a range session only after the same explicit
+/// single-golfer confirmation has been supplied to the associator. It preserves tracker source
+/// timestamps and never substitutes the proposal time when the track lacks them.
+actor FixedCameraSingleGolferLaunchDetector: GolfBallLaunchDetecting {
+    private let sessionEvidence: FixedCameraSingleGolferSessionEvidence
+    private let tracker: WASBGolfBallTrackingService
+
+    init(
+        sessionEvidence: FixedCameraSingleGolferSessionEvidence,
+        tracker: WASBGolfBallTrackingService = WASBGolfBallTrackingService()
+    ) {
+        self.sessionEvidence = sessionEvidence
+        self.tracker = tracker
+    }
+
+    func launchObservation(near sourceTime: TimeInterval, in url: URL) async -> BallLaunchObservation {
+        guard sessionEvidence.permitsAssociation else {
+            return BallLaunchObservation(
+                state: .noLaunchObserved,
+                targetGolferAssociation: .unavailable,
+                detectorDescription: "Ball launch is not associated automatically without fixed, single-golfer confirmation."
+            )
+        }
+        do {
+            let estimate = try await tracker.analyse(url: url, impactTime: sourceTime)
+            guard estimate.source == .observed || estimate.source == .observedAndInferred,
+                  estimate.observedPointCount >= 3,
+                  let launchTime = estimate.observedTrajectory?.presentationTimes.first else {
+                return BallLaunchObservation(
+                    state: .detectorFailed,
+                    targetGolferAssociation: .targetGolfer,
+                    detectorDescription: "A ball track did not contain enough source-timestamped observed points to accept a launch."
+                )
+            }
+            return BallLaunchObservation(
+                state: .verifiedGolfBall,
+                launchTime: launchTime,
+                confidence: estimate.confidence,
+                stableDetectionCount: estimate.observedPointCount,
+                targetGolferAssociation: .targetGolfer,
+                detectorDescription: "Source-timestamped golf-ball track in an explicitly confirmed fixed single-golfer session."
+            )
+        } catch let error as WASBGolfBallTrackingError {
+            switch error {
+            case .modelUnavailable:
+                return BallLaunchObservation(
+                    state: .modelUnavailable,
+                    targetGolferAssociation: .targetGolfer,
+                    detectorDescription: error.localizedDescription
+                )
+            case .noDefensibleBallTrack:
+                return BallLaunchObservation(
+                    state: .noLaunchObserved,
+                    targetGolferAssociation: .targetGolfer,
+                    detectorDescription: error.localizedDescription
+                )
+            default:
+                return BallLaunchObservation(
+                    state: .detectorFailed,
+                    targetGolferAssociation: .targetGolfer,
+                    detectorDescription: error.localizedDescription
+                )
+            }
+        } catch {
+            return BallLaunchObservation(
+                state: .detectorFailed,
+                targetGolferAssociation: .targetGolfer,
+                detectorDescription: error.localizedDescription
+            )
+        }
+    }
+}
+
 /// Deterministically merges nearby proposal signals without turning their coincidence into a
 /// real-shot claim. It preserves the source timestamp of the strongest proposal in each burst.
 struct ShotEventProposalDeduplicator: Sendable {
@@ -197,6 +326,22 @@ actor LongSessionAnalysisService {
         self.targetGolferAssociator = targetGolferAssociator
         self.ballDetector = ballDetector
         self.deduplicator = deduplicator
+        self.decisionPolicy = decisionPolicy
+    }
+
+    /// Opt-in construction for the narrow fixed-camera range case. Callers must hold the supplied
+    /// confirmation as session evidence; the default initializer remains fail-closed.
+    init(
+        fixedSingleGolferEvidence: FixedCameraSingleGolferSessionEvidence,
+        audioService: AudioImpactAnalysisService = .init(),
+        bodyMotionService: BodyMotionAnalysisService = .init(),
+        decisionPolicy: RealShotDecisionPolicy = .defaultPolicy
+    ) {
+        self.audioService = audioService
+        self.bodyMotionService = bodyMotionService
+        self.targetGolferAssociator = FixedCameraSingleGolferAssociator(sessionEvidence: fixedSingleGolferEvidence)
+        self.ballDetector = FixedCameraSingleGolferLaunchDetector(sessionEvidence: fixedSingleGolferEvidence)
+        self.deduplicator = .init()
         self.decisionPolicy = decisionPolicy
     }
 

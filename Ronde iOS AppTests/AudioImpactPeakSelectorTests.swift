@@ -55,6 +55,21 @@ final class AudioImpactPeakSelectorTests: XCTestCase {
         ])
     }
 
+    func testBodyMotionAnalysisIsOnlyAFallbackWhenAudioHasNoUsableCandidate() {
+        let audioCandidate = SwingCandidate(
+            impactTime: 1.2,
+            classification: .provisional(confidence: 0.8, explanation: "Audio fixture"),
+            evidence: [.audioTransient]
+        )
+
+        XCTAssertFalse(
+            ImpactCandidateAnalysisPolicy.shouldAnalyseBodyMotion(after: [audioCandidate])
+        )
+        XCTAssertTrue(
+            ImpactCandidateAnalysisPolicy.shouldAnalyseBodyMotion(after: [])
+        )
+    }
+
     func testOptionalRealClipProducesOneCandidate() async throws {
         guard let path = ProcessInfo.processInfo.environment["RONDE_TEST_VIDEO_PATH"], !path.isEmpty else {
             throw XCTSkip("Set RONDE_TEST_VIDEO_PATH to run the local real-video probe.")

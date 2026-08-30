@@ -10,3 +10,4 @@ Each record states status, date, context, decision, alternatives and consequence
 - [0004: Source-time tracer and honest native tracking baseline](0004-source-time-tracer-and-native-baseline.md)
 - [0005: Accept a real shot before clipping or tracing](0005-real-shot-gate-before-clip-and-tracer.md)
 - [0006: Evidence-backed automatic tracers and free on-device perception](0006-evidence-backed-tracer-and-free-perception.md)
+- [0007: Evidence-anchored complete tracers](0007-evidence-anchored-complete-tracer.md)

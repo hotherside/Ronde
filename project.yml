@@ -45,6 +45,7 @@ targets:
         INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: "Ronde saves confirmed shot clips to your photo library."
         INFOPLIST_KEY_NSCameraUsageDescription: "Ronde uses the camera to record range sessions and provide live shot review."
         INFOPLIST_KEY_NSMicrophoneUsageDescription: "Ronde uses the microphone to help detect impact timing during shot review."
+        INFOPLIST_KEY_NSMotionUsageDescription: "Ronde checks whether the phone is steady before recording a shot review."
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     dependencies:
       - target: Ronde Watch App

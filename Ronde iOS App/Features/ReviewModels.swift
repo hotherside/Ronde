@@ -153,6 +153,11 @@ struct ReviewCandidate: Identifiable {
     /// Vision's screen-space trajectory. This is deliberately retained as
     /// provisional geometry, not a physical flight or distance measurement.
     var trajectory: DetectedTrajectory?
+    /// One immutable automatic geometry used for both playback and rendered export. Its observed
+    /// source-frame segment and inferred continuation stay separate so the UI cannot style both
+    /// as detected flight by accident.
+    var evidenceAnchoredPath: EvidenceAnchoredFlightPath?
+    /// Person-authored rescue geometry. This remains separate from automatic evidence.
     var assistedTracer: AssistedTracerPath?
     var tracerSource: BallFlightEstimateSource
     var tracerConfidence: Double
@@ -181,6 +186,7 @@ struct ReviewCandidate: Identifiable {
         decision: CandidateDecision = .unreviewed,
         tracerAvailable: Bool = false,
         trajectory: DetectedTrajectory? = nil,
+        evidenceAnchoredPath: EvidenceAnchoredFlightPath? = nil,
         assistedTracer: AssistedTracerPath? = nil,
         tracerSource: BallFlightEstimateSource = .unavailable,
         tracerConfidence: Double = 0,
@@ -196,11 +202,15 @@ struct ReviewCandidate: Identifiable {
         self.decision = decision
         self.tracerAvailable = tracerAvailable
         self.trajectory = trajectory
+        self.evidenceAnchoredPath = evidenceAnchoredPath
         self.assistedTracer = assistedTracer
         self.tracerSource = tracerSource
         self.tracerConfidence = min(max(tracerConfidence, 0), 1)
         self.observedTracerPointCount = max(0, observedTracerPointCount)
     }
+
+    var hasAutomaticTracer: Bool { evidenceAnchoredPath != nil }
+    var hasManualTracer: Bool { assistedTracer != nil }
 }
 
 struct ReviewSession: Identifiable {
@@ -266,18 +276,30 @@ enum LibrarySection: String, CaseIterable, Identifiable, Hashable {
 enum ReviewFixtures {
     static let sampleTrajectory = DetectedTrajectory(
         detectedPoints: [
-            NormalizedPoint(x: 0.58, y: 0.38),
-            NormalizedPoint(x: 0.64, y: 0.45),
-            NormalizedPoint(x: 0.70, y: 0.51)
+            NormalizedPoint(x: 0.42, y: 0.68),
+            NormalizedPoint(x: 0.47, y: 0.59),
+            NormalizedPoint(x: 0.53, y: 0.51)
         ],
         projectedPoints: [
-            NormalizedPoint(x: 0.76, y: 0.56),
-            NormalizedPoint(x: 0.83, y: 0.58),
-            NormalizedPoint(x: 0.90, y: 0.57)
+            NormalizedPoint(x: 0.59, y: 0.43),
+            NormalizedPoint(x: 0.65, y: 0.37),
+            NormalizedPoint(x: 0.71, y: 0.33),
+            NormalizedPoint(x: 0.77, y: 0.34),
+            NormalizedPoint(x: 0.82, y: 0.40),
+            NormalizedPoint(x: 0.87, y: 0.50),
+            NormalizedPoint(x: 0.90, y: 0.62)
         ],
+        presentationTimes: [1.72, 1.78, 1.84],
         equationCoefficients: [0, 0, 0],
         confidence: 0.62
     )
+
+    static let sampleEvidenceAnchoredPath = EvidenceAnchoredFlightPath(
+        observedPoints: sampleTrajectory.detectedPoints,
+        inferredContinuation: sampleTrajectory.projectedPoints,
+        observedPresentationTimes: sampleTrajectory.presentationTimes,
+        confidence: 0.62
+    )!
 
     static let rangeSession = ReviewSession(
         id: UUID(uuidString: "C6C4F9D1-84AC-4DEB-8880-CCF7BF44E9D4")!,
@@ -298,7 +320,11 @@ enum ReviewFixtures {
                 confidence: .high,
                 evidence: ["Ball visible", "Strong impact motion"],
                 tracerAvailable: true,
-                trajectory: sampleTrajectory
+                trajectory: sampleTrajectory,
+                evidenceAnchoredPath: sampleEvidenceAnchoredPath,
+                tracerSource: .observedAndInferred,
+                tracerConfidence: 0.62,
+                observedTracerPointCount: sampleTrajectory.detectedPoints.count
             ),
             ReviewCandidate(
                 ordinal: 2,
@@ -340,8 +366,13 @@ enum ReviewFixtures {
                 sourceDuration: 6.618,
                 classification: .uncertain,
                 confidence: .medium,
-                evidence: ["Impact audio"],
-                tracerSource: .unavailable
+                evidence: ["Impact audio", "Ball launch tracked"],
+                tracerAvailable: true,
+                trajectory: sampleTrajectory,
+                evidenceAnchoredPath: sampleEvidenceAnchoredPath,
+                tracerSource: .observedAndInferred,
+                tracerConfidence: 0.62,
+                observedTracerPointCount: sampleTrajectory.detectedPoints.count
             )
         ],
         errorMessage: nil
@@ -369,14 +400,32 @@ final class ReviewerStore: ObservableObject {
     @Published var selectedCandidateID: UUID?
     @Published var playheadTime: TimeInterval = 94
     @Published var isBusy = false
+    @Published private(set) var lastExportedTracerURL: URL?
 
     private let mediaStore: LocalMediaStore?
     private let metadataProbe = VideoMetadataProbe()
     private let impactAnalysisService = ImpactCandidateAnalysisService()
-    private let longSessionAnalysisService = LongSessionAnalysisService()
+    private var longSessionAnalysisService: LongSessionAnalysisService
+    private(set) var fixedSingleGolferSessionEvidence: FixedCameraSingleGolferSessionEvidence?
     private let ballTrackingService = WASBGolfBallTrackingService()
+    private let flightPathExtrapolator = EvidenceAnchoredFlightPathExtrapolator()
+    private let tracedVideoExporter = TracedVideoExporter()
 
-    init(includeFixtures: Bool = false, previewSourceURL: URL? = nil) {
+    init(
+        includeFixtures: Bool = false,
+        previewSourceURL: URL? = nil,
+        fixedSingleGolferSessionEvidence: FixedCameraSingleGolferSessionEvidence? = nil
+    ) {
+        if let fixedSingleGolferSessionEvidence,
+           fixedSingleGolferSessionEvidence.permitsAssociation {
+            self.fixedSingleGolferSessionEvidence = fixedSingleGolferSessionEvidence
+            self.longSessionAnalysisService = LongSessionAnalysisService(
+                fixedSingleGolferEvidence: fixedSingleGolferSessionEvidence
+            )
+        } else {
+            self.fixedSingleGolferSessionEvidence = nil
+            self.longSessionAnalysisService = LongSessionAnalysisService()
+        }
         var previewSession = ReviewFixtures.quickReviewSession
         previewSession.sourceURL = previewSourceURL
         let initialSessions = includeFixtures ? [previewSession] : []
@@ -384,6 +433,28 @@ final class ReviewerStore: ObservableObject {
         selectedSessionID = initialSessions.first?.id
         selectedCandidateID = initialSessions.first?.defaultCandidate?.id
         mediaStore = try? LocalMediaStore()
+    }
+
+    /// Explicitly enables the narrow range-session detector path after the person reviewing the
+    /// video has confirmed the fixed-camera and single-golfer conditions. An incomplete
+    /// confirmation resets to the normal fail-closed service rather than using proximity.
+    @discardableResult
+    func configureFixedSingleGolferRangeAnalysis(
+        with evidence: FixedCameraSingleGolferSessionEvidence
+    ) -> Bool {
+        guard evidence.permitsAssociation else {
+            fixedSingleGolferSessionEvidence = nil
+            longSessionAnalysisService = LongSessionAnalysisService()
+            return false
+        }
+        fixedSingleGolferSessionEvidence = evidence
+        longSessionAnalysisService = LongSessionAnalysisService(fixedSingleGolferEvidence: evidence)
+        return true
+    }
+
+    func disableFixedSingleGolferRangeAnalysis() {
+        fixedSingleGolferSessionEvidence = nil
+        longSessionAnalysisService = LongSessionAnalysisService()
     }
 
     var selectedSession: ReviewSession? {
@@ -422,7 +493,81 @@ final class ReviewerStore: ObservableObject {
     }
 
     func updateAssistedTracer(_ path: AssistedTracerPath, for candidate: ReviewCandidate, in session: ReviewSession) {
-        updateCandidate(candidate, in: session) { $0.assistedTracer = path }
+        updateCandidate(candidate, in: session) { candidate in
+            candidate.assistedTracer = path
+            candidate.tracerAvailable = true
+            if candidate.evidenceAnchoredPath == nil {
+                candidate.tracerSource = .inferred
+                candidate.tracerConfidence = 0
+            }
+            if !candidate.evidence.contains("User-assisted tracer") {
+                candidate.evidence.append("User-assisted tracer")
+            }
+        }
+    }
+
+    /// Starts a recoverable manual overlay without pretending that a missed automatic track was
+    /// observed. The result is held in the current in-memory session until a durable session store
+    /// is introduced.
+    @discardableResult
+    func startManualTracer(for candidate: ReviewCandidate, in session: ReviewSession) -> AssistedTracerPath {
+        let path = candidate.assistedTracer ?? AssistedTracerPath.default
+        updateAssistedTracer(path, for: candidate, in: session)
+        return path
+    }
+
+    func clearManualTracer(for candidate: ReviewCandidate, in session: ReviewSession) {
+        updateCandidate(candidate, in: session) { candidate in
+            candidate.assistedTracer = nil
+            candidate.evidence.removeAll { $0 == "User-assisted tracer" }
+            if let automatic = candidate.evidenceAnchoredPath {
+                candidate.tracerAvailable = true
+                candidate.tracerSource = automatic.source
+                candidate.tracerConfidence = automatic.confidence
+            } else {
+                candidate.tracerAvailable = false
+                candidate.tracerSource = .unavailable
+                candidate.tracerConfidence = 0
+            }
+        }
+    }
+
+    /// Produces a local MOV using the exact geometry already stored on the selected candidate.
+    /// It is intentionally separate from analysis: sharing a video cannot rerun detection, invent
+    /// missing points, or turn a manual rescue into observed flight.
+    func exportTracedVideo(for candidate: ReviewCandidate, in session: ReviewSession) async throws -> URL {
+        guard let sourceURL = session.sourceURL else {
+            throw TracedVideoExportError.sourceUnavailable
+        }
+        let geometry: TracedVideoTracerGeometry
+        let revealStartTime: TimeInterval
+        if let manualPath = candidate.assistedTracer {
+            geometry = TracedVideoTracerGeometry(
+                manualLaunch: NormalizedPoint(x: manualPath.launch.x, y: manualPath.launch.y),
+                apex: NormalizedPoint(x: manualPath.apex.x, y: manualPath.apex.y),
+                landing: NormalizedPoint(x: manualPath.landing.x, y: manualPath.landing.y)
+            )
+            revealStartTime = candidate.impactTime
+        } else if let automaticPath = candidate.evidenceAnchoredPath,
+                  let automaticGeometry = TracedVideoTracerGeometry(path: automaticPath) {
+            geometry = automaticGeometry
+            revealStartTime = automaticPath.observedPresentationTimes.first ?? candidate.impactTime
+        } else {
+            throw TracedVideoExportError.noStoredTracerGeometry
+        }
+
+        let range = ReviewTimeRange(
+            start: candidate.startTime,
+            duration: max(0, candidate.endTime - candidate.startTime)
+        )
+        let output = try await tracedVideoExporter.export(TracedVideoExportRequest(
+            sourceURL: sourceURL,
+            sourceRange: range,
+            revealStartTime: revealStartTime,
+            geometry: geometry
+        ))
+        lastExportedTracerURL = output
+        return output
     }
 
     func addManualMarker(in session: ReviewSession) {
@@ -500,26 +645,10 @@ final class ReviewerStore: ObservableObject {
             // review surface remains usable with manual markers.
             let title = sourceName.replacingOccurrences(of: ".MOV", with: "").replacingOccurrences(of: ".mov", with: "")
             if let current = sessions.first(where: { $0.title == title }) {
-                if current.importKind == .oneShot, current.duration > 0 {
-                    let fallback = ReviewCandidate(
-                        ordinal: 1,
-                        impactTime: current.duration * 0.52,
-                        sourceDuration: current.duration,
-                        classification: .uncertain,
-                        confidence: .low,
-                        evidence: ["Short clip", "Ball flight not tracked"],
-                        tracerSource: .unavailable
-                    )
-                    updateSession(current) {
-                        $0.candidates = [fallback]
-                        $0.status = .reviewing
-                        $0.progress = 1
-                        $0.errorMessage = nil
-                    }
-                    selectedCandidateID = fallback.id
-                    playheadTime = fallback.impactTime
-                } else {
-                    updateSession(current) { $0.status = .needsAttention; $0.progress = 1; $0.errorMessage = "The video is imported, but automatic analysis could not finish. Add a shot marker to continue." }
+                updateSession(current) {
+                    $0.status = .needsAttention
+                    $0.progress = 1
+                    $0.errorMessage = "The video is imported, but automatic analysis could not finish. Add a shot marker to continue."
                 }
             }
         }
@@ -539,14 +668,17 @@ final class ReviewerStore: ObservableObject {
                 self.updateSession(current) { $0.progress = progress * 0.72; $0.status = .analysing }
             }
         }
-        // Impact audio is the closest available timing anchor for a direct one-shot clip.
-        // Body motion may peak during follow-through, so it is only the fallback here.
-        let timingCandidates = candidates.filter { $0.evidence.contains(.audioTransient) }
-        let strongest = (timingCandidates.isEmpty ? candidates : timingCandidates).max { lhs, rhs in
+        // Impact audio is the closest available timing anchor for a direct one-shot clip. Silent
+        // clips fall back to observed body motion, then the ball tracker performs its own local
+        // acquisition scan from that source time. A duration-based impact guess is never used.
+        let audioCandidates = candidates.filter { $0.evidence.contains(.audioTransient) }
+        let bodyCandidates = candidates.filter { $0.evidence.contains(.bodyMotion) }
+        let timingCandidates = audioCandidates.isEmpty ? bodyCandidates : audioCandidates
+        let strongest = timingCandidates.max { lhs, rhs in
             lhs.classification.confidence < rhs.classification.confidence
         }
-        let impactTime = strongest?.impactTime ?? (duration * 0.52)
-        guard duration > 0 else { return [] }
+        guard duration > 0, let strongest else { return [] }
+        let impactTime = strongest.impactTime
 
         let trackedFlight = try? await ballTrackingService.analyse(
             url: url,
@@ -562,21 +694,23 @@ final class ReviewerStore: ObservableObject {
             }
         }
         let flight = trackedFlight.flatMap { $0.isDisplayable ? $0 : nil }
-        var evidence = strongest?.evidence.map(evidenceLabel) ?? ["Short clip"]
-        evidence.append(tracerEvidenceLabel(flight?.source ?? .unavailable))
+        let automaticPath = flight.flatMap { flightPathExtrapolator.path(from: $0) }
+        var evidence = strongest.evidence.map(evidenceLabel)
+        evidence.append(tracerEvidenceLabel(automaticPath?.source ?? .unavailable))
         return [ReviewCandidate(
-            id: strongest?.id ?? UUID(),
+            id: strongest.id,
             ordinal: 1,
             impactTime: impactTime,
             sourceDuration: duration,
             classification: .uncertain,
-            confidence: mapConfidence(strongest?.classification.confidence ?? 0),
+            confidence: mapConfidence(strongest.classification.confidence),
             evidence: evidence,
-            tracerAvailable: flight != nil,
+            tracerAvailable: automaticPath != nil,
             trajectory: flight?.observedTrajectory,
-            assistedTracer: flight.map(AssistedTracerPath.init(estimate:)),
-            tracerSource: flight?.source ?? .unavailable,
-            tracerConfidence: flight?.confidence ?? 0,
+            evidenceAnchoredPath: automaticPath,
+            assistedTracer: nil,
+            tracerSource: automaticPath?.source ?? .unavailable,
+            tracerConfidence: automaticPath?.confidence ?? 0,
             observedTracerPointCount: flight?.observedPointCount ?? 0
         )]
     }
@@ -608,6 +742,7 @@ final class ReviewerStore: ObservableObject {
                 impactTime: shot.impactTime
             )
             let flight = trackedFlight.flatMap { $0.isDisplayable ? $0 : nil }
+            let automaticPath = flight.flatMap { flightPathExtrapolator.path(from: $0) }
             let progress = 0.82 + (0.17 * (Double(index + 1) / Double(max(result.acceptedShots.count, 1))))
             if let current = sessions.first(where: { $0.id == sessionID }) {
                 updateSession(current) { $0.progress = progress; $0.status = .analysing }
@@ -623,13 +758,14 @@ final class ReviewerStore: ObservableObject {
                     shot.evidence.targetGolferSwing.sourceDescription,
                     shot.evidence.ballLaunch.detectorDescription,
                     shot.decision.explanation,
-                    tracerEvidenceLabel(flight?.source ?? .unavailable)
+                    tracerEvidenceLabel(automaticPath?.source ?? .unavailable)
                 ],
-                tracerAvailable: flight != nil,
+                tracerAvailable: automaticPath != nil,
                 trajectory: flight?.observedTrajectory,
-                assistedTracer: flight.map(AssistedTracerPath.init(estimate:)),
-                tracerSource: flight?.source ?? .unavailable,
-                tracerConfidence: flight?.confidence ?? 0,
+                evidenceAnchoredPath: automaticPath,
+                assistedTracer: nil,
+                tracerSource: automaticPath?.source ?? .unavailable,
+                tracerConfidence: automaticPath?.confidence ?? 0,
                 observedTracerPointCount: flight?.observedPointCount ?? 0
             ))
         }
@@ -712,8 +848,8 @@ final class ReviewerStore: ObservableObject {
         switch source {
         case .unavailable: return "Ball flight not tracked"
         case .observed: return "Observed ball flight"
-        case .observedAndInferred: return "Observed launch · inferred continuation"
-        case .inferred: return "Inferred flight path"
+        case .observedAndInferred: return "Observed launch · estimated flight"
+        case .inferred: return "Manual tracer"
         }
     }
 

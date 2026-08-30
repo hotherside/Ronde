@@ -124,38 +124,70 @@ struct RondeLibraryView: View {
 struct SessionLibraryHome: View {
     @ObservedObject var store: ReviewerStore
     let onChooseMode: (ReviewLaunchIntent) -> Void
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                header
-                modeChooser
-
-                if store.sessions.isEmpty {
-                    EmptySessionsView(onChooseMode: onChooseMode)
+            Group {
+                if horizontalSizeClass == .regular {
+                    iPadHome
                 } else {
-                    recentSessions
+                    VStack(alignment: .leading, spacing: 22) {
+                        header
+                        modeChooser
+
+                        if store.sessions.isEmpty {
+                            EmptySessionsView(onChooseMode: onChooseMode)
+                        } else {
+                            recentSessions
+                        }
+                    }
                 }
             }
-            .frame(maxWidth: 760, alignment: .leading)
+            .frame(maxWidth: 1080, alignment: .leading)
             .padding(.horizontal, 20)
-            .padding(.vertical, 26)
+            .padding(.vertical, horizontalSizeClass == .regular ? 30 : 24)
             .frame(maxWidth: .infinity, alignment: .top)
         }
         .scrollIndicators(.hidden)
     }
 
+    private var iPadHome: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            header
+
+            HStack(alignment: .top, spacing: 22) {
+                VStack(alignment: .leading, spacing: 12) {
+                    modeChooser
+                    if store.sessions.isEmpty {
+                        EmptySessionsView(onChooseMode: onChooseMode)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+
+                if !store.sessions.isEmpty {
+                    recentSessions
+                        .frame(maxWidth: 430, alignment: .topLeading)
+                }
+            }
+        }
+    }
+
     private var header: some View {
         VStack(alignment: .leading, spacing: 9) {
-            Text("RONDE REVIEW")
+            HStack(spacing: 8) {
+                Image(systemName: "scope")
+                    .font(.caption.weight(.bold))
+                Text("RONDE REVIEW")
+            }
                 .font(.reviewerSection)
                 .tracking(1.7)
                 .foregroundStyle(RondeReviewDesign.fairway)
-            Text("Review the swings that matter.")
+            Text("Find the shot.")
                 .font(.reviewerDisplay)
                 .foregroundStyle(RondeReviewDesign.graphite)
                 .fixedSize(horizontal: false, vertical: true)
-            Text("One clean review for a short clip. A focused review list for the range.")
+            Text("Bring a single swing into focus, then keep the moments worth another look.")
                 .font(.body)
                 .foregroundStyle(RondeReviewDesign.graphiteMuted)
                 .fixedSize(horizontal: false, vertical: true)
@@ -166,17 +198,28 @@ struct SessionLibraryHome: View {
 
     private var modeChooser: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("CHOOSE YOUR REVIEW")
+            Text("START WITH FOOTAGE")
                 .font(.reviewerSection)
                 .tracking(1.4)
                 .foregroundStyle(RondeReviewDesign.graphiteFaint)
 
-            ForEach(ReviewLaunchIntent.allCases) { intent in
+            // Live capture is intentionally not offered as a peer action until
+            // the end-to-end capture and association loop is ready.
+            ForEach([ReviewLaunchIntent.oneShot, .range]) { intent in
                 Button { onChooseMode(intent) } label: {
                     ModeLaunchRow(intent: intent)
                 }
                 .buttonStyle(.plain)
             }
+
+            HStack(spacing: 7) {
+                Image(systemName: "camera.metering.unknown")
+                    .font(.caption.weight(.semibold))
+                Text("Hands-free review is coming later. Import a recording for now.")
+                    .font(.caption)
+            }
+            .foregroundStyle(RondeReviewDesign.graphiteFaint)
+            .accessibilityElement(children: .combine)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -213,30 +256,41 @@ struct ModeLaunchRow: View {
     let intent: ReviewLaunchIntent
 
     var body: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 13) {
             ModeMedallion(intent: intent)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(intent == .live ? "HANDS-FREE" : "FROM FOOTAGE")
+                Text(intent == .oneShot ? "RECOMMENDED" : "FOR A SESSION")
                     .font(.reviewerSection)
                     .tracking(1.1)
-                    .foregroundStyle(intent == .live ? RondeReviewDesign.blue : RondeReviewDesign.fairway)
+                    .foregroundStyle(intent == .oneShot ? RondeReviewDesign.amber : RondeReviewDesign.fairway)
                 Text(intent.title)
-                    .font(.title3.weight(.semibold))
+                    .font(.headline.weight(.semibold))
                     .foregroundStyle(RondeReviewDesign.graphite)
                 Text(intent.subtitle)
-                    .font(.subheadline)
+                    .font(.footnote)
                     .foregroundStyle(RondeReviewDesign.graphiteMuted)
                     .multilineTextAlignment(.leading)
+                    .lineLimit(2)
             }
 
             Spacer(minLength: 8)
             Image(systemName: "chevron.right")
-                .font(.system(size: 13, weight: .semibold))
+                .font(.caption.weight(.semibold))
                 .foregroundStyle(RondeReviewDesign.graphiteFaint)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .reviewCard(cardPadding: 17)
+        .padding(.horizontal, 14)
+        .padding(.vertical, intent == .oneShot ? 14 : 12)
+        .background(
+            RoundedRectangle(cornerRadius: RondeReviewDesign.cardRadius, style: .continuous)
+                .fill(intent == .oneShot ? RondeReviewDesign.surface : RondeReviewDesign.surfaceRaised)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: RondeReviewDesign.cardRadius, style: .continuous)
+                .stroke(intent == .oneShot ? RondeReviewDesign.tracerGold.opacity(0.62) : RondeReviewDesign.border, lineWidth: intent == .oneShot ? 1.1 : 0.8)
+        }
+        .shadow(color: intent == .oneShot ? RondeReviewDesign.tracerGold.opacity(0.09) : .clear, radius: 12, y: 5)
         .contentShape(RoundedRectangle(cornerRadius: RondeReviewDesign.cardRadius, style: .continuous))
         .accessibilityElement(children: .combine)
         .accessibilityHint("Opens \(intent.title)")
@@ -249,12 +303,12 @@ private struct ModeMedallion: View {
     var body: some View {
         ZStack {
             Circle()
-                .fill(intent == .live ? RondeReviewDesign.blueWash : RondeReviewDesign.fairwayWash)
+                .fill(intent == .oneShot ? RondeReviewDesign.amberWash : RondeReviewDesign.fairwayWash)
             Image(systemName: intent.icon)
-                .font(.system(size: 19, weight: .medium))
-                .foregroundStyle(intent == .live ? RondeReviewDesign.blue : RondeReviewDesign.fairway)
+                .font(.system(size: 17, weight: .medium))
+                .foregroundStyle(intent == .oneShot ? RondeReviewDesign.amber : RondeReviewDesign.fairway)
         }
-        .frame(width: 46, height: 46)
+        .frame(width: 42, height: 42)
         .accessibilityHidden(true)
     }
 }
@@ -310,39 +364,27 @@ struct EmptySessionsView: View {
     let onChooseMode: (ReviewLaunchIntent) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Image(systemName: "figure.golf")
-                .font(.system(size: 28, weight: .medium))
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "film")
+                .font(.body.weight(.semibold))
                 .foregroundStyle(RondeReviewDesign.fairway)
                 .accessibilityHidden(true)
-            Text("YOUR FIRST REVIEW")
-                .font(.reviewerSection)
-                .tracking(1.4)
-                .foregroundStyle(RondeReviewDesign.fairway)
-            Text("Bring one swing into focus.")
-                .font(.reviewerTitle)
-                .foregroundStyle(RondeReviewDesign.graphite)
-            Text("Start with a short clip for instant playback, or review potential moments in a longer recording.")
-                .font(.body)
-                .foregroundStyle(RondeReviewDesign.graphiteMuted)
-            ViewThatFits(in: .horizontal) {
-                startActions
+            VStack(alignment: .leading, spacing: 4) {
+                Text("NO REVIEWS YET")
+                    .font(.reviewerSection)
+                    .tracking(1.3)
+                    .foregroundStyle(RondeReviewDesign.fairway)
+                Text("Your imported clips will appear here.")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(RondeReviewDesign.graphite)
+                Text("Start with One Shot above for the quickest review.")
+                    .font(.caption)
+                    .foregroundStyle(RondeReviewDesign.graphiteMuted)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .reviewCard(cardPadding: 20)
-    }
-
-    @ViewBuilder
-    private var startActions: some View {
-        Button { onChooseMode(.oneShot) } label: {
-            Label("Import one shot", systemImage: "play.rectangle.fill")
-        }
-        .buttonStyle(ReviewPrimaryButtonStyle())
-        Button { onChooseMode(.range) } label: {
-            Label("Import range session", systemImage: "film.stack")
-        }
-        .buttonStyle(ReviewSecondaryButtonStyle())
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -420,6 +462,9 @@ struct RangeSessionEntryView: View {
     @State private var entryTab: RangeEntryTab = .importVideo
     @State private var isLoading = false
     @State private var importError: String?
+    @State private var fixedCameraConfirmed = false
+    @State private var targetGolferConfirmed = false
+    @State private var singleGolferConfirmed = false
     let onImported: (ReviewSession) -> Void
 
     enum RangeEntryTab: String, CaseIterable, Identifiable {
@@ -443,20 +488,13 @@ struct RangeSessionEntryView: View {
                     entryHeader
 
                     if intent != .oneShot {
-                        Picker("Range session source", selection: $entryTab) {
-                            ForEach(RangeEntryTab.allCases) { tab in
-                                Text(tab.title).tag(tab)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-                        .accessibilityLabel("Range session source")
+                        Text("IMPORT A SESSION")
+                            .font(.reviewerSection)
+                            .tracking(1.3)
+                            .foregroundStyle(RondeReviewDesign.graphiteFaint)
                     }
 
-                    if intent == .oneShot || entryTab == .importVideo {
-                        importPanel
-                    } else {
-                        recordPanel
-                    }
+                    importPanel
 
                     if let importError {
                         Label(importError, systemImage: "exclamationmark.triangle.fill")
@@ -497,14 +535,23 @@ struct RangeSessionEntryView: View {
 
     private var entryHeader: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(intent == .oneShot ? "Your shot, ready to review." : "Review a longer recording.")
+            HStack(spacing: 8) {
+                Image(systemName: intent == .oneShot ? "play.rectangle.fill" : "film.stack")
+                    .foregroundStyle(RondeReviewDesign.tracerGold)
+                Text(intent == .oneShot ? "One shot" : "Range session")
+            }
+            .font(.reviewerSection)
+            .tracking(1.2)
+            .foregroundStyle(RondeReviewDesign.fairway)
+            Text(intent == .oneShot ? "Make the swing the hero." : "Review the session that matters.")
                 .font(.reviewerTitle)
                 .foregroundStyle(RondeReviewDesign.graphite)
             Text(intent == .oneShot
-                 ? "Import a short clip and Ronde will draw a tracer only when the uploaded frames support a real ball track."
-                 : "Ronde reviews potential moments locally. A shot is only confirmed when the available evidence supports it; other moments stay in a small review queue.")
-                .font(.body)
+                 ? "Choose a short clip. Ronde keeps the original footage and draws a tracer only when the frames support it."
+                 : "Potential moments are reviewed locally. Only supported shots earn a tracer; the rest stay in the queue.")
+                .font(.subheadline)
                 .foregroundStyle(RondeReviewDesign.graphiteMuted)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .accessibilityElement(children: .combine)
     }
@@ -512,16 +559,16 @@ struct RangeSessionEntryView: View {
     private var importPanel: some View {
         VStack(alignment: .leading, spacing: 14) {
             VStack(alignment: .leading, spacing: 5) {
-                Text("SOURCE FOOTAGE")
-                    .font(.reviewerSection)
-                    .tracking(1.3)
-                    .foregroundStyle(RondeReviewDesign.fairway)
-                Text("Choose a recording")
-                    .font(.reviewerTitle)
+                Label("Choose a recording", systemImage: "video.badge.plus")
+                    .font(.headline.weight(.semibold))
                     .foregroundStyle(RondeReviewDesign.graphite)
                 Text("Photos or Files · H.264 and HEVC first")
-                    .font(.subheadline)
+                    .font(.footnote)
                     .foregroundStyle(RondeReviewDesign.graphiteMuted)
+            }
+
+            if intent == .range {
+                rangeEvidenceChecklist
             }
 
             HStack(spacing: 10) {
@@ -530,7 +577,7 @@ struct RangeSessionEntryView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(ReviewPrimaryButtonStyle())
-                .disabled(isLoading)
+                .disabled(isLoading || !canImportRangeSession)
 
                 Button {
                     isImporterPresented = true
@@ -539,7 +586,14 @@ struct RangeSessionEntryView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(ReviewSecondaryButtonStyle())
-                .disabled(isLoading)
+                .disabled(isLoading || !canImportRangeSession)
+            }
+
+            if intent == .range, !canImportRangeSession {
+                Text("Confirm all three conditions before Ronde can assess a range session.")
+                    .font(.caption)
+                    .foregroundStyle(RondeReviewDesign.amber)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             if isLoading {
@@ -561,6 +615,41 @@ struct RangeSessionEntryView: View {
             }
         }
         .reviewCard()
+    }
+
+    private var canImportRangeSession: Bool {
+        intent != .range || (fixedCameraConfirmed && targetGolferConfirmed && singleGolferConfirmed)
+    }
+
+    private var rangeEvidenceChecklist: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("SHOT ASSOCIATION")
+                .font(.reviewerSection)
+                .tracking(1.2)
+                .foregroundStyle(RondeReviewDesign.fairway)
+            Text("For automatic range review, confirm the footage setup.")
+                .font(.caption)
+                .foregroundStyle(RondeReviewDesign.graphiteMuted)
+
+            RangeEvidenceToggle(
+                title: "Camera is fixed or braced",
+                isOn: $fixedCameraConfirmed,
+                hint: "The phone stays still through the shot"
+            )
+            RangeEvidenceToggle(
+                title: "I am the target golfer",
+                isOn: $targetGolferConfirmed,
+                hint: "The intended golfer remains in frame"
+            )
+            RangeEvidenceToggle(
+                title: "No other golfer is in frame",
+                isOn: $singleGolferConfirmed,
+                hint: "Ronde will not infer which golfer launched the ball"
+            )
+        }
+        .padding(11)
+        .background(RondeReviewDesign.canvas, in: RoundedRectangle(cornerRadius: RondeReviewDesign.smallRadius, style: .continuous))
+        .accessibilityElement(children: .contain)
     }
 
     private var recordPanel: some View {
@@ -589,10 +678,10 @@ struct RangeSessionEntryView: View {
         switch analysisProgress {
         case ..<0.2:
             return ("Preparing", "Keeping the original recording on this device.")
-        case ..<0.65:
-            return ("Finding moments", "Looking for impact-like moments in source time.")
-        case ..<0.95:
-            return ("Checking evidence", "Looking for usable visual or audio evidence.")
+        case ..<0.72:
+            return ("Finding impact", "Locating the swing timing in the original recording.")
+        case ..<0.99:
+            return ("Tracking the ball", "Following the launch frame by frame on this device.")
         default:
             return ("Ready", "Opening the review surface now.")
         }
@@ -626,6 +715,18 @@ struct RangeSessionEntryView: View {
     private func importVideo(url: URL, sourceName: String) async {
         isLoading = true
         defer { isLoading = false }
+        if intent == .range {
+            let evidence = FixedCameraSingleGolferSessionEvidence(
+                cameraWasFixedForSession: fixedCameraConfirmed,
+                targetGolferWasExplicitlyConfirmed: targetGolferConfirmed,
+                noOtherGolferWasConfirmedInFrame: singleGolferConfirmed,
+                confirmationDescription: "Reviewer confirmed a fixed camera, named target golfer and no other golfer in frame before importing this range session."
+            )
+            guard store.configureFixedSingleGolferRangeAnalysis(with: evidence) else {
+                importError = "Confirm the fixed-camera and single-golfer setup before importing a range session."
+                return
+            }
+        }
         await store.importVideo(
             at: url,
             sourceName: sourceName,
@@ -721,11 +822,14 @@ struct LiveReviewView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 VStack(alignment: .leading, spacing: 7) {
-                    Text("A quiet loop for the range")
-                        .font(.reviewerTitle)
-                        .foregroundStyle(RondeReviewDesign.graphite)
-                    Text("Check your camera frame and keep one golfer in view. This is the live setup surface for a future live review.")
-                        .font(.body)
+                    HStack(spacing: 8) {
+                        Text("Hands-free review")
+                            .font(.reviewerTitle)
+                        ReviewTag("Preview", tint: RondeReviewDesign.amber)
+                    }
+                    .foregroundStyle(RondeReviewDesign.graphite)
+                    Text("Keep one golfer in view. Camera setup is available here; saving and reviewing live shots is still in progress.")
+                        .font(.subheadline)
                         .foregroundStyle(RondeReviewDesign.graphiteMuted)
                 }
 
@@ -735,9 +839,8 @@ struct LiveReviewView: View {
                     if !hasStarted {
                         Button {
                             hasStarted = true
-                            _ = store.addLivePlaceholder()
                         } label: {
-                            Label("Start Live Review", systemImage: "record.circle")
+                            Label("Start camera", systemImage: "camera.viewfinder")
                                 .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(ReviewPrimaryButtonStyle(tint: RondeReviewDesign.fairway))
@@ -792,6 +895,19 @@ struct LiveReviewView: View {
                     .font(.subheadline)
                     .foregroundStyle(RondeReviewDesign.graphiteMuted)
             }
+
+            Divider().overlay(RondeReviewDesign.border)
+
+            HStack(spacing: 10) {
+                LiveQualityValue(title: "Capture", value: capture.captureQuality.framesPerSecond > 0 ? "\(Int(capture.captureQuality.framesPerSecond.rounded())) fps" : "Preparing")
+                LiveQualityValue(title: "Stability", value: capture.captureQuality.stability.title)
+                LiveQualityValue(title: "Focus", value: capture.captureQuality.focusExposureState.title)
+            }
+
+            Text(capture.captureQuality.framingGuidance)
+                .font(.caption)
+                .foregroundStyle(RondeReviewDesign.graphiteMuted)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .reviewCard()
     }
@@ -815,6 +931,66 @@ struct LiveReviewView: View {
         case .failed: return .failed
         case .unavailable: return .needsAttention
         case .ready: return .ready
+        }
+    }
+}
+
+private struct RangeEvidenceToggle: View {
+    let title: String
+    @Binding var isOn: Bool
+    let hint: String
+
+    var body: some View {
+        Toggle(isOn: $isOn) {
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(RondeReviewDesign.graphite)
+        }
+        .tint(RondeReviewDesign.fairway)
+        .accessibilityLabel(title)
+        .accessibilityHint(hint)
+    }
+}
+
+private struct LiveQualityValue: View {
+    let title: String
+    let value: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title.uppercased())
+                .font(.system(.caption2, design: .rounded).weight(.bold))
+                .tracking(0.7)
+                .foregroundStyle(RondeReviewDesign.graphiteFaint)
+            Text(value)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(RondeReviewDesign.graphite)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(title), \(value)")
+    }
+}
+
+private extension LiveReviewCaptureStability {
+    var title: String {
+        switch self {
+        case .checking: return "Checking"
+        case .steady: return "Steady"
+        case .moving: return "Moving"
+        case .unavailable: return "Unavailable"
+        }
+    }
+}
+
+private extension LiveReviewCaptureQuality.FocusExposureState {
+    var title: String {
+        switch self {
+        case .settling: return "Settling"
+        case .locked: return "Locked"
+        case .unavailable: return "Unavailable"
         }
     }
 }
@@ -971,6 +1147,10 @@ struct RangeReviewWorkspace: View {
     @State private var isReviewQueueExpanded = false
     @State private var hasAutoPlayedSingleShot = false
     @State private var assistedTracerPoints = AssistedTracerPoints.default
+    @State private var isTracerEditing = false
+    @State private var isExportingTracer = false
+    @State private var exportError: String?
+    @State private var exportedTracerURL: URL?
     @StateObject private var playback = ClipPlaybackController()
 
     private var selectedCandidate: ReviewCandidate? { store.candidate(in: session) }
@@ -999,13 +1179,14 @@ struct RangeReviewWorkspace: View {
             autoPlaySingleShotIfReady()
         }
         .onChange(of: store.selectedCandidateID) { _, _ in
+            isTracerEditing = false
             seekToSelectedCandidate()
             restoreAssistedTracer()
             autoPlaySingleShotIfReady()
         }
         .onChange(of: assistedTracerPoints) { _, points in
             guard let selectedCandidate else { return }
-            guard selectedCandidate.tracerAvailable else { return }
+            guard isTracerEditing || selectedCandidate.assistedTracer != nil else { return }
             store.updateAssistedTracer(points.path, for: selectedCandidate, in: session)
         }
         .onChange(of: store.playheadTime) { _, _ in
@@ -1015,6 +1196,15 @@ struct RangeReviewWorkspace: View {
         }
         .onDisappear {
             playback.detach()
+        }
+        .sheet(isPresented: Binding(
+            get: { exportedTracerURL != nil },
+            set: { if !$0 { exportedTracerURL = nil } }
+        )) {
+            if let exportedTracerURL {
+                ActivityShareView(activityItems: [exportedTracerURL])
+                    .presentationDetents([.medium, .large])
+            }
         }
     }
 
@@ -1029,17 +1219,17 @@ struct RangeReviewWorkspace: View {
     }
 
     private var regularWorkspace: some View {
-        HStack(alignment: .top, spacing: 28) {
+        HStack(alignment: .top, spacing: 22) {
             VStack(alignment: .leading, spacing: 14) {
                 reviewMedia
                 if !isSingleShotReview {
                     workspaceHeader
                 }
             }
-            .frame(maxWidth: 620)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
 
             detailColumn
-                .frame(maxWidth: 430)
+                .frame(width: 370, alignment: .topLeading)
         }
     }
 
@@ -1112,18 +1302,21 @@ struct RangeReviewWorkspace: View {
                         }
 
                         if let selectedCandidate,
-                           selectedCandidate.tracerAvailable,
-                           selectedCandidate.assistedTracer != nil,
-                           isSingleShotReview || selectedCandidate.isAcceptedShot {
+                           tracerIsVisible(for: selectedCandidate),
+                           (isSingleShotReview || selectedCandidate.isAcceptedShot || isTracerEditing) {
                             PlayerSynchronizedTracer(
                                 player: playback.player,
                                 points: $assistedTracerPoints,
-                                observedPoints: selectedCandidate.trajectory?.detectedPoints ?? [],
-                                fallbackPlaybackTime: playback.currentTime,
+                                observedPoints: observedTracerPoints(for: selectedCandidate),
+                                inferredPoints: inferredTracerPoints(for: selectedCandidate),
+                                fallbackPlaybackTime: playback.player == nil && session.sourceURL == nil
+                                    ? tracerRevealStartTime + tracerFlightDuration
+                                    : playback.currentTime,
                                 impactTime: tracerRevealStartTime,
                                 flightDuration: tracerFlightDuration,
-                                isEditing: false,
-                                onFinishEditing: {}
+                                isEditing: isTracerEditing,
+                                isManual: selectedCandidate.hasManualTracer,
+                                onFinishEditing: finishTracerEditing
                             )
                         }
                     }
@@ -1137,6 +1330,10 @@ struct RangeReviewWorkspace: View {
                     .stroke(.white.opacity(0.24), lineWidth: 0.8)
             }
             .shadow(color: RondeReviewDesign.graphite.opacity(0.12), radius: 18, y: 7)
+
+            if let selectedCandidate {
+                playbackRail(for: selectedCandidate)
+            }
 
             if !isSingleShotReview {
                 TimelineMarkerControl(
@@ -1153,13 +1350,66 @@ struct RangeReviewWorkspace: View {
     private var mediaStageHeight: CGFloat {
         let isPortrait = (session.sourceAspectRatio ?? (16.0 / 9.0)) < 1
         if horizontalSizeClass == .regular {
-            return isPortrait ? 700 : 440
+            return isPortrait ? 560 : 340
         }
-        return isPortrait ? 500 : 250
+        return isPortrait ? 470 : 238
+    }
+
+    private func playbackRail(for candidate: ReviewCandidate) -> some View {
+        HStack(spacing: 11) {
+            Button {
+                if playback.isPlaying {
+                    playback.pause()
+                } else {
+                    playback.play(candidate: candidate)
+                }
+            } label: {
+                Image(systemName: playback.isPlaying ? "pause.fill" : "play.fill")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(RondeReviewDesign.graphite)
+                    .frame(width: 30, height: 30)
+                    .background(RondeReviewDesign.tracerGold, in: Circle())
+            }
+            .buttonStyle(.plain)
+            .disabled(playback.player == nil)
+            .accessibilityLabel(playback.isPlaying ? "Pause shot" : "Play shot")
+            .accessibilityHint(playback.player == nil ? "A source video is needed before playback is available" : "Plays the selected shot")
+
+            Slider(
+                value: Binding(
+                    get: { min(max(playback.currentTime, candidate.startTime), candidate.endTime) },
+                    set: { playback.seek(to: $0) }
+                ),
+                in: candidate.startTime...max(candidate.startTime + 0.1, candidate.endTime),
+                step: 0.05
+            )
+            .tint(RondeReviewDesign.tracerGold)
+            .disabled(playback.player == nil)
+            .accessibilityLabel("Shot playback position")
+
+            Text(formatTimestamp(playback.currentTime))
+                .font(.reviewerTimestamp)
+                .foregroundStyle(RondeReviewDesign.graphiteMuted)
+                .monospacedDigit()
+                .frame(minWidth: 52, alignment: .trailing)
+        }
+        .padding(.horizontal, 3)
+        .accessibilityElement(children: .contain)
     }
 
     private var tracerFlightDuration: TimeInterval {
         guard let selectedCandidate else { return TracerRevealTimeline.defaultFlightDuration }
+        if let anchored = selectedCandidate.evidenceAnchoredPath {
+            let observedDuration: TimeInterval
+            if let first = anchored.observedPresentationTimes.first,
+               let last = anchored.observedPresentationTimes.last,
+               last > first {
+                observedDuration = last - first
+            } else {
+                observedDuration = 0
+            }
+            return max(0.18, observedDuration + (anchored.inferredContinuation.isEmpty ? 0 : anchored.inferredPresentationDuration))
+        }
         if let first = selectedCandidate.trajectory?.presentationTimes.first,
            let last = selectedCandidate.trajectory?.presentationTimes.last,
            last > first {
@@ -1170,7 +1420,8 @@ struct RangeReviewWorkspace: View {
     }
 
     private var tracerRevealStartTime: TimeInterval {
-        selectedCandidate?.trajectory?.presentationTimes.first
+        selectedCandidate?.evidenceAnchoredPath?.observedPresentationTimes.first
+            ?? selectedCandidate?.trajectory?.presentationTimes.first
             ?? selectedCandidate?.impactTime
             ?? 0
     }
@@ -1262,7 +1513,11 @@ struct RangeReviewWorkspace: View {
                 )
             }
 
-            singleShotControls(for: candidate)
+            tracerActionRow(for: candidate)
+
+            if candidate.hasAutomaticTracer || candidate.hasManualTracer {
+                exportActions(for: candidate)
+            }
 
             Text(tracerExplanation(for: candidate))
                 .font(.caption)
@@ -1311,6 +1566,84 @@ struct RangeReviewWorkspace: View {
         .padding(.vertical, 4)
     }
 
+    private func tracerActionRow(for candidate: ReviewCandidate) -> some View {
+        let actionTitle = candidate.hasManualTracer ? "Edit trace" : (candidate.hasAutomaticTracer ? "Adjust trace" : "Place trace")
+        return HStack(spacing: 10) {
+            Button {
+                beginTracerEditing(for: candidate)
+            } label: {
+                Label(
+                    isTracerEditing ? "Adjusting" : actionTitle,
+                    systemImage: isTracerEditing ? "hand.draw.fill" : "pencil.and.outline"
+                )
+            }
+            .buttonStyle(ReviewSecondaryButtonStyle(tint: RondeReviewDesign.fairway))
+            .disabled(isTracerEditing)
+            .accessibilityHint(candidate.hasManualTracer ? "Adjust your manual trace" : "Place a manual trace over the video")
+
+            Spacer(minLength: 8)
+
+            if candidate.hasManualTracer, candidate.hasAutomaticTracer {
+                Button {
+                    store.clearManualTracer(for: candidate, in: session)
+                    restoreAssistedTracer()
+                } label: {
+                    Image(systemName: "arrow.counterclockwise")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(RondeReviewDesign.graphiteMuted)
+                        .frame(width: 34, height: 34)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Use automatic trace")
+                .accessibilityHint("Removes your manual adjustment and restores the observed path")
+            }
+        }
+        .padding(.vertical, 2)
+        .accessibilityElement(children: .contain)
+    }
+
+    private func exportActions(for candidate: ReviewCandidate) -> some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(spacing: 10) {
+                Button {
+                    Task { await exportTracer(for: candidate) }
+                } label: {
+                    Label(isExportingTracer ? "Rendering…" : "Export trace", systemImage: "square.and.arrow.up")
+                }
+                .buttonStyle(ReviewSecondaryButtonStyle(tint: RondeReviewDesign.graphite))
+                .disabled(isExportingTracer || (!candidate.hasAutomaticTracer && !candidate.hasManualTracer))
+                .accessibilityHint("Renders this same trace over the source video, then opens the share sheet")
+
+                if isExportingTracer {
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(RondeReviewDesign.fairway)
+                        .accessibilityLabel("Rendering traced video")
+                }
+            }
+
+            if let exportError {
+                Label(exportError, systemImage: "exclamationmark.triangle")
+                    .font(.caption)
+                    .foregroundStyle(RondeReviewDesign.red)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private func exportTracer(for candidate: ReviewCandidate) async {
+        guard !isExportingTracer else { return }
+        isExportingTracer = true
+        exportError = nil
+        defer { isExportingTracer = false }
+
+        do {
+            exportedTracerURL = try await store.exportTracedVideo(for: candidate, in: session)
+        } catch {
+            exportError = error.localizedDescription
+        }
+    }
+
     private func reviewInspector(for candidate: ReviewCandidate) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top, spacing: 12) {
@@ -1333,6 +1666,12 @@ struct RangeReviewWorkspace: View {
                     systemImage: tracerSourceIcon(for: candidate),
                     tint: tracerSourceTint(for: candidate)
                 )
+            }
+
+            tracerActionRow(for: candidate)
+
+            if candidate.hasAutomaticTracer || candidate.hasManualTracer {
+                exportActions(for: candidate)
             }
 
             if !candidate.evidence.isEmpty {
@@ -1489,24 +1828,33 @@ struct RangeReviewWorkspace: View {
     }
 
     private func tracerTitle(for candidate: ReviewCandidate) -> String {
+        if candidate.hasManualTracer {
+            return "Manual flight path"
+        }
         switch candidate.tracerSource {
         case .unavailable: return "Ball flight not tracked"
         case .observed: return "Tracked ball flight"
-        case .observedAndInferred: return "Shot tracer"
+        case .observedAndInferred: return "Observed launch · estimated flight"
         case .inferred: return "Estimated shot tracer"
         }
     }
 
     private func tracerSourceTitle(for candidate: ReviewCandidate) -> String {
+        if candidate.hasManualTracer {
+            return "Manual trace"
+        }
         switch candidate.tracerSource {
         case .unavailable: return "No tracer"
         case .observed: return "Observed"
-        case .observedAndInferred: return "Tracked + estimated"
+        case .observedAndInferred: return "Observed + estimated"
         case .inferred: return "Estimated"
         }
     }
 
     private func tracerSourceIcon(for candidate: ReviewCandidate) -> String {
+        if candidate.hasManualTracer {
+            return "pencil.and.outline"
+        }
         switch candidate.tracerSource {
         case .unavailable: return "eye.slash"
         case .observed: return "scope"
@@ -1516,6 +1864,9 @@ struct RangeReviewWorkspace: View {
     }
 
     private func tracerSourceTint(for candidate: ReviewCandidate) -> Color {
+        if candidate.hasManualTracer {
+            return RondeReviewDesign.fairway
+        }
         switch candidate.tracerSource {
         case .unavailable: return RondeReviewDesign.graphiteMuted
         case .observed: return RondeReviewDesign.fairway
@@ -1525,13 +1876,16 @@ struct RangeReviewWorkspace: View {
     }
 
     private func tracerExplanation(for candidate: ReviewCandidate) -> String {
+        if candidate.hasManualTracer {
+            return "Manual trace placed by you. It is a visual aid, not observed ball flight or a distance estimate."
+        }
         switch candidate.tracerSource {
         case .unavailable:
             return "Ronde could not verify enough ball points in these frames, so it has not drawn a misleading line."
         case .observed:
             return "Ball flight tracked from the uploaded frames. No distance estimate."
         case .observedAndInferred:
-            return "Launch tracked from the uploaded frames; the remaining flight is estimated. No distance estimate."
+            return "Observed launch · estimated flight. The dashed segment is inferred and no distance is estimated."
         case .inferred:
             return "The ball was not reliably visible after impact, so this flight path is estimated. No distance estimate."
         }
@@ -1540,7 +1894,12 @@ struct RangeReviewWorkspace: View {
     private var headerMetadata: String {
         let duration = session.duration > 0 ? formatDuration(session.duration) : "duration pending"
         if isSingleShotReview {
-            let tracer = selectedCandidate?.tracerAvailable == true ? "tracked tracer" : "no verified tracer"
+            let tracer: String
+            if let selectedCandidate, selectedCandidate.hasManualTracer {
+                tracer = "manual trace"
+            } else {
+                tracer = selectedCandidate?.tracerAvailable == true ? "tracked tracer" : "no verified tracer"
+            }
             return "\(duration) · one shot · \(tracer)"
         }
         let shots = session.acceptedShots.count == 1 ? "1 likely shot" : "\(session.acceptedShots.count) likely shots"
@@ -1577,12 +1936,54 @@ struct RangeReviewWorkspace: View {
 
     private func restoreAssistedTracer() {
         guard let selectedCandidate,
-              selectedCandidate.tracerAvailable,
               let path = selectedCandidate.assistedTracer else {
             assistedTracerPoints = .default
             return
         }
         assistedTracerPoints = AssistedTracerPoints(path: path)
+    }
+
+    private func tracerIsVisible(for candidate: ReviewCandidate) -> Bool {
+        isTracerEditing || candidate.hasAutomaticTracer || candidate.hasManualTracer
+    }
+
+    private func observedTracerPoints(for candidate: ReviewCandidate) -> [NormalizedPoint] {
+        candidate.evidenceAnchoredPath?.observedPoints ?? candidate.trajectory?.detectedPoints ?? []
+    }
+
+    private func inferredTracerPoints(for candidate: ReviewCandidate) -> [NormalizedPoint] {
+        candidate.evidenceAnchoredPath?.inferredContinuation ?? candidate.trajectory?.projectedPoints ?? []
+    }
+
+    private func beginTracerEditing(for candidate: ReviewCandidate) {
+        if store.selectedCandidateID != candidate.id {
+            store.selectCandidate(candidate)
+        }
+        assistedTracerPoints = manualTracerPoints(for: candidate)
+        isTracerEditing = true
+        store.updateAssistedTracer(assistedTracerPoints.path, for: candidate, in: session)
+        playback.pause()
+    }
+
+    private func manualTracerPoints(for candidate: ReviewCandidate) -> AssistedTracerPoints {
+        if let path = candidate.assistedTracer {
+            return AssistedTracerPoints(path: path)
+        }
+        guard let automatic = candidate.evidenceAnchoredPath,
+              let launch = automatic.observedPoints.first,
+              let endpoint = (automatic.inferredContinuation.last ?? automatic.observedPoints.last) else {
+            return .default
+        }
+        let apex = automatic.observedPoints.min { $0.y < $1.y } ?? launch
+        return AssistedTracerPoints(
+            launch: CGPoint(x: launch.x, y: launch.y),
+            apex: CGPoint(x: apex.x, y: apex.y),
+            landing: CGPoint(x: endpoint.x, y: endpoint.y)
+        )
+    }
+
+    private func finishTracerEditing() {
+        isTracerEditing = false
     }
 }
 
@@ -1674,7 +2075,7 @@ struct TrajectoryOverlay: View {
                 }
             }
             .overlay(alignment: .topTrailing) {
-                Text("TRACER · SCREEN-SPACE")
+                Text(trajectory.projectedPoints.isEmpty ? "OBSERVED" : "OBSERVED LAUNCH · ESTIMATED FLIGHT")
                     .font(.system(size: 10, weight: .bold, design: .rounded))
                     .tracking(0.8)
                     .foregroundStyle(.white)
@@ -1683,7 +2084,9 @@ struct TrajectoryOverlay: View {
                     .background(.black.opacity(0.62), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
                     .padding(12)
                     .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Provisional screen-space shot tracer. Distance is not estimated.")
+                    .accessibilityLabel(trajectory.projectedPoints.isEmpty
+                        ? "Observed ball flight from the uploaded frames."
+                        : "Observed launch followed by an estimated flight continuation. No distance is estimated.")
             }
         }
     }
@@ -1862,4 +2265,18 @@ private func formatTimestamp(_ seconds: TimeInterval) -> String {
     let safe = max(0, seconds.isFinite ? seconds : 0)
     let total = Int(safe.rounded())
     return String(format: "%02d:%02d", total / 60, total % 60)
+}
+
+/// Native share surface for traced videos. Rendering happens in the store so
+/// the exported asset uses the same geometry the reviewer displays.
+struct ActivityShareView: UIViewControllerRepresentable {
+    let activityItems: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let controller = UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
+        controller.modalPresentationStyle = .pageSheet
+        return controller
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }

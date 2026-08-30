@@ -1,5 +1,58 @@
 import Foundation
 
+enum LiveReviewCaptureStability: String, Sendable, Equatable {
+    case checking
+    case steady
+    case moving
+    case unavailable
+}
+
+struct LiveReviewMotionSample: Sendable, Equatable {
+    let rotationMagnitude: Double
+    let accelerationMagnitude: Double
+}
+
+struct LiveReviewStabilityClassifier: Sendable, Equatable {
+    var minimumSamples = 12
+    var maximumSamples = 20
+    var maximumRotationMagnitude = 0.035
+    var maximumAccelerationMagnitude = 0.025
+    var minimumStableRatio = 0.8
+
+    func classify(_ samples: [LiveReviewMotionSample]) -> LiveReviewCaptureStability {
+        guard samples.count >= minimumSamples else { return .checking }
+        let window = samples.suffix(maximumSamples)
+        let steadyCount = window.reduce(into: 0) { result, sample in
+            if sample.rotationMagnitude < maximumRotationMagnitude,
+               sample.accelerationMagnitude < maximumAccelerationMagnitude {
+                result += 1
+            }
+        }
+        let stableRatio = Double(steadyCount) / Double(window.count)
+        return stableRatio >= minimumStableRatio ? .steady : .moving
+    }
+}
+
+struct LiveReviewCaptureQuality: Sendable, Equatable {
+    enum FocusExposureState: String, Sendable, Equatable {
+        case settling
+        case locked
+        case unavailable
+    }
+
+    var framesPerSecond: Double
+    var focusExposureState: FocusExposureState
+    var stability: LiveReviewCaptureStability
+    var framingGuidance: String
+
+    static let preparing = LiveReviewCaptureQuality(
+        framesPerSecond: 0,
+        focusExposureState: .settling,
+        stability: .checking,
+        framingGuidance: "Brace the phone behind the ball and keep the full flight corridor in frame."
+    )
+}
+
 enum LiveReviewState: Sendable, Equatable {
     case idle
     case requestingPermission

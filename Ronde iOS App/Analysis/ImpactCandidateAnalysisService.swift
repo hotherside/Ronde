@@ -1,8 +1,14 @@
 import Foundation
 
-/// Produces human-reviewable markers only. Audio and body motion are peers: either may nominate
-/// a moment, and nearby signals are merged. Neither an audio-only nor a body-only marker can be
-/// promoted to an automatic real shot, clip, or tracer.
+enum ImpactCandidateAnalysisPolicy {
+    static func shouldAnalyseBodyMotion(after audioCandidates: [SwingCandidate]) -> Bool {
+        audioCandidates.isEmpty
+    }
+}
+
+/// Produces human-reviewable markers only. Audio is the preferred timing source; body motion is
+/// decoded only when audio yields no usable candidate. Neither signal alone can promote a moment
+/// to an automatic real shot, clip, or tracer.
 actor ImpactCandidateAnalysisService {
     private let audioService: AudioImpactAnalysisService
     private let bodyMotionService: BodyMotionAnalysisService
@@ -31,14 +37,22 @@ actor ImpactCandidateAnalysisService {
         }
 
         let bodyCandidates: [SwingCandidate]
-        do {
-            bodyCandidates = try await bodyMotionService.analyse(url: url) { bodyProgress in
-                progress?(0.5 + (bodyProgress * 0.5))
+        if ImpactCandidateAnalysisPolicy.shouldAnalyseBodyMotion(after: audioCandidates) {
+            do {
+                bodyCandidates = try await bodyMotionService.analyse(url: url) { bodyProgress in
+                    progress?(0.5 + (bodyProgress * 0.5))
+                }
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                bodyCandidates = []
             }
-        } catch is CancellationError {
-            throw CancellationError()
-        } catch {
+        } else {
+            // A usable audio anchor is already the preferred source-time signal for One Shot.
+            // Avoid a second full video decode and Vision body-pose pass that cannot improve the
+            // ball tracker's launch evidence.
             bodyCandidates = []
+            progress?(1)
         }
 
         let proposals = ShotEventProposalDeduplicator().deduplicate(

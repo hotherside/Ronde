@@ -24,9 +24,12 @@ enum RondeReviewDesign {
     static let blue = Color(red: 0.225, green: 0.405, blue: 0.315)
     static let blueWash = Color(red: 0.875, green: 0.920, blue: 0.870)
 
-    static let smallRadius: CGFloat = 8
-    static let cardRadius: CGFloat = 12
-    static let largeRadius: CGFloat = 16
+    // The reviewer is deliberately quieter than the Watch instrument. A
+    // small family of radii keeps the source footage, rather than chrome,
+    // as the visual anchor.
+    static let smallRadius: CGFloat = 7
+    static let cardRadius: CGFloat = 11
+    static let largeRadius: CGFloat = 15
 
     static func statusColor(for status: ReviewStatus) -> Color {
         switch status {
@@ -93,40 +96,46 @@ struct ReviewTag: View {
 
 struct ReviewPrimaryButtonStyle: ButtonStyle {
     var tint: Color = RondeReviewDesign.fairway
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.body.weight(.semibold))
             .foregroundStyle(Color.white)
             .padding(.horizontal, 16)
-            .frame(minHeight: 48)
+            .frame(minHeight: 46)
             .background(tint.opacity(configuration.isPressed ? 0.82 : 1), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             .scaleEffect(configuration.isPressed ? 0.98 : 1)
-            .animation(.easeOut(duration: 0.14), value: configuration.isPressed)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.14), value: configuration.isPressed)
     }
 }
 
 struct ReviewSecondaryButtonStyle: ButtonStyle {
     var tint: Color = RondeReviewDesign.graphite
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.body.weight(.semibold))
             .foregroundStyle(tint)
             .padding(.horizontal, 14)
-            .frame(minHeight: 46)
+            .frame(minHeight: 44)
             .background(
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .fill(RondeReviewDesign.surface)
                     .overlay { RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(RondeReviewDesign.borderStrong, lineWidth: 0.8) }
             )
             .opacity(configuration.isPressed ? 0.68 : 1)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: configuration.isPressed)
     }
 }
 
 extension Font {
-    static var reviewerDisplay: Font { .system(size: 34, weight: .semibold, design: .default) }
-    static var reviewerTitle: Font { .system(size: 25, weight: .semibold, design: .default) }
-    static var reviewerSection: Font { .system(size: 11, weight: .bold, design: .default) }
+    // Semantic styles retain Dynamic Type while keeping the reviewer compact.
+    // The previous fixed 34/25 point display styles made the home surface feel
+    // like a marketing landing page and overflowed quickly with larger text.
+    static var reviewerDisplay: Font { .system(.title, design: .default).weight(.semibold) }
+    static var reviewerTitle: Font { .system(.title3, design: .default).weight(.semibold) }
+    static var reviewerSection: Font { .system(.caption2, design: .default).weight(.bold) }
     static var reviewerTimestamp: Font { .system(.footnote, design: .monospaced).weight(.semibold) }
 }
