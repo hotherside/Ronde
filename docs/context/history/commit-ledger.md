@@ -2,9 +2,9 @@
 
 > Generated from Git. Git remains authoritative. Context-only refresh commits are excluded.
 
-- Source commit: `49269d6f7aebd74fbb932057318b4099d21ff981`
-- Source commit date: 2026-08-29
-- Tracked commit count: 50
+- Source commit: `babf92972b538bebc386b3ffac43982adebf8ea6`
+- Source commit date: 2026-08-30
+- Tracked commit count: 52
 
 | Date | Commit | Subject |
 | --- | --- | --- |
@@ -54,3 +54,5 @@
 | 2026-07-19 | `11c751c` | feat: harden Ronde watch experience |
 | 2026-07-19 | `53ae391` | Merge pull request #2 from hotherside/agent/ronde-watch-hardening |
 | 2026-08-29 | `1f2e815` | feat(ios): add evidence-backed shot reviewer |
+| 2026-08-30 | `bbdcda6` | feat(ios): complete evidence-backed shot reviewer |
+| 2026-08-30 | `babf929` | Merge pull request #3 from hotherside/codex/ronde-shot-reviewer-v1 |
