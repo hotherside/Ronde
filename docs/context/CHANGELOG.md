@@ -2,6 +2,15 @@
 
 ## 30 August 2026
 
+### Source-cadence recall correction and search-scale rejections
+
+- Recorded the signed-iPhone TestFlight field result across five owner-selected shot videos: only one video produced an automatic tracer, and that tracer was not visually accurate. The exact five sources have not yet been transferred into the labelled external matrix, so this is decisive product feedback but not per-clip detector diagnosis.
+- Corrected `PresentationTimestampFrameSampler` so a real source frame arriving up to 2 ms before the nominal 30 Hz target remains eligible. A measured 30.087 fps stream now retains all 31 test frames instead of collapsing to every second frame, while 50, 60, 120 and 240 fps sources remain bounded near the 30 Hz analysis cadence.
+- Evaluated a denser acquisition experiment that ran the current WASB tennis model on every accepted three-frame window. The full-frame Landscape A production probe completed in 265.965 seconds on CPU-only Simulator inference but selected the wrong moving object: its launch `y` was `0.3903`, outside the labelled `0.20...0.30` mid-air corridor. The dense experiment was rejected and the alternate-window false-acquisition guard was restored.
+- Evaluated a 2x predicted-position crop after competitive ball acquisition, while keeping acquisition and reacquisition at native source scale. The exact three-video matrix passed in 992.403 seconds, but observed-point counts remained unchanged at 7, 86 and 82 and launch coordinates were effectively unchanged. The crop added model work without measured tracking extension, so it was removed rather than shipped as an unproven accuracy improvement.
+- Tightened the optional private-matrix regression from a generic five-point floor to the established per-clip baselines of 7, 86 and 82 points, while retaining each labelled launch corridor and rising-flight check.
+- Passed the focused `GolfBallTrackSelectorTests` suite on iPhone 17 Pro iOS 26.0 Simulator after removing the rejected experiment. The private fixture link and temporary external-test enablement were removed; no private footage entered Git.
+
 ### Local-first iPhone/iPad app redesign
 
 - Brought the Caddie prototype hierarchy into the native app: golf-led Apple-only entry, personalised Home, real video thumbnails, an overlaid Library grid, Profile scorecard and places, plus Flightline-style trace-rate and activity charts. The primary import control is now a labelled `Add video` Photos action; the obsolete download-style affordance and floating-action pattern are absent.
