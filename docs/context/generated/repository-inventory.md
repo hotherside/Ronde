@@ -4,19 +4,19 @@
 
 ## Repository baseline
 
-- Source commit: `84aa14dd52c41e713a3cf8d53e4f61e329f8f331`
+- Source commit: `d5e67af5674c9fffa449a2c8d0ca5f1bc8a696b5`
 - Source commit date: 2026-08-30
-- Commit count: 55
-- Working-tree entries when generated: 0
-- Origin: `https://github.com/hotherside/Ronde`
+- Commit count: 56
+- Working-tree entries when generated: 35
+- Origin: `https://github.com/hotherside/Ronde.git`
 
 ## File composition
 
 | Type | Count |
 | --- | ---: |
-| Swift | 59 |
-| XCTest files | 8 |
-| Markdown | 29 |
+| Swift | 64 |
+| XCTest files | 9 |
+| Markdown | 33 |
 | JSON resources | 8 |
 
 ## Source areas

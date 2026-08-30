@@ -2,9 +2,9 @@
 
 > Generated from Git. Git remains authoritative. Context-only refresh commits are excluded.
 
-- Source commit: `84aa14dd52c41e713a3cf8d53e4f61e329f8f331`
+- Source commit: `d5e67af5674c9fffa449a2c8d0ca5f1bc8a696b5`
 - Source commit date: 2026-08-30
-- Tracked commit count: 55
+- Tracked commit count: 56
 
 | Date | Commit | Subject |
 | --- | --- | --- |

@@ -27,7 +27,8 @@ Record the following without copying the source video into Git:
 - source dimensions, orientation, duration and presentation-rate summary;
 - labelled impact time and expected positive or negative result;
 - acquisition result, observed point count and observed time span;
-- estimate provenance and whether a tracer was displayed or withheld;
+- estimate provenance, impact/launch/apex/landing positions, rough carry range and whether a tracer was displayed or withheld;
+- traced-export duration, frame count and presentation cadence when an export is inspected;
 - analysis wall-clock duration, analysed sample count, full-search frames and tile inference count;
 - false-tracer result for negatives;
 - device model, OS version and thermal state for physical-device runs;
@@ -42,7 +43,7 @@ Record the following without copying the source video into Git:
 | Representative held-out matrix | Not supplied | Blocks accuracy, false-tracer and cross-source reliability claims |
 | Physical iPhone performance | Not run | Blocks latency, memory, battery and thermal claims |
 | Golf-specific fine-tune | Not run | No licensed, consented golf training set is present; the official upstream repository documents evaluation but its training section remains `TBA` |
-| Distance and apex-height ground truth | Not supplied | Blocks numerical carry and height outputs |
+| Distance and apex-height ground truth | Not supplied | Blocks precise or calibrated carry and physical apex-height claims; a passing perspective fit may show only a broad uncalibrated carry range |
 
 ## 30 August positive regression
 
@@ -53,6 +54,20 @@ Three owner-supplied originals remained outside Git and were temporarily install
 | Landscape A | 3840 x 2160 H.264, about 30 fps, 6.315 s | 1.6320 s audio | 7 points, confidence 0.307; launch around `(0.532, 0.273)` | 30 decoded, 29 sampled, 18 model windows, 975 tiles |
 | Landscape B | 3840 x 2160 HEVC, nominal 30 fps, 7.725 s | 0.8747 s audio | 86 points, confidence 0.828; launch around `(0.754, 0.199)` | 116 decoded, 115 sampled, 104 model windows, 3,217 tiles |
 | Portrait C | 2160 x 3840 H.264, about 30 fps, 6.618 s | 1.6747 s audio | 82 points, confidence 0.712; launch around `(0.563, 0.351)` after trimming pre-ball club/body motion | 115 decoded, 114 sampled, 101 model windows, 4,985 tiles |
+
+### Landscape A completed-path and export probe
+
+The current working tree was also exercised against the original Landscape A source through the exact AVFoundation decoder, packaged Core ML model, selector, impact-timed perspective completion and traced-video exporter. To make the diagnostic repeatable without spending another full-frame matrix run, model inference was restricted to two known Landscape A source tiles. This proves the supplied clip can drive the corrected completion and renderer when ball evidence is acquired; it does not prove production full-frame acquisition recall.
+
+- Audio impact: `1.6320 s`.
+- Diagnostic cost: 28 decoded frames, 27 sampled frames, 15 model windows, 30 tile predictions and 12 candidates.
+- Observed evidence: 11 selected points, confidence `0.417`, from approximately `(0.532, 0.273)` to `(0.522, 0.131)`.
+- Estimated completion: 16-point impact connector, 138-point continuation, image-space apex around `(0.521, 0.131)` and bounded landing around `(0.470, 0.508)`.
+- Carry presentation: `95–155 m`, labelled `MODEL CARRY` and `ESTIMATE · UNCALIBRATED`. This is a prior-driven model range, not a validated measurement.
+- Rendered output: 3,840 x 2,160, 190 frames at 30 fps, duration 6.333 seconds. Full-resolution inspection at 30 fps confirmed that the solid purple trail stays behind the visible ball during the 1.9 to 2.5 second observed span. The dashed connector/continuation, rasterised carry/provenance labels and `EST. APEX` appear only after that observed trail completes.
+- Export runtime boundary: the exact production sources complete this 4K export in a macOS harness. The iOS 26.5 Simulator compositor terminates in its Core Animation IOSurface/XPC path during exporter integration, so a signed physical-iPhone traced export remains required.
+
+This is one owner-supplied positive and one rendered-output inspection. It does not validate distance accuracy, physical-device performance, other framing or the required positive/negative matrix.
 
 The incident was a false-acquisition failure, not an overlay coordinate conversion. The former search narrowed around the first high-confidence coherent moving peak, which could be foliage, compression detail, club or body motion and permanently exclude the later-visible ball. Acquisition now lets full-frame track hypotheses compete through the post-impact launch window, requires eight linked detections before narrowing to a local ROI or displaying a later trimmed path, and trims an early detector hand-off before labelling points observed. If no defensible path remains, the existing no-tracer state still wins.
 

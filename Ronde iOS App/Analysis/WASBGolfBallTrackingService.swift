@@ -498,7 +498,14 @@ actor WASBGolfBallTrackingService {
         }
         do {
             let configuration = MLModelConfiguration()
+#if targetEnvironment(simulator)
+            // This converted Espresso model currently fails through the Simulator's MPSGraph
+            // backend on Xcode 26.5. CPU execution preserves the exact decoder, model and
+            // association code for local regression work; physical iPhones retain all units.
+            configuration.computeUnits = .cpuOnly
+#else
             configuration.computeUnits = .all
+#endif
             let model = try MLModel(contentsOf: url, configuration: configuration)
             loadedModel = model
             return model

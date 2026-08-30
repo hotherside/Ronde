@@ -2,11 +2,11 @@
 
 **Status:** current working contract
 
-**Reviewed:** 29 August 2026
+**Reviewed:** 30 August 2026
 
 ## Product
 
-Ronde is an Apple Watch golf shot counter and a local-only iPhone/iPad shot reviewer. The Watch remains the independent core product for keeping an honest score without repeatedly handling a phone. The reviewer helps golfers inspect range swings, create useful clips and review a ball path only when the uploaded frames support a defensible track.
+Ronde is an Apple Watch golf shot counter and a local-first iPhone/iPad shot reviewer. The Watch remains the independent core product for keeping an honest score without repeatedly handling a phone. The reviewer helps golfers build a private media library, inspect range swings, create useful clips and review a ball path only when the uploaded frames support a defensible track.
 
 The essential loop is:
 
@@ -29,25 +29,28 @@ The essential loop is:
 - Ronde does not claim automatic swing detection, GPS yardage, handicap calculation or social competition unless those behaviours are implemented and verified.
 - The Watch app remains independently usable and does not depend on the reviewer, network access or a paired phone at runtime.
 - The iPhone/iPad reviewer uses a light appearance and supports fixed-tripod, down-the-line range footage.
-- A short single-swing import opens directly into an automatically playing, video-first Shot Review. When a ball-specific track passes the evidence gate, its tracer is hidden before impact, reveals progressively in source time and remains visible after the tracked flight completes. Otherwise the review explicitly says that ball flight was not tracked. Candidate management and segmentation are reserved for recordings with multiple detected shots.
-- The selected `One Shot` or `Range Session` intent is authoritative. Duration and frame rate affect processing cost and evidence quality but do not decide which review workflow the user receives.
-- A longer Range Session first creates non-authoritative event proposals. An automatic real shot requires both a swing/impact attributed to the target golfer and a stable golf-ball launch attributed to that golfer within the allowed source-time window.
-- Only accepted real shots enter the primary shot rail, receive a non-destructive clip plan and become tracer eligible. Uncertain moments remain in a collapsed correction queue without tracers; rejected background events, generic motion and different-golfer events are hidden from the primary workflow.
-- An accepted shot clip defaults to impact minus five seconds through impact plus five seconds. Validated target-golfer impact time is canonical once available; a coarser proposal timestamp must not drive clipping, playback or tracer reveal. The source range is clamped at recording boundaries, trimming is non-destructive, and the original media is retained until the user explicitly removes it.
+- The reviewer uses Sign in with Apple as its only account method. Account access must never become a prerequisite for the independent Watch counter.
+- The primary reviewer navigation is Home, Library and Profile. Import is a labelled toolbar or empty-state action, not a floating action button.
+- Home and Profile summaries use only saved review data. Production empty states show zero or unavailable values rather than fixture statistics.
+- The Library persists each signed-in account's local reviews separately and supports search, favourites, optional place/course, club and notes.
+- The reviewer MVP accepts one shot video up to 60 seconds. It retains the full source range, opens directly into an automatically playing video-first Shot Review and does not expose long-session slicing, candidate classification or shot-confirmation theatre.
+- Impact analysis is an internal timing input for ball acquisition and tracer reveal. The golfer is not asked to identify a start point before an automatic review can appear.
+- Range Session and Live Review foundations remain dormant future work. If long-session segmentation returns, a proposed event may become an automatic shot only after target-golfer impact and a stable, time-aligned golf-ball launch agree.
 - Live Review may use a temporary rolling capture buffer for hands-free one-shot feedback. It retains the candidate clip only after an impact-like event, plays it automatically after post-roll and processing, and discards unrelated buffer segments.
 - The MVP must never fabricate an automatic tracer. A short review without enough ball-specific observations remains playable and says `Ball flight not tracked`; audio, body motion, generic Vision motion and fixed fallback geometry cannot create a visible automatic line.
 - Uploaded files are processed using their own presentation timestamps and orientation. No specific recording frame rate is required; lower temporal or spatial quality may reduce tracking confidence and result in no tracer.
 - Native Vision trajectory analysis may be used as a constrained diagnostic baseline, but generic moving-shape points cannot accept a real shot, enable a tracer or earn an `Observed` golf-ball label. A one-shot review may show an automatic tracer only when the packaged sports-ball model produces a temporally consistent post-impact track. Long-session shot acceptance additionally requires target-golfer association.
-- A confidence-gated two-dimensional ball track may seed a deterministic estimated continuation through a screen-space apex and bounded landing. The observed and estimated portions must use the source presentation timeline, render distinctly and be labelled `Observed launch · estimated flight`. A generic trajectory or an unanchored projection cannot seed this path.
+- A confidence-gated, source-timed two-dimensional ball track may seed a perspective-aware ballistic presentation fit. The fit may estimate backwards from the first observed point towards impact and forwards through a screen-space apex to a bounded landing. The observed solid-purple stroke is a causal trail derived from the source timestamps and must never reach or pass a future ball position; estimated geometry is dashed purple and appears only after the observed trail completes. The apex is visibly marked and identified as estimated when it lies on modelled geometry. A generic trajectory or an unanchored projection cannot seed this path.
 - A person may rescue or correct a path with the assisted editor. User-authored geometry must be labelled `Manual trace` and must not be presented as automatic observation.
 - Playback and traced-video export use the same saved geometry. Export does not rerun analysis, and the original source remains unchanged.
-- Numerical distance is a later experiment requiring a saved calibration setup and validation against known ground truth. It is not an MVP promise.
-- Reviewer media and analysis stay on-device for MVP. No cloud upload, remote round storage, analytics, or background location is part of this scope.
+- When multiple similarly plausible perspective fits pass the evidence gate, Ronde may display their rounded carry spread in metres as `Model carry` with `Estimate · uncalibrated`. It is broad directional guidance, not measured distance or launch-monitor precision. Precise carry and physical apex height remain later experiments requiring calibration and known ground truth.
+- Reviewer media, tracer geometry and analysis stay on-device for MVP. Supabase may store the signed-in profile and lightweight private library metadata such as title, date, place, club, favourite state, evidence provenance and broad supported carry range. It must not receive raw video, local file paths, analysis frames, remote round storage, analytics or background location.
 
 ## Platform boundary
 
 - The watchOS application is the independent core shot-counter product.
 - The iOS target is a universal iPhone/iPad Shot Reviewer and also remains the packaging companion required by the watch bundle relationship.
+- The reviewer archive is scoped to the current Apple account on the device. Supabase Auth and row-level security protect the corresponding private metadata rows.
 - Reviewer media processing uses Apple on-device frameworks where available, with confidence and unsupported-input states exposed honestly. Physical-device performance and model quality remain validation gates.
 - SwiftData owns local round history.
 - HealthKit owns the optional golf workout session.

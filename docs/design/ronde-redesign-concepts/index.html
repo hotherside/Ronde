@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Ronde · iOS redesign concepts</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <svg class="symbol-sprite" aria-hidden="true">
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M3.8 10.4 12 3.7l8.2 6.7v8.1a2 2 0 0 1-2 2h-3.8v-6.2H9.6v6.2H5.8a2 2 0 0 1-2-2Z"/></symbol>
+    <symbol id="i-library" viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="16" rx="3"/><path d="M8.2 4v16M12.2 4v16"/></symbol>
+    <symbol id="i-person" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.7 20.2c.7-4 3.1-6 7.3-6s6.6 2 7.3 6"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="m9 6 9 6-9 6Z"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path d="M20 8.6c0 5-8 10.3-8 10.3S4 13.6 4 8.6C4 5.4 7.8 3.5 12 7c4.2-3.5 8-1.6 8 1.6Z"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0Z"/><circle cx="12" cy="10" r="2.3"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.2 4.2L19.5 6.5"/></symbol>
+    <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7 18.5h10a4 4 0 0 0 .5-7.9A6 6 0 0 0 6 9a4.8 4.8 0 0 0 1 9.5Z"/><path d="m8 8 8 10"/></symbol>
+    <symbol id="i-ellipsis" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="m14.5 5-7 7 7 7"/></symbol>
+    <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 15V3m0 0L8 7m4-4 4 4"/><path d="M6 10H4.8A1.8 1.8 0 0 0 3 11.8v7.4A1.8 1.8 0 0 0 4.8 21h14.4a1.8 1.8 0 0 0 1.8-1.8v-7.4a1.8 1.8 0 0 0-1.8-1.8H18"/></symbol>
+    <symbol id="i-pencil" viewBox="0 0 24 24"><path d="m4 20 4.4-1 10.8-10.8a2.2 2.2 0 0 0-3.1-3.1L5.3 15.9Z"/><path d="m14.7 6.5 3 3"/></symbol>
+    <symbol id="i-scissors" viewBox="0 0 24 24"><circle cx="6" cy="7" r="3"/><circle cx="6" cy="17" r="3"/><path d="m8.7 8.3 11 6.7M8.7 15.7 19.7 9"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 10v7M12 7.2v.2"/></symbol>
+    <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 7 4 12l5 5"/><path d="M5 12h8.5a5.5 5.5 0 0 1 5.5 5.5"/></symbol>
+    <symbol id="i-frame" viewBox="0 0 24 24"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol>
+  </svg>
+
+  <header class="page-header">
+    <div class="brand-lockup">
+      <div class="brand-mark" aria-hidden="true"><span></span></div>
+      <div>
+        <p>Ronde / product direction</p>
+        <h1>Three ways to make the reviewer feel real.</h1>
+      </div>
+    </div>
+    <p class="header-note">Interactive HTML concept board · iPhone · light appearance · native Liquid Glass target</p>
+  </header>
+
+  <nav class="concept-switcher" aria-label="Choose a concept">
+    <button class="concept-tab is-active" data-target="caddie" aria-pressed="true">
+      <span>01</span>
+      <strong>Caddie</strong>
+      <small>Media first</small>
+    </button>
+    <button class="concept-tab" data-target="flightline" aria-pressed="false">
+      <span>02</span>
+      <strong>Flightline</strong>
+      <small>Insight first</small>
+    </button>
+    <button class="concept-tab" data-target="journal" aria-pressed="false">
+      <span>03</span>
+      <strong>Range Journal</strong>
+      <small>Place first</small>
+    </button>
+  </nav>
+
+  <main>
+    <section class="concept concept-caddie is-active" data-concept="caddie">
+      <div class="concept-intro">
+        <div>
+          <p class="eyebrow">01 · Recommended direction</p>
+          <h2>Caddie</h2>
+          <p class="concept-lede">A quiet, editorial home for golf footage. The latest review is always the hero, while the system gets out of the way until the golfer is ready to import another swing.</p>
+        </div>
+        <dl class="concept-notes">
+          <div><dt>Best at</dt><dd>Feeling premium and immediately understandable</dd></div>
+          <div><dt>Signature</dt><dd>Wide media carousel with a restrained scorecard rhythm</dd></div>
+          <div><dt>Watch-out</dt><dd>Deeper analytics need a deliberate secondary layer</dd></div>
+        </dl>
+      </div>
+
+      <div class="phone-board" aria-label="Caddie screens">
+        <article class="phone phone-login">
+          <p class="screen-label">First launch</p>
+          <div class="device-shell">
+            <div class="phone-screen">
+              <div class="statusbar"><span>9:41</span><span>● ◒ ▰</span></div>
+              <div class="login-scene scene-dawn">
+                <div class="login-horizon"></div>
+                <svg class="login-flight" viewBox="0 0 260 220" aria-hidden="true"><path d="M36 184C72 101 128 55 219 47"/><circle cx="36" cy="184" r="3"/></svg>
+                <div class="login-copy">
+                  <div class="app-monogram">R</div>
+                  <p class="micro">RONDE</p>
+                  <h3>Keep the shots<br>worth seeing again.</h3>
+                  <p>Review locally. Remember the places and sessions that shape your game.</p>
+                </div>
+              </div>
+              <div class="login-actions">
+                <button class="apple-button"><span></span> Continue with Apple</button>
+                <p>Videos and analysis stay on this iPhone. Your account syncs lightweight library details only.</p>
+              </div>
+              <div class="home-indicator"></div>
+            </div>
+          </div>
+        </article>
+
+        <article class="phone">
+          <p class="screen-label">Home</p>
+          <div class="device-shell">
+            <div class="phone-screen app-screen">
+              <div class="statusbar"><span>9:41</span><span>● ◒ ▰</span></div>
+              <div class="app-content">
+                <header class="app-header">
+                  <div><p class="micro">SATURDAY, 30 AUG</p><h3>Good morning, Hojae.</h3></div>
+                  <button class="avatar" aria-label="Open profile">HJ</button>
+                </header>
+
+                <section class="media-hero media-day">
+                  <div class="media-topline"><span class="glass-pill"><svg><use href="#i-pin"/></svg> Moore Park</span><span class="media-time">Yesterday · 6:42 pm</span></div>
+                  <div class="golfer" aria-hidden="true"><i></i><b></b><em></em></div>
+                  <svg class="tracer tracer-gold" viewBox="0 0 320 210" aria-hidden="true"><path class="observed" d="M90 174C106 123 126 92 149 75"/><path class="estimated" d="M149 75C188 45 235 51 282 105"/></svg>
+                  <button class="play-button" aria-label="Play latest review"><svg><use href="#i-play"/></svg></button>
+                  <div class="media-caption"><div><small>LATEST REVIEW</small><strong>7-iron · One shot</strong></div><span>0:12</span></div>
+                </section>
+
+                <section class="metric-strip">
+                  <div><strong>18</strong><span>Reviews</span></div>
+                  <div><strong>13</strong><span>Traced</span></div>
+                  <div><strong>6</strong><span>Places</span></div>
+                </section>
+
+                <div class="section-heading"><h4>Recent</h4><button>See all</button></div>
+                <div class="card-carousel">
+                  <div class="mini-media media-night"><span>Saved</span><strong>Driver</strong><small>Thornleigh · 0:09</small></div>
+                  <div class="mini-media media-cloud"><span>Review</span><strong>Wedge</strong><small>Eastlake · 0:14</small></div>
+                </div>
+              </div>
+              <div class="tabbar glass">
+                <button class="is-selected"><svg><use href="#i-home"/></svg><span>Home</span></button>
+                <button><svg><use href="#i-library"/></svg><span>Library</span></button>
+                <button><svg><use href="#i-person"/></svg><span>Profile</span></button>
+              </div>
+              <div class="home-indicator"></div>
+            </div>
+          </div>
+        </article>
+
+        <article class="phone">
+          <p class="screen-label">Library</p>
+          <div class="device-shell">
+            <div class="phone-screen app-screen">
+              <div class="statusbar"><span>9:41</span><span>● ◒ ▰</span></div>
+              <div class="app-content library-content">
+                <header class="app-header compact"><div><p class="micro">YOUR FOOTAGE</p><h3>Library</h3></div><button class="round-action"><svg><use href="#i-search"/></svg></button></header>
+                <div class="filter-row"><button class="glass-pill selected">All 18</button><button class="glass-pill">Traced 13</button><button class="glass-pill">Saved 4</button></div>
+                <section class="feature-session media-cloud">
+                  <div class="feature-session-copy"><span>RANGE SESSION</span><h4>Moore Park</h4><p>7 shots · 5 traced · Yesterday</p></div>
+                  <div class="stacked-thumbs"><i></i><i></i><i></i></div>
+                </section>
+                <div class="section-heading"><h4>August</h4><button><svg><use href="#i-ellipsis"/></svg></button></div>
+                <div class="media-grid">
+                  <article class="grid-item media-day"><button class="heart is-saved"><svg><use href="#i-heart"/></svg></button><div><strong>7-iron</strong><small>Moore Park · 0:12</small></div></article>
+                  <article class="grid-item media-night"><button class="heart"><svg><use href="#i-heart"/></svg></button><div><strong>Driver</strong><small>Thornleigh · 0:09</small></div></article>
+                  <article class="grid-item media-soft"><span class="no-trace">No trace</span><div><strong>Wedge</strong><small>Eastlake · 0:14</small></div></article>
+                  <article class="grid-item media-green"><button class="heart is-saved"><svg><use href="#i-heart"/></svg></button><div><strong>6-iron</strong><small>The Ridge · 0:11</small></div></article>
+                </div>
+              </div>
+              <div class="tabbar glass"><button><svg><use href="#i-home"/></svg><span>Home</span></button><button class="is-selected"><svg><use href="#i-library"/></svg><span>Library</span></button><button><svg><use href="#i-person"/></svg><span>Profile</span></button></div>
+              <div class="home-indicator"></div>
+            </div>
+          </div>
+        </article>
+
+        <article class="phone">
+          <p class="screen-label">Profile</p>
+          <div class="device-shell">
+            <div class="phone-screen app-screen">
+              <div class="statusbar"><span>9:41</span><span>● ◒ ▰</span></div>
+              <div class="app-content profile-content">
+                <header class="profile-header"><div class="profile-avatar">HJ</div><div><p class="micro">RONDE MEMBER</p><h3>Hojae Jung</h3><p>Playing around Sydney</p></div><button class="round-action"><svg><use href="#i-ellipsis"/></svg></button></header>
+                <section class="profile-scorecard">
+                  <div><span>REVIEWS</span><strong>18</strong><small>Since August</small></div>
+                  <div><span>SAVED</span><strong>4</strong><small>Worth revisiting</small></div>
+                </section>
+                <div class="section-heading"><h4>Your places</h4><button>View map</button></div>
+                <div class="place-list">
+                  <div><span class="place-rank">01</span><div><strong>Moore Park Golf</strong><small>3 sessions · 9 reviews</small></div><b>50%</b></div>
+                  <div><span class="place-rank">02</span><div><strong>Thornleigh Golf Centre</strong><small>2 sessions · 6 reviews</small></div><b>33%</b></div>
+                  <div><span class="place-rank">03</span><div><strong>Eastlake Golf Club</strong><small>1 session · 3 reviews</small></div><b>17%</b></div>
+                </div>
+                <section class="privacy-card"><svg><use href="#i-cloud"/></svg><div><strong>Media stays here</strong><p>Only your profile, favourites and library metadata are synced.</p></div><svg class="chev"><use href="#i-chevron"/></svg></section>
+              </div>
+              <div class="tabbar glass"><button><svg><use href="#i-home"/></svg><span>Home</span></button><button><svg><use href="#i-library"/></svg><span>Library</span></button><button class="is-selected"><svg><use href="#i-person"/></svg><span>Profile</span></button></div>
+              <div class="home-indicator"></div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="concept concept-flightline" data-concept="flightline" hidden>
+      <div class="concept-intro">
+        <div>
+          <p class="eyebrow">02 · Analytical alternative</p>
+          <h2>Flightline</h2>
+          <p class="concept-lede">A precise, modern instrument for golfers who want the review to answer “what happened?” immediately. Compact charts, evidence state, and session comparisons lead the experience.</p>
+        </div>
+        <dl class="concept-notes">
+          <div><dt>Best at</dt><dd>Making analysis feel capable and technically credible</dd></div>
+          <div><dt>Signature</dt><dd>Trace evidence and session cadence as visible data</dd></div>
+          <div><dt>Watch-out</dt><dd>Can overpromise performance if metrics outrun validation</dd></div>
+        </dl>
+      </div>
+
+      <div class="phone-board" aria-label="Flightline screens">
+        <article class="phone phone-login"><p class="screen-label">First launch</p><div class="device-shell"><div class="phone-screen"><div class="statusbar"><span>9:41</span><span>● ◒ ▰</span></div><div class="login-scene scene-flightline"><div class="flight-grid"></div><svg class="login-flight" viewBox="0 0 260 260"><path d="M26 222C91 211 97 77 232 44"/><circle cx="26" cy="222" r="3"/><circle cx="232" cy="44" r="3"/></svg><div class="login-copy"><div class="app-monogram">R</div><p class="micro">RONDE / FLIGHTLINE</p><h3>Every swing,<br>made legible.</h3><p>On-device review that distinguishes what Ronde saw from what it estimated.</p></div></div><div class="login-actions"><button class="apple-button"><span></span> Continue with Apple</button><p>Your source footage never leaves this device.</p></div><div class="home-indicator"></div></div></div></article>
+
+        <article class="phone"><p class="screen-label">Home</p><div class="device-shell"><div class="phone-screen app-screen"><div class="statusbar"><span>9:41</span><span>● ◒ ▰</span></div><div class="app-content"><header class="app-header"><div><p class="micro">RONDE / TODAY</p><h3>18 reviews</h3></div><button class="avatar">HJ</button></header><section class="flightline-hero media-night"><div class="media-topline"><span>LAST REVIEW · DRIVER</span><span>0:09</span></div><div class="golfer"><i></i><b></b><em></em></div><svg class="tracer tracer-cyan" viewBox="0 0 320 210"><path class="observed" d="M84 176C106 122 133 83 157 68"/><path class="estimated" d="M157 68C208 30 264 64 291 119"/></svg><div class="trace-legend"><span><i></i>Observed</span><span><i></i>Estimated</span></div><button class="play-button"><svg><use href="#i-play"/></svg></button></section><section class="analysis-grid"><div><span>TRACE RATE</span><strong>13<span>/18</span></strong><i style="--p:72%"></i></div><div><span>THIS MONTH</span><strong>6<span>sessions</span></strong><svg viewBox="0 0 100 30"><path d="M3 25 18 19 34 22 51 10 69 15 97 4"/></svg></div></section><div class="section-heading"><h4>Continue reviewing</h4><button>Queue 2</button></div><div class="review-queue"><div class="queue-thumb media-cloud"></div><div><strong>Moore Park · Range</strong><small>5 accepted · 2 need review</small></div><svg><use href="#i-chevron"/></svg></div></div><button class="floating-add glass"><svg><use href="#i-plus"/></svg></button><div class="tabbar glass"><button class="is-selected"><svg><use href="#i-home"/></svg><span>Home</span></button><button><svg><use href="#i-library"/></svg><span>Library</span></button><button><svg><use href="#i-person"/></svg><span>Profile</span></button></div><div class="home-indicator"></div></div></div></article>
+
+        <article class="phone"><p class="screen-label">Library</p><div class="device-shell"><div class="phone-screen app-screen"><div class="statusbar"><span>9:41</span><span>● ◒ ▰</span></div><div class="app-content library-content"><header class="app-header compact"><div><p class="micro">18 ITEMS · 1.8 GB</p><h3>Library</h3></div><button class="round-action"><svg><use href="#i-search"/></svg></button></header><div class="filter-row"><button class="glass-pill selected">Recent</button><button class="glass-pill">Evidence</button><button class="glass-pill">Saved</button></div><div class="timeline-date"><span>YESTERDAY</span><i></i></div><div class="timeline-list"><article><div class="timeline-thumb media-day"><span>0:12</span></div><div><strong>7-iron</strong><p>Moore Park · One shot</p><small class="evidence-good"><i></i>8 observed points</small></div><button><svg><use href="#i-heart"/></svg></button></article><article><div class="timeline-thumb media-night"><span>0:09</span></div><div><strong>Driver</strong><p>Thornleigh · One shot</p><small class="evidence-good"><i></i>11 observed points</small></div><button class="is-saved"><svg><use href="#i-heart"/></svg></button></article></div><div class="timeline-date"><span>24 AUGUST</span><i></i></div><div class="timeline-list"><article><div class="timeline-thumb media-soft"><span>0:14</span></div><div><strong>Wedge</strong><p>Eastlake · One shot</p><small class="evidence-none"><i></i>Ball flight not tracked</small></div><button><svg><use href="#i-heart"/></svg></button></article><article><div class="timeline-thumb media-green"><span>34:18</span></div><div><strong>Range session</strong><p>The Ridge · 7 reviews</p><small class="evidence-good"><i></i>5 traced · 2 reviewed</small></div><button><svg><use href="#i-chevron"/></svg></button></article></div></div><button class="floating-add glass"><svg><use href="#i-plus"/></svg></button><div class="tabbar glass"><button><svg><use href="#i-home"/></svg><span>Home</span></button><button class="is-selected"><svg><use href="#i-library"/></svg><span>Library</span></button><button><svg><use href="#i-person"/></svg><span>Profile</span></button></div><div class="home-indicator"></div></div></div></article>
+
+        <article class="phone"><p class="screen-label">Profile</p><div class="device-shell"><div class="phone-screen app-screen"><div class="statusbar"><span>9:41</span><span>● ◒ ▰</span></div><div class="app-content profile-content"><header class="profile-header"><div class="profile-avatar">HJ</div><div><p class="micro">PLAYER PROFILE</p><h3>Hojae Jung</h3><p>Member since August</p></div><button class="round-action"><svg><use href="#i-ellipsis"/></svg></button></header><section class="profile-dashboard"><div class="ring" style="--p:72"><span>72<small>%</small></span></div><div><span>TRACE AVAILABILITY</span><strong>13 of 18 reviews</strong><p>Availability reflects evidence quality, not shot quality.</p></div></section><h4 class="subheading">Activity</h4><div class="activity-chart"><div class="bars"><i style="--h:28%"></i><i style="--h:65%"></i><i style="--h:40%"></i><i style="--h:85%"></i><i style="--h:55%"></i><i style="--h:35%"></i><i style="--h:72%"></i></div><div><span>12 WEEKS</span><strong>18 reviews</strong></div></div><h4 class="subheading">Account & privacy</h4><div class="settings-list"><button><span><svg><use href="#i-cloud"/></svg></span><div><strong>On-device media</strong><small>1.8 GB · 18 items</small></div><svg><use href="#i-chevron"/></svg></button><button><span><svg><use href="#i-check"/></svg></span><div><strong>Metadata sync</strong><small>Up to date</small></div><svg><use href="#i-chevron"/></svg></button></div></div><div class="tabbar glass"><button><svg><use href="#i-home"/></svg><span>Home</span></button><button><svg><use href="#i-library"/></svg><span>Library</span></button><button class="is-selected"><svg><use href="#i-person"/></svg><span>Profile</span></button></div><div class="home-indicator"></div></div></div></article>
+      </div>
+    </section>
+
+    <section class="concept concept-journal" data-concept="journal" hidden>
+      <div class="concept-intro">
+        <div>
+          <p class="eyebrow">03 · Personal alternative</p>
+          <h2>Range Journal</h2>
+          <p class="concept-lede">A location-led record of where the golfer practises and plays. Sessions become memories anchored to a place, making repeat visits and favourites feel meaningful rather than merely counted.</p>
+        </div>
+        <dl class="concept-notes">
+          <div><dt>Best at</dt><dd>Building emotional attachment and long-term retention</dd></div>
+          <div><dt>Signature</dt><dd>Place cards, topographic layers, and monthly field notes</dd></div>
+          <div><dt>Watch-out</dt><dd>Location entry must stay optional and privacy-safe</dd></div>
+        </dl>
+      </div>
+
+      <div class="phone-board" aria-label="Range Journal screens">
+        <article class="phone phone-login"><p class="screen-label">First launch</p><div class="device-shell"><div class="phone-screen"><div class="statusbar"><span>9:41</span><span>● ◒ ▰</span></div><div class="login-scene scene-journal"><div class="topo"></div><div class="map-pin"><svg><use href="#i-pin"/></svg></div><svg class="login-flight" viewBox="0 0 260 240"><path d="M38 194C70 116 137 88 221 63"/><circle cx="38" cy="194" r="3"/></svg><div class="login-copy"><div class="app-monogram">R</div><p class="micro">RONDE / RANGE JOURNAL</p><h3>Remember where<br>the work happened.</h3><p>A private record of your swings, sessions, and favourite places.</p></div></div><div class="login-actions"><button class="apple-button"><span></span> Continue with Apple</button><p>Adding a place is always optional. Video remains on this device.</p></div><div class="home-indicator"></div></div></div></article>
+
+        <article class="phone"><p class="screen-label">Home</p><div class="device-shell"><div class="phone-screen app-screen"><div class="statusbar"><span>9:41</span><span>● ◒ ▰</span></div><div class="app-content"><header class="app-header"><div><p class="micro">YOUR AUGUST</p><h3>Six sessions,<br>three places.</h3></div><button class="avatar">HJ</button></header><section class="journal-map"><div class="topo"></div><div class="map-location one"><i></i><span>Moore Park<br><small>3 sessions</small></span></div><div class="map-location two"><i></i><span>Thornleigh<br><small>2 sessions</small></span></div><div class="map-location three"><i></i><span>Eastlake<br><small>1 session</small></span></div><div class="map-caption"><span>SYDNEY</span><button>Explore places</button></div></section><div class="section-heading"><h4>Latest from Moore Park</h4><button>View 9</button></div><div class="journal-feature media-day"><div class="golfer"><i></i><b></b><em></em></div><svg class="tracer tracer-cream" viewBox="0 0 320 190"><path class="observed" d="M87 161C112 101 139 73 159 61"/><path class="estimated" d="M159 61C211 29 259 55 286 106"/></svg><div><span>YESTERDAY · 6:42 PM</span><strong>7-iron · One shot</strong></div><button class="play-button"><svg><use href="#i-play"/></svg></button></div></div><button class="floating-add glass"><svg><use href="#i-plus"/></svg></button><div class="tabbar glass"><button class="is-selected"><svg><use href="#i-home"/></svg><span>Home</span></button><button><svg><use href="#i-library"/></svg><span>Library</span></button><button><svg><use href="#i-person"/></svg><span>Profile</span></button></div><div class="home-indicator"></div></div></div></article>
+
+        <article class="phone"><p class="screen-label">Library</p><div class="device-shell"><div class="phone-screen app-screen"><div class="statusbar"><span>9:41</span><span>● ◒ ▰</span></div><div class="app-content library-content"><header class="app-header compact"><div><p class="micro">FIELD NOTES</p><h3>Library</h3></div><button class="round-action"><svg><use href="#i-search"/></svg></button></header><div class="filter-row"><button class="glass-pill selected">By place</button><button class="glass-pill">Recent</button><button class="glass-pill">Saved</button></div><section class="place-hero media-green"><div><span>MOST VISITED</span><h4>Moore Park Golf</h4><p>3 sessions · 9 reviews · August</p></div><button><svg><use href="#i-chevron"/></svg></button></section><div class="section-heading"><h4>Other places</h4><button>3 total</button></div><div class="journal-place-list"><article><div class="place-photo media-night"></div><div><strong>Thornleigh Golf Centre</strong><small>2 sessions · 6 reviews</small><span>Last visited 24 Aug</span></div><svg><use href="#i-chevron"/></svg></article><article><div class="place-photo media-soft"></div><div><strong>Eastlake Golf Club</strong><small>1 session · 3 reviews</small><span>Last visited 17 Aug</span></div><svg><use href="#i-chevron"/></svg></article><article><div class="place-photo media-cloud"></div><div><strong>Place not added</strong><small>2 individual reviews</small><span>Kept private on this iPhone</span></div><svg><use href="#i-chevron"/></svg></article></div></div><button class="floating-add glass"><svg><use href="#i-plus"/></svg></button><div class="tabbar glass"><button><svg><use href="#i-home"/></svg><span>Home</span></button><button class="is-selected"><svg><use href="#i-library"/></svg><span>Library</span></button><button><svg><use href="#i-person"/></svg><span>Profile</span></button></div><div class="home-indicator"></div></div></div></article>
+
+        <article class="phone"><p class="screen-label">Profile</p><div class="device-shell"><div class="phone-screen app-screen"><div class="statusbar"><span>9:41</span><span>● ◒ ▰</span></div><div class="app-content profile-content"><header class="profile-header"><div class="profile-avatar">HJ</div><div><p class="micro">RANGE JOURNAL</p><h3>Hojae Jung</h3><p>Sydney, Australia</p></div><button class="round-action"><svg><use href="#i-ellipsis"/></svg></button></header><section class="journal-quote"><span>2026</span><blockquote>“The swing becomes clearer when the record stays honest.”</blockquote></section><section class="journal-stats"><div><strong>18</strong><span>Reviews</span></div><i></i><div><strong>6</strong><span>Sessions</span></div><i></i><div><strong>3</strong><span>Places</span></div></section><div class="section-heading"><h4>Most visited</h4><button>See all</button></div><div class="favourite-place"><div class="topo"></div><span><svg><use href="#i-pin"/></svg></span><div><small>NO. 1 THIS YEAR</small><strong>Moore Park Golf</strong><p>3 sessions · 50% of visits</p></div></div><section class="privacy-card"><svg><use href="#i-cloud"/></svg><div><strong>Your private record</strong><p>Locations are optional. Raw videos never sync to Ronde.</p></div><svg class="chev"><use href="#i-chevron"/></svg></section></div><div class="tabbar glass"><button><svg><use href="#i-home"/></svg><span>Home</span></button><button><svg><use href="#i-library"/></svg><span>Library</span></button><button class="is-selected"><svg><use href="#i-person"/></svg><span>Profile</span></button></div><div class="home-indicator"></div></div></div></article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="page-footer">
+    <p><strong>Material note.</strong> The browser uses CSS blur to communicate hierarchy. The SwiftUI build should use system-owned iOS 26 Liquid Glass for the tab bar, labelled toolbar actions, filters, and transient playback controls, with a material fallback on earlier iOS versions.</p>
+    <p><strong>Product note.</strong> Demonstration data is illustrative. Distance is intentionally absent until Ronde has calibrated, ground-truthed measurement.</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

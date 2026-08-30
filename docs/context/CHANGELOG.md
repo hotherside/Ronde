@@ -2,6 +2,31 @@
 
 ## 30 August 2026
 
+### Local-first iPhone/iPad app redesign
+
+- Replaced the reviewer-only entry with an Apple-only sign-in screen and a complete Home, Library and Profile shell. The Caddie-led hierarchy uses horizontal media tiles and the Flightline direction for evidence metrics and eight-week charts.
+- Adopted native iOS 26 Liquid Glass for structural tab and toolbar navigation with a restrained system-material fallback on earlier supported iOS versions. Import is a labelled toolbar or empty-state action; no floating plus action is present.
+- Added an account-scoped local review archive with atomic complete-file-protection writes. Reviews now retain favourites, optional place/course, club, notes and evidence geometry across relaunches without exposing one Apple account's library to another on the same device.
+- Added individual media detail and edit interactions around the existing video-first workspace: favourite, edit metadata, adjust impact timing, inspect trace provenance and rough carry, adjust/manual trace, export and delete local plus hosted metadata.
+- Integrated Supabase Swift 2.55.1, secure native Apple nonce exchange, session restoration and best-effort lightweight library metadata sync. Raw videos, file paths, tracer geometry and analysis stay on device.
+- Applied hosted `profiles` and `library_items` migrations to Supabase project `apaowuzliauwxbxylfpk`, enabled per-user row-level security and revoked anonymous table access. Verified the saved Apple Auth provider as enabled for native Client IDs value `com.ronde` with no OAuth secret; Apple Developer capability and signed-device login remain unverified.
+- Added deterministic archive-isolation and honest-metrics coverage. The final complete iPhone 17 Pro iOS 26.5 Simulator suite executed 62 checks: 60 passed, two optional external-video/audio probes skipped and zero failed. Fresh iPhone 17 Pro and iPad Pro 11-inch iOS 26.5 visual passes covered sign-in, Home, Library, Profile and the media-detail design; these remain Simulator fixture evidence.
+- Added ADR 0009 for the local-first account, persistence and private metadata boundary.
+
+### Short-shot-video MVP and impact-timed tracer completion
+
+- Narrowed the exposed reviewer MVP to one Shot Video import up to 60 seconds. The full source is retained for review; Range Session slicing, candidate acknowledgement and Live Review remain dormant implementation foundations.
+- Diagnosed the supplied Codex export: it contained only a seven-point mid-air fragment, started reveal at the first observed point, projected only forwards for a short bounded interval and exported the approximately 30 fps source at 16.67 fps.
+- Replaced point-count and whole-curve reveal progress with a shared `TimedTrajectoryPath` for playback and export. The solid-purple stroke now follows source presentation timestamps, uses bounded renderer-only smoothing and retains a small sampling-derived gap behind the visible ball, so it cannot cover or lead it. The moving synthetic head marker was removed.
+- Stopped animating the fitted connector and continuation as though they were observations. Dashed estimated geometry, `MODEL CARRY`, `ESTIMATE · UNCALIBRATED` and `EST. APEX` now fade in only after the observed trail completes.
+- Replaced the first-observation time origin with an impact-time perspective flight fit. The detector-attributed points remain unchanged; separate estimated geometry now connects towards impact and continues through a marked image-space apex to a bounded landing. Estimated launch displacement and all eligible endpoints remain inside a safe presentation area.
+- Added a broad metres carry range from similarly plausible fits. Screen rate now selects only a broad full-shot versus chip-like speed/elevation prior, while a separate gentler down-range drag assumption avoids reusing the strong screen-perspective damping as physical carry loss. It remains labelled `MODEL CARRY` and `ESTIMATE · UNCALIBRATED`, not a measured-distance or launch-monitor claim.
+- Changed automatic tracer styling to purple, with solid observed geometry and dashed estimated geometry in playback and export. Export badges now rasterise text through Core Text so carry, provenance and `EST. APEX` labels survive AVFoundation composition.
+- Preserved common source cadence and corrected orientation transforms in traced MOV export. The final real-source exact-code probe against `IMG_0495.mov` selected 11 observed points, added 16 launch-connector and 138 continuation points, placed the estimated landing at normalised `(0.470, 0.508)`, showed `95–155 m` model carry and rendered 190 frames at 30 fps. Frame inspection confirmed the ball remains visible ahead of the causal observed trail, with the full dashed estimate and apex appearing afterwards. This owner-supplied positive is regression evidence, not representative distance accuracy or physical-device proof.
+- The focused evidence-anchored suite passes 13 checks, including source-time interpolation, non-uniform time-to-path mapping, monotonic timestamp rejection and the causal trail gap. A macOS exact-source harness completed the final 4K Core Animation export. The iOS 26.5 Simulator's video compositor exits with an IOSurface/XPC API-misuse trap during the same exporter integration path, so physical-iPhone export remains a separate gate.
+- Passed the clean complete iOS 26.5 Simulator suite: 53 checks executed, 51 passed, two optional external-video/audio probes skipped and zero failed. The final generic iOS Simulator build, including the embedded Watch app and packaged model, also succeeded. The real-source model probe used a bounded two-tile diagnostic corridor, so it verifies the corrected completion/export path after acquisition rather than general full-frame recall.
+- Added ADR 0008 for the short-shot-video boundary, estimated launch/apex/landing treatment and uncalibrated carry language.
+
 ### Delivery
 
 - Merged the evidence-backed iOS Shot Reviewer release candidate into `main` through PR #3. The automatic context refresh followed the merge. Physical-device performance, held-out footage, signing and distribution remain separate open gates.
