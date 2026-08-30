@@ -2,9 +2,9 @@
 
 > Generated from Git. Git remains authoritative. Context-only refresh commits are excluded.
 
-- Source commit: `d249512f8ca313698fb6af802f75f8b240286e61`
+- Source commit: `0afaa0a02bc663fdc2ef96fdcfa734d98e3608a2`
 - Source commit date: 2026-08-30
-- Tracked commit count: 66
+- Tracked commit count: 68
 
 | Date | Commit | Subject |
 | --- | --- | --- |
@@ -65,3 +65,4 @@
 | 2026-08-30 | `5a121df` | Merge pull request #6 from hotherside/codex/redesignapp |
 | 2026-08-30 | `1d93e30` | feat(ios): deliver immersive reviewer redesign |
 | 2026-08-30 | `d249512` | Merge pull request #7 from hotherside/codex/immersive-review-redesign |
+| 2026-08-30 | `0afaa0a` | fix(ios): preserve near-30fps tracer samples |
