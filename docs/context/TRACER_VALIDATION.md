@@ -40,6 +40,7 @@ Record the following without copying the source video into Git:
 | --- | --- | --- |
 | Synthetic timebase tests | Passed at 25, 30, 50, 60, 120 and 240 fps on iPhone 17 Pro iOS 26.5 Simulator | Proves selector and sampling invariance only, not detector accuracy on decoded footage |
 | Three supplied private positive clips | Exact production tracker passed two 4K landscape daylight clips and one 4K portrait night-range clip on macOS and iPhone 17 Pro iOS 26.0 Simulator | Positive regression evidence only; clips are not retained in the repository and do not replace a held-out matrix |
+| Five-video TestFlight check | One video displayed an automatic tracer; that path was not visually accurate | Signed-iPhone product evidence that current recall and geometry are unacceptable; exact clips are not yet labelled locally, so per-stage causes remain unknown |
 | Representative held-out matrix | Not supplied | Blocks accuracy, false-tracer and cross-source reliability claims |
 | Physical iPhone performance | Not run | Blocks latency, memory, battery and thermal claims |
 | Golf-specific fine-tune | Not run | No licensed, consented golf training set is present; the official upstream repository documents evaluation but its training section remains `TBA` |
@@ -82,6 +83,14 @@ The same production-code diagnostic exposed a separate termination risk: a 5.3 M
 | Portrait C | 101 / 4,985 | 678 MB | 1.02 GB |
 
 These are macOS diagnostic measurements against the exact Swift tracker, not a physical-iPhone benchmark. A fresh hardware run must still confirm that One Shot completes without an OS memory termination and capture device model, OS, runtime, thermal state and peak memory.
+
+### Source-cadence and dense-acquisition probe
+
+- A deterministic 30.087 fps timestamp stream formerly lost every second source frame because its approximately 0.097 ms early arrival missed a one-microsecond eligibility tolerance. The accepted tolerance is now bounded to 2 ms. All 31 regression frames remain eligible, while the existing 25, 30, 50, 60, 120 and 240 fps invariance checks still pass.
+- Running the current tennis-domain detector on every accepted acquisition window did not improve identity. The exact full-frame Landscape A test ran for 265.965 seconds on iPhone 17 Pro iOS 26.0 Simulator with CPU-only Core ML and returned a displayable but wrong path whose launch `y` was `0.3903`, outside the labelled `0.20...0.30` mid-air corridor. That experiment was removed; it is negative model/association evidence, not an accuracy gain.
+- A separate post-lock 2x crop presented a smaller predicted-position source region in the detector's 512 by 288 input while leaving acquisition and reacquisition at native scale. The complete three-video production matrix passed in 992.403 seconds, but observed-point counts remained exactly 7, 86 and 82 and launch coordinates remained effectively unchanged. The negligible confidence movement did not establish better localisation or identity. The crop was removed because it added inference work without extending any observed track.
+- The optional matrix now protects the established 7, 86 and 82 point counts in addition to the labelled launch corridors. This is a regression floor for these three positives, not a representative accuracy threshold.
+- The latest TestFlight field check remains one inaccurate trace from five videos. The exact sources must be transferred, consented and labelled before the four misses can be split among impact timing, detector recall, association and path-completion failure.
 
 ## Acceptance thresholds
 

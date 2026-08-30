@@ -77,10 +77,10 @@ struct GolfBallTrackSelectorTests {
 
     @Test(.enabled(if: ProcessInfo.processInfo.environment["RONDE_RUN_EXTERNAL_VIDEO_MATRIX"] == "1"))
     func optionalExternalVideoMatrixTracksTheLabelledBall() async throws {
-        let specs: [(resource: String, impact: TimeInterval, launchX: ClosedRange<Double>, launchY: ClosedRange<Double>)] = [
-            ("RondeExternalLandscapeA", 1.6320, 0.50...0.56, 0.20...0.30),
-            ("RondeExternalLandscapeB", 0.8747, 0.70...0.79, 0.17...0.28),
-            ("RondeExternalPortraitC", 1.6747, 0.54...0.60, 0.32...0.38)
+        let specs: [(resource: String, impact: TimeInterval, launchX: ClosedRange<Double>, launchY: ClosedRange<Double>, previousPointCount: Int)] = [
+            ("RondeExternalLandscapeA", 1.6320, 0.50...0.56, 0.20...0.30, 7),
+            ("RondeExternalLandscapeB", 0.8747, 0.70...0.79, 0.17...0.28, 86),
+            ("RondeExternalPortraitC", 1.6747, 0.54...0.60, 0.32...0.38, 82)
         ]
         let bundle = Bundle(for: GolfBallTrackerTestBundleMarker.self)
 
@@ -96,7 +96,7 @@ struct GolfBallTrackSelectorTests {
             let points = estimate.observedTrajectory?.detectedPoints ?? []
             print("EXTERNAL_PROBE \(spec.resource) confidence=\(estimate.confidence) points=\(points)")
             #expect(estimate.isDisplayable)
-            #expect(points.count >= 5)
+            #expect(points.count >= spec.previousPointCount)
             #expect(spec.launchX.contains(estimate.launch.x))
             #expect(spec.launchY.contains(estimate.launch.y))
             #expect((points.map(\.y).min() ?? 1) < estimate.launch.y - 0.01)
@@ -339,6 +339,26 @@ struct GolfBallTrackSelectorTests {
             #expect(abs((selected?.detections.first?.point.x ?? 0) - 0.58) < 0.001)
             #expect((selected?.detections.last?.point.y ?? 1) < 0.34)
         }
+    }
+
+    @Test func measuredThirtyFrameFootageDoesNotCollapseToHalfRate() {
+        let measuredSourceRate = 30.087
+        let startTime = 1.714
+        var sampler = PresentationTimestampFrameSampler(
+            startTime: startTime,
+            cadence: 1.0 / 30.0
+        )
+        let presentationTimes = (0..<31).map {
+            startTime + (Double($0) / measuredSourceRate)
+        }
+        let acceptedTimes = presentationTimes.filter {
+            sampler.accepts(presentationTime: $0)
+        }
+
+        #expect(acceptedTimes.count == presentationTimes.count)
+        #expect(zip(acceptedTimes, acceptedTimes.dropFirst()).allSatisfy {
+            $1 - $0 < 0.034
+        })
     }
 
     @Test func contiguousFrameNumbersCannotBridgeALargePresentationTimeGap() {

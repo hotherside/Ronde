@@ -7,18 +7,23 @@ import Foundation
 /// 24, 30, 60 and 120 fps uploads without inventing frames that were not present in the source.
 struct PresentationTimestampFrameSampler: Sendable, Equatable {
     private let cadence: TimeInterval
+    private let acceptanceTolerance: TimeInterval
     private var nextEligibleTime: TimeInterval
 
     init(startTime: TimeInterval, cadence: TimeInterval) {
         self.cadence = max(1.0 / 120.0, cadence)
+        // Real iPhone footage commonly reports a measured frame rate just above the nominal
+        // 30 fps capture rate. Requiring the next sample to land within one microsecond of the
+        // target made every second 30.08 fps frame ineligible, collapsing analysis to about
+        // 15 fps. A tightly bounded tolerance keeps those source frames while still reducing
+        // 50, 60, 120 and 240 fps footage to a practical analysis cadence.
+        acceptanceTolerance = min(self.cadence * 0.06, 0.002)
         nextEligibleTime = max(0, startTime)
     }
 
     mutating func accepts(presentationTime: TimeInterval) -> Bool {
         let timestamp = max(0, presentationTime)
-        // A small tolerance avoids excluding a sample merely because CMTime converted to Double
-        // one ULP below the target time.
-        guard timestamp + 0.000_001 >= nextEligibleTime else { return false }
+        guard timestamp + acceptanceTolerance >= nextEligibleTime else { return false }
         nextEligibleTime = timestamp + cadence
         return true
     }
