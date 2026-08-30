@@ -4,6 +4,10 @@
 
 ### Local-first iPhone/iPad app redesign
 
+- Brought the Caddie prototype hierarchy into the native app: golf-led Apple-only entry, personalised Home, real video thumbnails, an overlaid Library grid, Profile scorecard and places, plus Flightline-style trace-rate and activity charts. The primary import control is now a labelled `Add video` Photos action; the obsolete download-style affordance and floating-action pattern are absent.
+- Rebuilt individual review as an edge-to-edge, video-first route with restrained glass back/favourite/edit chrome, a single evidence strip and concise provenance copy. Automatic carry/provenance cards no longer compete with the route controls inside the video.
+- Moved manual tracer placement into a dedicated full-screen editor. Impact, Apex and Landing are direct-manipulation handles over the fitted source frame with point selection, frame stepping, Undo and Reset in a dark Liquid Glass dock. Cancel discards the draft; Save persists separately labelled user-authored geometry without changing automatic observed evidence.
+- Revalidated the final adaptive build on iPhone 17 Pro and iPad Pro 11-inch iOS 26.5 Simulators. The complete working-tree suite passed with two optional external-media probes skipped and zero failures; the screenshots remain layout evidence rather than signed-device, live-auth or real-footage accuracy evidence.
 - Replaced the reviewer-only entry with an Apple-only sign-in screen and a complete Home, Library and Profile shell. The Caddie-led hierarchy uses horizontal media tiles and the Flightline direction for evidence metrics and eight-week charts.
 - Adopted native iOS 26 Liquid Glass for structural tab and toolbar navigation with a restrained system-material fallback on earlier supported iOS versions. Import is a labelled toolbar or empty-state action; no floating plus action is present.
 - Added an account-scoped local review archive with atomic complete-file-protection writes. Reviews now retain favourites, optional place/course, club, notes and evidence geometry across relaunches without exposing one Apple account's library to another on the same device.

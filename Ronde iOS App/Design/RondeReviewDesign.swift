@@ -67,6 +67,19 @@ extension View {
                     }
             )
     }
+
+    @ViewBuilder
+    func rondeConditionalGlass(isEnabled: Bool, cornerRadius: CGFloat) -> some View {
+        if isEnabled {
+            if #available(iOS 26.0, *) {
+                self.glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
+            } else {
+                self.background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            }
+        } else {
+            self
+        }
+    }
 }
 
 struct ReviewTag: View {

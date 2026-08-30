@@ -34,6 +34,7 @@ The essential loop is:
 - Home and Profile summaries use only saved review data. Production empty states show zero or unavailable values rather than fixture statistics.
 - The Library persists each signed-in account's local reviews separately and supports search, favourites, optional place/course, club and notes.
 - The reviewer MVP accepts one shot video up to 60 seconds. It retains the full source range, opens directly into an automatically playing video-first Shot Review and does not expose long-session slicing, candidate classification or shot-confirmation theatre.
+- Individual review gives the video the full available width and keeps evidence, details and sharing below it. Manual trace placement opens as a dedicated full-screen workspace: Impact, Apex and Landing are adjusted directly over the video, Cancel discards the draft and Save persists a separately labelled user-authored visual aid.
 - Impact analysis is an internal timing input for ball acquisition and tracer reveal. The golfer is not asked to identify a start point before an automatic review can appear.
 - Range Session and Live Review foundations remain dormant future work. If long-session segmentation returns, a proposed event may become an automatic shot only after target-golfer impact and a stable, time-aligned golf-ball launch agree.
 - Live Review may use a temporary rolling capture buffer for hands-free one-shot feedback. It retains the candidate clip only after an impact-like event, plays it automatically after post-roll and processing, and discards unrelated buffer segments.

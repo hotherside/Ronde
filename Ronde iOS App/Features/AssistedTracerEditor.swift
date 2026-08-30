@@ -38,6 +38,22 @@ struct AssistedTracerPoints: Equatable {
     }
 }
 
+enum AssistedTracerHandle: String, CaseIterable, Identifiable {
+    case impact = "Impact"
+    case apex = "Apex"
+    case landing = "Landing"
+
+    var id: String { rawValue }
+
+    var systemImage: String {
+        switch self {
+        case .impact: return "smallcircle.filled.circle"
+        case .apex: return "triangle.fill"
+        case .landing: return "flag.fill"
+        }
+    }
+}
+
 /// Maps the player's actual item time to the visible portion of an assisted
 /// tracer. The values are intentionally independent of the source frame rate:
 /// AVPlayer provides the authoritative presentation time for any imported file.
@@ -88,8 +104,14 @@ struct AssistedTracerEditor: View {
     let isEditing: Bool
     let isManual: Bool
     let onFinishEditing: () -> Void
+    var selectedHandle: AssistedTracerHandle? = nil
+    var showsEditingBanner = true
+    var showsEvidenceChrome = true
+    var onSelectHandle: (AssistedTracerHandle) -> Void = { _ in }
+    var onBeginHandleAdjustment: () -> Void = {}
 
     @Environment(\.accessibilityReduceMotion) private var reducesMotion
+    @State private var activeDragHandle: AssistedTracerHandle?
 
     private var revealTimeline: TracerRevealTimeline {
         TracerRevealTimeline(impactTime: impactTime, flightDuration: flightDuration)
@@ -190,6 +212,7 @@ struct AssistedTracerEditor: View {
 
                 if !isEditing,
                    let estimatedCarry,
+                   showsEvidenceChrome,
                    carryOpacity > 0 {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("MODEL CARRY")
@@ -215,15 +238,15 @@ struct AssistedTracerEditor: View {
                 }
 
                 if isEditing {
-                    handle(for: "Launch", systemImage: "circle.fill", point: $points.launch, in: geometry.size)
-                    handle(for: "Apex", systemImage: "triangle.fill", point: $points.apex, in: geometry.size)
-                    handle(for: "Landing", systemImage: "flag.fill", point: $points.landing, in: geometry.size)
+                    handle(.impact, point: $points.launch, in: geometry.size)
+                    handle(.apex, point: $points.apex, in: geometry.size)
+                    handle(.landing, point: $points.landing, in: geometry.size)
                 }
 
-                if isEditing {
+                if isEditing && showsEditingBanner {
                     HStack(spacing: 7) {
                         Image(systemName: "hand.draw.fill")
-                        Text("Adjust flight path")
+                        Text("Place the flight path")
                         Button("Done", action: onFinishEditing)
                             .font(.caption.weight(.bold))
                             .foregroundStyle(RondeReviewDesign.tracerPurple)
@@ -238,7 +261,7 @@ struct AssistedTracerEditor: View {
                     .frame(maxWidth: .infinity, alignment: .topTrailing)
                 }
 
-                if !isEditing {
+                if !isEditing && showsEvidenceChrome {
                     Text(sourceLabel)
                         .font(.system(.caption2, design: .rounded).weight(.bold))
                         .tracking(0.8)
@@ -494,20 +517,26 @@ struct AssistedTracerEditor: View {
         context.stroke(path, with: .color(.white.opacity(0.82)), style: StrokeStyle(lineWidth: 1.4, lineCap: .round, lineJoin: .round))
     }
 
-    private func handle(for label: String, systemImage: String, point: Binding<CGPoint>, in size: CGSize) -> some View {
+    private func handle(_ handle: AssistedTracerHandle, point: Binding<CGPoint>, in size: CGSize) -> some View {
         let location = canvasPoint(point.wrappedValue, in: size)
-        return Button {} label: {
+        let isSelected = selectedHandle == nil || selectedHandle == handle
+        return Button {
+            onSelectHandle(handle)
+        } label: {
             VStack(spacing: 3) {
                 ZStack {
                     Circle()
                         .fill(.white)
-                        .frame(width: 34, height: 34)
+                        .frame(width: isSelected ? 38 : 34, height: isSelected ? 38 : 34)
                         .shadow(color: .black.opacity(0.25), radius: 6, y: 2)
-                    Image(systemName: systemImage)
+                    Circle()
+                        .stroke(RondeReviewDesign.tracerPurple.opacity(isSelected ? 0.9 : 0), lineWidth: 3)
+                        .frame(width: 44, height: 44)
+                    Image(systemName: handle.systemImage)
                         .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(label == "Landing" ? RondeReviewDesign.tracerPurple : RondeReviewDesign.fairway)
+                        .foregroundStyle(handle == .landing ? RondeReviewDesign.tracerPurple : RondeReviewDesign.fairway)
                 }
-                Text(label)
+                Text(handle.rawValue)
                     .font(.system(size: 10, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 5)
@@ -521,11 +550,19 @@ struct AssistedTracerEditor: View {
         .gesture(
             DragGesture(minimumDistance: 0)
                 .onChanged { value in
+                    if activeDragHandle != handle {
+                        activeDragHandle = handle
+                        onBeginHandleAdjustment()
+                        onSelectHandle(handle)
+                    }
                     point.wrappedValue = normalised(value.location, in: size)
                 }
+                .onEnded { _ in
+                    activeDragHandle = nil
+                }
         )
-        .accessibilityLabel("Tracer \(label) handle")
-        .accessibilityHint("Drag to adjust the \(label.lowercased()) point")
+        .accessibilityLabel("Tracer \(handle.rawValue) handle")
+        .accessibilityHint("Drag to adjust the \(handle.rawValue.lowercased()) point")
     }
 
     private func canvasPoint(_ point: CGPoint, in size: CGSize) -> CGPoint {
@@ -580,6 +617,7 @@ struct PlayerSynchronizedTracer: View {
     let isEditing: Bool
     let isManual: Bool
     let onFinishEditing: () -> Void
+    var showsEvidenceChrome = true
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1.0 / 30.0)) { _ in
@@ -597,7 +635,8 @@ struct PlayerSynchronizedTracer: View {
                 flightDuration: flightDuration,
                 isEditing: isEditing,
                 isManual: isManual,
-                onFinishEditing: onFinishEditing
+                onFinishEditing: onFinishEditing,
+                showsEvidenceChrome: showsEvidenceChrome
             )
         }
     }
