@@ -2,9 +2,9 @@
 
 > Generated from Git. Git remains authoritative. Context-only refresh commits are excluded.
 
-- Source commit: `7f60902bb957997e59910037d51abd30d40445bb`
+- Source commit: `7db177bd1114896555ab6fbfdc506acc2d927b5a`
 - Source commit date: 2026-08-30
-- Tracked commit count: 57
+- Tracked commit count: 58
 
 | Date | Commit | Subject |
 | --- | --- | --- |
@@ -59,3 +59,4 @@
 | 2026-08-30 | `b5ff93d` | chore(context): reconcile reviewer merge state |
 | 2026-08-30 | `84aa14d` | Merge pull request #4 from hotherside/codex/reconcile-reviewer-merge-context |
 | 2026-08-30 | `7f60902` | feat(ios): ship local-first reviewer redesign |
+| 2026-08-30 | `7db177b` | feat(ios): checkpoint experimental shot tracer |
