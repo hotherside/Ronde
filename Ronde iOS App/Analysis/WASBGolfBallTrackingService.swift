@@ -43,6 +43,194 @@ struct WASBGolfBallTrackingConfiguration: Sendable, Equatable {
     )
 }
 
+/// A small top-left-origin luminance crop used by the launch evidence gate. Keeping this pure and
+/// frame-format agnostic lets the detector be regression-tested without private video fixtures.
+struct GolfBallLaunchLuminancePlane: Sendable, Equatable {
+    let sourceWidth: Int
+    let sourceHeight: Int
+    let originX: Int
+    let originY: Int
+    let width: Int
+    let height: Int
+    let values: [Float]
+
+    init(
+        sourceWidth: Int,
+        sourceHeight: Int,
+        originX: Int = 0,
+        originY: Int = 0,
+        width: Int,
+        height: Int,
+        values: [Float]
+    ) {
+        self.sourceWidth = sourceWidth
+        self.sourceHeight = sourceHeight
+        self.originX = originX
+        self.originY = originY
+        self.width = width
+        self.height = height
+        self.values = values
+    }
+
+    subscript(x: Int, y: Int) -> Float {
+        values[(y * width) + x]
+    }
+}
+
+struct GolfBallLaunchAnchorDetection: Sendable, Equatable {
+    let point: NormalizedPoint
+    let confidence: Double
+}
+
+/// Looks for a compact bright object that is present beside the first accepted flight corridor at
+/// impact and absent one source frame later. It does not extrapolate a launch point and returns nil
+/// unless the disappearing candidate is both strong and locally unique.
+struct GolfBallLaunchAnchorDetector: Sendable {
+    func detect(
+        before: GolfBallLaunchLuminancePlane,
+        after: GolfBallLaunchLuminancePlane,
+        firstObservedPoint: NormalizedPoint
+    ) -> GolfBallLaunchAnchorDetection? {
+        guard before.sourceWidth == after.sourceWidth,
+              before.sourceHeight == after.sourceHeight,
+              before.originX == after.originX,
+              before.originY == after.originY,
+              before.width == after.width,
+              before.height == after.height,
+              before.values.count == before.width * before.height,
+              after.values.count == after.width * after.height,
+              before.width >= 5,
+              before.height >= 5 else {
+            return nil
+        }
+
+        let integralWidth = before.width + 1
+        var integral = [Double](repeating: 0, count: integralWidth * (before.height + 1))
+        for y in 0..<before.height {
+            var rowSum = 0.0
+            for x in 0..<before.width {
+                let initial = Double(before[x, y])
+                let departed = Double(after[x, y])
+                let difference = initial - departed
+                let signal = initial >= 55 && difference >= 18 ? difference : 0
+                rowSum += signal
+                integral[((y + 1) * integralWidth) + x + 1]
+                    = integral[(y * integralWidth) + x + 1] + rowSum
+            }
+        }
+
+        func summedSignal(x0: Int, y0: Int, x1: Int, y1: Int) -> Double {
+            integral[(y1 * integralWidth) + x1]
+                - integral[(y0 * integralWidth) + x1]
+                - integral[(y1 * integralWidth) + x0]
+                + integral[(y0 * integralWidth) + x0]
+        }
+
+        struct Candidate {
+            let score: Double
+            let x: Int
+            let y: Int
+            let diameter: Int
+        }
+
+        let sourceShortSide = min(before.sourceWidth, before.sourceHeight)
+        let minimumDiameter = max(5, Self.odd(Int((Double(sourceShortSide) * 0.006).rounded())))
+        let maximumDiameter = max(minimumDiameter, Self.odd(Int((Double(sourceShortSide) * 0.018).rounded())))
+        let scanStep = max(1, sourceShortSide / 540)
+        var candidates: [Candidate] = []
+
+        for diameter in stride(from: minimumDiameter, through: maximumDiameter, by: 2) {
+            let radius = diameter / 2
+            guard before.width > diameter, before.height > diameter else { continue }
+            for y in stride(from: radius, to: before.height - radius, by: scanStep) {
+                for x in stride(from: radius, to: before.width - radius, by: scanStep) {
+                    let averageSignal = summedSignal(
+                        x0: x - radius,
+                        y0: y - radius,
+                        x1: x + radius + 1,
+                        y1: y + radius + 1
+                    ) / Double(diameter * diameter)
+                    guard averageSignal >= 2 else { continue }
+                    let sourceX = Double(before.originX + x) / Double(before.sourceWidth)
+                    let corridorDistance = abs(sourceX - firstObservedPoint.x)
+                    let corridorWeight = 1 - min(0.35, corridorDistance / 0.07 * 0.35)
+                    candidates.append(Candidate(
+                        score: averageSignal * corridorWeight,
+                        x: x,
+                        y: y,
+                        diameter: diameter
+                    ))
+                }
+            }
+        }
+
+        let exclusionDistance = max(16, Int((Double(sourceShortSide) * 0.015).rounded()))
+        var separated: [Candidate] = []
+        for candidate in candidates.sorted(by: { $0.score > $1.score }) {
+            guard separated.allSatisfy({
+                hypot(Double(candidate.x - $0.x), Double(candidate.y - $0.y))
+                    > Double(exclusionDistance)
+            }) else { continue }
+            separated.append(candidate)
+            if separated.count == 2 { break }
+        }
+        guard let best = separated.first,
+              best.score >= 5.5 else {
+            return nil
+        }
+        if let runnerUp = separated.dropFirst().first {
+            // A club head can leave a second compact difference immediately below the ball. The
+            // ball must still win by a material absolute and relative margin, but demanding a
+            // near two-to-one gap rejects clean impact frames where both objects depart together.
+            guard best.score - runnerUp.score >= 4.5,
+                  best.score >= runnerUp.score * 1.30 else {
+                return nil
+            }
+        }
+
+        let radius = best.diameter / 2
+        var weightSum = 0.0
+        var weightedX = 0.0
+        var weightedY = 0.0
+        for y in max(0, best.y - radius)...min(before.height - 1, best.y + radius) {
+            for x in max(0, best.x - radius)...min(before.width - 1, best.x + radius) {
+                let initial = Double(before[x, y])
+                let difference = initial - Double(after[x, y])
+                let weight = initial >= 55 && difference >= 18 ? difference : 0
+                weightSum += weight
+                weightedX += Double(x) * weight
+                weightedY += Double(y) * weight
+            }
+        }
+        guard weightSum > 0 else { return nil }
+        let refinedX = weightedX / weightSum
+        let refinedY = weightedY / weightSum
+        let point = NormalizedPoint(
+            x: Double(before.originX) / Double(before.sourceWidth)
+                + (refinedX / Double(before.sourceWidth)),
+            y: Double(before.originY) / Double(before.sourceHeight)
+                + (refinedY / Double(before.sourceHeight))
+        )
+        guard abs(point.x - firstObservedPoint.x) <= 0.07,
+              point.y >= firstObservedPoint.y + 0.06,
+              point.y <= 0.94 else {
+            return nil
+        }
+
+        let runnerUpScore = separated.dropFirst().first?.score ?? 0
+        let strength = min(1, max(0, (best.score - 5.5) / 12))
+        let separation = min(1, max(0, (best.score - runnerUpScore - 4.5) / 10))
+        return GolfBallLaunchAnchorDetection(
+            point: point,
+            confidence: 0.55 + (0.25 * strength) + (0.20 * separation)
+        )
+    }
+
+    private static func odd(_ value: Int) -> Int {
+        value.isMultiple(of: 2) ? value + 1 : value
+    }
+}
+
 /// Pure timestamp-based state for local continuation after competitive acquisition. It retains
 /// the last three linked observations for prediction and stops after a sustained miss rather than
 /// scanning a whole upload forever.
@@ -388,6 +576,7 @@ actor WASBGolfBallTrackingService {
 
         var sampler = PresentationTimestampFrameSampler(startTime: startTime, cadence: cadence)
         var frameWindow: [RGBFrame] = []
+        var launchEvidenceFrames: [(time: TimeInterval, frame: RGBFrame)] = []
         var detections: [GolfBallDetectionCandidate] = []
         var frameIndex = 0
         var searchState = SearchState(
@@ -420,6 +609,10 @@ actor WASBGolfBallTrackingService {
             sampledFrameCount += 1
             frameWindow.append(frame)
             if frameWindow.count > 3 { frameWindow.removeFirst() }
+            if sampleTime >= impactTime - 0.075,
+               sampleTime <= impactTime + 0.11 {
+                launchEvidenceFrames.append((time: sampleTime, frame: frame))
+            }
 
             if frameWindow.count == 3 {
                 let searchPlan = searchState.plan(at: sampleTime)
@@ -487,7 +680,12 @@ actor WASBGolfBallTrackingService {
             throw WASBGolfBallTrackingError.noDefensibleBallTrack
         }
         selectedTrackPointCount = selectedTrack.detections.count
-        return Self.estimate(from: selectedTrack)
+        let launchAnchor = try? Self.detectLaunchAnchor(
+            in: launchEvidenceFrames,
+            impactTime: impactTime,
+            firstObservedPoint: selectedTrack.detections[0].point
+        )
+        return Self.estimate(from: selectedTrack, launchAnchor: launchAnchor)
     }
 
     private func loadModel() throws -> MLModel {
@@ -722,7 +920,55 @@ actor WASBGolfBallTrackingService {
         return values
     }
 
-    private static func estimate(from track: GolfBallTrack) -> BallFlightEstimate {
+    private static func detectLaunchAnchor(
+        in frames: [(time: TimeInterval, frame: RGBFrame)],
+        impactTime: TimeInterval,
+        firstObservedPoint: NormalizedPoint
+    ) throws -> NormalizedPoint? {
+        let beforeFrames = frames.filter { $0.time <= impactTime + 0.02 }
+        let afterFrames = frames.filter { $0.time >= impactTime + 0.02 }
+        guard !beforeFrames.isEmpty, !afterFrames.isEmpty else { return nil }
+
+        var strongest: GolfBallLaunchAnchorDetection?
+        for before in beforeFrames {
+            for after in afterFrames {
+                let elapsed = after.time - before.time
+                guard elapsed >= 0.02, elapsed <= 0.095,
+                      before.frame.width == after.frame.width,
+                      before.frame.height == after.frame.height else {
+                    continue
+                }
+                let searchRegion = CGRect(
+                    x: max(0, firstObservedPoint.x - 0.07),
+                    y: min(0.92, firstObservedPoint.y + 0.06),
+                    width: min(1, firstObservedPoint.x + 0.07)
+                        - max(0, firstObservedPoint.x - 0.07),
+                    height: max(
+                        0,
+                        min(0.94, firstObservedPoint.y + 0.72)
+                            - min(0.92, firstObservedPoint.y + 0.06)
+                    )
+                )
+                guard searchRegion.width > 0.01, searchRegion.height > 0.01 else { continue }
+                let initial = try before.frame.luminancePlane(in: searchRegion)
+                let departed = try after.frame.luminancePlane(in: searchRegion)
+                guard let detection = GolfBallLaunchAnchorDetector().detect(
+                    before: initial,
+                    after: departed,
+                    firstObservedPoint: firstObservedPoint
+                ) else { continue }
+                if strongest.map({ detection.confidence > $0.confidence }) ?? true {
+                    strongest = detection
+                }
+            }
+        }
+        return strongest?.point
+    }
+
+    private static func estimate(
+        from track: GolfBallTrack,
+        launchAnchor: NormalizedPoint?
+    ) -> BallFlightEstimate {
         let points = track.detections.map(\.point)
         let times = track.detections.map(\.presentationTime)
         let trajectory = DetectedTrajectory(
@@ -736,6 +982,7 @@ actor WASBGolfBallTrackingService {
             launch: points[0],
             apex: points[points.count / 2],
             landing: points[points.count - 1],
+            observedLaunchAnchor: launchAnchor,
             source: .observed,
             confidence: track.confidence,
             observedPointCount: points.count,
@@ -974,6 +1221,80 @@ actor WASBGolfBallTrackingService {
                         xOrigin: xOrigin,
                         yOrigin: yOrigin
                     )
+                }
+            }
+        }
+
+        func luminancePlane(in normalizedRegion: CGRect) throws -> GolfBallLaunchLuminancePlane {
+            let x0 = min(width - 1, max(0, Int(floor(normalizedRegion.minX * CGFloat(width)))))
+            let y0 = min(height - 1, max(0, Int(floor(normalizedRegion.minY * CGFloat(height)))))
+            let x1 = min(width, max(x0 + 1, Int(ceil(normalizedRegion.maxX * CGFloat(width)))))
+            let y1 = min(height, max(y0 + 1, Int(ceil(normalizedRegion.maxY * CGFloat(height)))))
+            let planeWidth = x1 - x0
+            let planeHeight = y1 - y0
+            var values = [Float](repeating: 0, count: planeWidth * planeHeight)
+
+            switch storage {
+            case let .bgraPixelBuffer(pixelBuffer):
+                let lockResult = CVPixelBufferLockBaseAddress(pixelBuffer, .readOnly)
+                guard lockResult == kCVReturnSuccess,
+                      let baseAddress = CVPixelBufferGetBaseAddress(pixelBuffer) else {
+                    throw WASBGolfBallTrackingError.modelFailed("The launch frame could not be locked.")
+                }
+                defer { CVPixelBufferUnlockBaseAddress(pixelBuffer, .readOnly) }
+                Self.writeLuminanceRows(
+                    source: baseAddress.assumingMemoryBound(to: UInt8.self),
+                    bytesPerRow: CVPixelBufferGetBytesPerRow(pixelBuffer),
+                    channelOffsets: (red: 2, green: 1, blue: 0),
+                    destination: &values,
+                    xOrigin: x0,
+                    yOrigin: y0,
+                    width: planeWidth,
+                    height: planeHeight
+                )
+            case let .rgba(bytes):
+                bytes.withUnsafeBytes { rawBuffer in
+                    guard let baseAddress = rawBuffer.bindMemory(to: UInt8.self).baseAddress else { return }
+                    Self.writeLuminanceRows(
+                        source: baseAddress,
+                        bytesPerRow: width * 4,
+                        channelOffsets: (red: 0, green: 1, blue: 2),
+                        destination: &values,
+                        xOrigin: x0,
+                        yOrigin: y0,
+                        width: planeWidth,
+                        height: planeHeight
+                    )
+                }
+            }
+            return GolfBallLaunchLuminancePlane(
+                sourceWidth: width,
+                sourceHeight: height,
+                originX: x0,
+                originY: y0,
+                width: planeWidth,
+                height: planeHeight,
+                values: values
+            )
+        }
+
+        private static func writeLuminanceRows(
+            source: UnsafePointer<UInt8>,
+            bytesPerRow: Int,
+            channelOffsets: (red: Int, green: Int, blue: Int),
+            destination: inout [Float],
+            xOrigin: Int,
+            yOrigin: Int,
+            width: Int,
+            height: Int
+        ) {
+            for y in 0..<height {
+                let row = source.advanced(by: ((yOrigin + y) * bytesPerRow) + (xOrigin * 4))
+                for x in 0..<width {
+                    let pixel = row.advanced(by: x * 4)
+                    destination[(y * width) + x] = (0.2126 * Float(pixel[channelOffsets.red]))
+                        + (0.7152 * Float(pixel[channelOffsets.green]))
+                        + (0.0722 * Float(pixel[channelOffsets.blue]))
                 }
             }
         }

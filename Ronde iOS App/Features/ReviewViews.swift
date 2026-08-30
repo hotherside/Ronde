@@ -1318,6 +1318,8 @@ struct RangeReviewWorkspace: View {
                                     ? tracerRevealStartTime + tracerFlightDuration
                                     : playback.currentTime,
                                 impactTime: tracerRevealStartTime,
+                                modelFlightDuration: selectedCandidate.evidenceAnchoredPath?
+                                    .estimatedFlightDuration,
                                 flightDuration: tracerFlightDuration,
                                 isEditing: isTracerEditing,
                                 isManual: selectedCandidate.hasManualTracer,
@@ -1406,7 +1408,19 @@ struct RangeReviewWorkspace: View {
         guard let selectedCandidate else { return TracerRevealTimeline.defaultFlightDuration }
         if let anchored = selectedCandidate.evidenceAnchoredPath {
             if let estimatedFlightDuration = anchored.estimatedFlightDuration {
-                return max(0.18, estimatedFlightDuration)
+                let observedTrailLag = TimedTrajectoryPath(
+                    points: anchored.observedPoints,
+                    presentationTimes: anchored.observedPresentationTimes
+                )?.suggestedTrailLag ?? 0
+                return FullFlightRevealTimeline.presentationFlightDuration(
+                    modelFlightDuration: estimatedFlightDuration,
+                    impactTime: selectedCandidate.impactTime,
+                    lastObservedTime: anchored.observedPresentationTimes.last
+                        ?? selectedCandidate.impactTime,
+                    availablePostImpactDuration: selectedCandidate.endTime
+                        - selectedCandidate.impactTime,
+                    observedTrailLag: observedTrailLag
+                )
             }
             let observedDuration: TimeInterval
             if let first = anchored.observedPresentationTimes.first,

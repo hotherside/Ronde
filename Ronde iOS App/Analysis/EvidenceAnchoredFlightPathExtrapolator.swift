@@ -123,11 +123,34 @@ struct EvidenceAnchoredFlightPathExtrapolator: Sendable {
         // Physics time begins at impact, not at the first mid-air observation. Treating the first
         // observed point as height zero was the direct cause of the foreground launch spike and
         // the continuation ending in the sky.
-        let samples = zip(observed, timestamps).map { point, time in
+        let observedSamples = zip(observed, timestamps).map { point, time in
             (x: point.x, y: point.y, time: time - impactTime)
         }
-        let speedPrior = launchSpeedPrior(for: samples)
-        let fits = fittedModels(for: samples, speedPrior: speedPrior)
+        let launchAnchor = estimate.observedLaunchAnchor.flatMap { point -> NormalizedPoint? in
+            guard abs(point.x - observed[0].x) <= 0.08,
+                  point.y >= observed[0].y + 0.06 else {
+                return nil
+            }
+            return point
+        }
+        let speedSamples = launchAnchor.map {
+            [(x: $0.x, y: $0.y, time: 0.0)] + observedSamples
+        } ?? observedSamples
+        // The launch ball is a single source-frame observation while the flight track contains
+        // many samples. Give that independent anchor enough weight to constrain the otherwise
+        // underdetermined camera projection without presenting it as a measured world distance.
+        let fitSamples = launchAnchor.map { anchor in
+            Array(
+                repeating: (x: anchor.x, y: anchor.y, time: 0.0),
+                count: max(2, min(5, observedSamples.count / 2))
+            ) + observedSamples
+        } ?? observedSamples
+        let speedPrior = launchSpeedPrior(for: speedSamples)
+        let fits = fittedModels(
+            for: fitSamples,
+            speedPrior: speedPrior,
+            launchAnchor: launchAnchor
+        )
         guard let best = fits.min(by: { $0.selectionScore < $1.selectionScore }),
               best.error <= configuration.maximumFitError else {
             return EvidenceAnchoredFlightPath(
@@ -147,7 +170,8 @@ struct EvidenceAnchoredFlightPathExtrapolator: Sendable {
             model: best.parameters,
             firstObserved: observed[0],
             firstObservedFlightTime: firstObservedFlightTime,
-            duration: connectorDuration
+            duration: launchAnchor == nil ? connectorDuration : firstObservedFlightTime,
+            observedLaunchAnchor: launchAnchor
         )
         let continuation = landingContinuation(
             model: best.parameters,
@@ -172,7 +196,9 @@ struct EvidenceAnchoredFlightPathExtrapolator: Sendable {
             observedPoints: observed,
             inferredContinuation: continuation,
             observedPresentationTimes: timestamps,
-            inferredLaunchPresentationDuration: connectorDuration,
+            inferredLaunchPresentationDuration: launchAnchor == nil
+                ? connectorDuration
+                : firstObservedFlightTime,
             inferredPresentationDuration: continuationDuration,
             estimatedFlightDuration: best.flightDuration,
             estimatedCarry: carryEstimate(from: fits, bestScore: best.selectionScore),
@@ -183,7 +209,8 @@ struct EvidenceAnchoredFlightPathExtrapolator: Sendable {
 
     private func fittedModels(
         for samples: [(x: Double, y: Double, time: Double)],
-        speedPrior: LaunchSpeedPrior
+        speedPrior: LaunchSpeedPrior,
+        launchAnchor: NormalizedPoint?
     ) -> [FittedModel] {
         guard let first = samples.first, let last = samples.last else { return [] }
         var fits: [FittedModel] = []
@@ -220,11 +247,16 @@ struct EvidenceAnchoredFlightPathExtrapolator: Sendable {
                         x: landing.x + (last.x - modelAtLastObservation.x),
                         y: landing.y + (last.y - modelAtLastObservation.y)
                     )
+                    let launchIsPlausible = launchAnchor.map {
+                        hypot(launch.x - $0.x, launch.y - $0.y) <= 0.045
+                    } ?? (
+                        launch.y >= min(0.98, first.y + 0.08)
+                            && launch.y <= 0.98
+                    )
                     guard parameters.horizonY >= 0.20,
                           parameters.horizonY <= 0.72,
                           (0.035...0.965).contains(launch.x),
-                          launch.y >= min(0.98, first.y + 0.08),
-                          launch.y <= 0.98,
+                          launchIsPlausible,
                           (0.035...0.965).contains(landing.x),
                           (0.035...0.965).contains(landing.y),
                           landing.y > parameters.horizonY,
@@ -257,7 +289,8 @@ struct EvidenceAnchoredFlightPathExtrapolator: Sendable {
         model: ModelParameters,
         firstObserved: NormalizedPoint,
         firstObservedFlightTime: TimeInterval,
-        duration: TimeInterval
+        duration: TimeInterval,
+        observedLaunchAnchor: NormalizedPoint?
     ) -> [NormalizedPoint] {
         guard duration > 0.01 else { return [] }
         let modelJoin = project(model, at: firstObservedFlightTime)
@@ -277,14 +310,18 @@ struct EvidenceAnchoredFlightPathExtrapolator: Sendable {
         var time = startTime
         while time < firstObservedFlightTime - (step / 2) {
             let projected = project(model, at: time)
-            let blend = time / max(firstObservedFlightTime, 0.001)
             let connectorProgress = (time - startTime)
                 / max(firstObservedFlightTime - startTime, 0.001)
+            let startOffset = observedLaunchAnchor.map {
+                (x: $0.x - modelStart.x, y: $0.y - modelStart.y)
+            } ?? (x: 0, y: startAdjustmentY)
             result.append(NormalizedPoint(
-                x: projected.x + (joinOffset.x * blend),
+                x: projected.x
+                    + (startOffset.x * (1 - connectorProgress))
+                    + (joinOffset.x * connectorProgress),
                 y: projected.y
-                    + (joinOffset.y * blend)
-                    + (startAdjustmentY * (1 - connectorProgress))
+                    + (startOffset.y * (1 - connectorProgress))
+                    + (joinOffset.y * connectorProgress)
             ))
             time += step
         }
@@ -297,23 +334,89 @@ struct EvidenceAnchoredFlightPathExtrapolator: Sendable {
         lastObservedFlightTime: TimeInterval,
         flightDuration: TimeInterval
     ) -> [NormalizedPoint] {
-        guard let last = observed.last,
+        guard let first = observed.first,
+              let last = observed.last,
               flightDuration - lastObservedFlightTime >= 0.18 else { return [] }
 
         let joinReference = project(model, at: lastObservedFlightTime)
         let joinOffset = (x: last.x - joinReference.x, y: last.y - joinReference.y)
+        let rawLanding = project(model, at: flightDuration)
+        let boundedLandingX = Self.boundedLandingX(
+            firstObservedX: first.x,
+            lastObservedX: last.x,
+            rawLandingX: rawLanding.x
+        )
+        let landingCorrectionX = boundedLandingX - rawLanding.x
+        let corridor = (
+            lower: max(0.035, min(last.x, boundedLandingX) - 0.008),
+            upper: min(0.965, max(last.x, boundedLandingX) + 0.008)
+        )
+        let continuationDuration = flightDuration - lastObservedFlightTime
         let step = 1 / configuration.sampleRate
         var result: [NormalizedPoint] = []
         var time = lastObservedFlightTime + step
         while time <= flightDuration + (step / 2) {
             let projected = project(model, at: min(time, flightDuration))
+            let progress = min(
+                1,
+                max(0, (time - lastObservedFlightTime) / continuationDuration)
+            )
+            let residualWeight = Self.continuationResidualWeight(progress: progress)
+            let landingBlend = Self.smoothstep(progress)
+            let adjustedX = projected.x
+                + (joinOffset.x * residualWeight)
+                + (landingCorrectionX * landingBlend)
             result.append(NormalizedPoint(
-                x: projected.x + joinOffset.x,
-                y: projected.y + joinOffset.y
+                x: min(corridor.upper, max(corridor.lower, adjustedX)),
+                y: projected.y + (joinOffset.y * residualWeight)
             ))
             time += step
         }
+        let launch = project(model, at: 0)
+        guard let landing = result.last,
+              landing.y > model.horizonY,
+              landing.y < launch.y,
+              Self.isSafeEstimatedPoint(landing) else {
+            return []
+        }
         return result
+    }
+
+    /// Residual alignment is strongest at the observed join and disappears down-range so a small
+    /// detector/model mismatch cannot become a large landing displacement.
+    static func continuationResidualWeight(progress: Double) -> Double {
+        let boundedProgress = min(1, max(0, progress))
+        return pow(1 - boundedProgress, 2)
+    }
+
+    static func maximumLandingDX(observedDX: Double) -> Double {
+        min(0.055, max(0.012, abs(observedDX) * 2.5 + 0.008))
+    }
+
+    /// Caps the final lateral displacement relative to the last observed point. Once the observed
+    /// track establishes a direction, the estimated landing cannot reverse it towards foreground
+    /// geometry merely because the unconstrained single-view projection drifts the other way.
+    static func boundedLandingX(
+        firstObservedX: Double,
+        lastObservedX: Double,
+        rawLandingX: Double
+    ) -> Double {
+        let observedDX = lastObservedX - firstObservedX
+        let maximumDX = maximumLandingDX(observedDX: observedDX)
+        let rawDX = rawLandingX - lastObservedX
+        let boundedDX: Double
+        if abs(observedDX) >= 0.002 {
+            let direction = observedDX < 0 ? -1.0 : 1.0
+            boundedDX = direction * min(maximumDX, abs(rawDX))
+        } else {
+            boundedDX = min(maximumDX, max(-maximumDX, rawDX))
+        }
+        return min(0.965, max(0.035, lastObservedX + boundedDX))
+    }
+
+    static func smoothstep(_ progress: Double) -> Double {
+        let boundedProgress = min(1, max(0, progress))
+        return boundedProgress * boundedProgress * (3 - (2 * boundedProgress))
     }
 
     /// For fixed physical parameters, image `y` is linear in

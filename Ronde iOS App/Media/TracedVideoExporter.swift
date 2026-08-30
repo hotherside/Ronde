@@ -63,6 +63,7 @@ struct TracedVideoTracerGeometry: Sendable, Equatable {
     let inferredLaunchPresentationDuration: TimeInterval
     let observedPresentationDuration: TimeInterval?
     let inferredPresentationDuration: TimeInterval
+    let estimatedFlightDuration: TimeInterval
     let apexPoint: NormalizedPoint?
     let estimatedCarry: EstimatedCarryDistance?
 
@@ -76,6 +77,13 @@ struct TracedVideoTracerGeometry: Sendable, Equatable {
         self.inferredLaunchPresentationDuration = path.inferredLaunchPresentationDuration
         self.observedPresentationDuration = path.observedDuration
         self.inferredPresentationDuration = path.inferredPresentationDuration
+        self.estimatedFlightDuration = path.estimatedFlightDuration
+            ?? max(
+                0.18,
+                path.inferredLaunchPresentationDuration
+                    + (path.observedDuration ?? 0)
+                    + path.inferredPresentationDuration
+            )
         self.apexPoint = path.apexPoint
         self.estimatedCarry = path.estimatedCarry
     }
@@ -89,6 +97,7 @@ struct TracedVideoTracerGeometry: Sendable, Equatable {
         self.inferredLaunchPresentationDuration = 0
         self.observedPresentationDuration = nil
         self.inferredPresentationDuration = 0
+        self.estimatedFlightDuration = 0
         self.apexPoint = apex
         self.estimatedCarry = nil
     }
@@ -223,7 +232,8 @@ actor TracedVideoExporter {
             geometry: request.geometry,
             renderSize: renderSize,
             revealStartTime: max(0, request.revealStartTime - request.sourceRange.start),
-            sourceRangeStartTime: request.sourceRange.start
+            sourceRangeStartTime: request.sourceRange.start,
+            sourceRangeDuration: request.sourceRange.duration
         ))
         videoComposition.animationTool = AVVideoCompositionCoreAnimationTool(
             postProcessingAsVideoLayer: videoLayer,
@@ -262,7 +272,8 @@ actor TracedVideoExporter {
         geometry: TracedVideoTracerGeometry,
         renderSize: CGSize,
         revealStartTime: TimeInterval,
-        sourceRangeStartTime: TimeInterval
+        sourceRangeStartTime: TimeInterval,
+        sourceRangeDuration: TimeInterval
     ) -> CALayer {
         let container = CALayer()
         container.frame = CGRect(origin: .zero, size: renderSize)
@@ -275,14 +286,32 @@ actor TracedVideoExporter {
             .map { max(observedStartTime, $0.endTime - sourceRangeStartTime) }
             ?? (observedStartTime + observedDuration)
         let observedTrailLag = timedObservedPath?.suggestedTrailLag ?? 0
-        let observedTrailStartTime = observedStartTime + observedTrailLag
-        let observedTrailEndTime = observedEndTime + observedTrailLag
-        let estimatedRevealTime = observedTrailEndTime + 0.02
+        let presentationFlightDuration = FullFlightRevealTimeline.presentationFlightDuration(
+            modelFlightDuration: geometry.estimatedFlightDuration,
+            impactTime: revealStartTime + sourceRangeStartTime,
+            lastObservedTime: timedObservedPath?.endTime
+                ?? (revealStartTime + sourceRangeStartTime),
+            availablePostImpactDuration: sourceRangeDuration - revealStartTime,
+            observedTrailLag: observedTrailLag
+        )
+        let fullFlightTimeline = geometry.provenance == .userAssisted
+            ? nil
+            : FullFlightRevealTimeline(
+                impactTime: revealStartTime + sourceRangeStartTime,
+                inferredLaunchConnector: geometry.inferredLaunchConnector,
+                observedPoints: geometry.observedPoints,
+                observedPresentationTimes: geometry.observedPresentationTimes,
+                inferredContinuation: geometry.inferredContinuation,
+                estimatedFlightDuration: geometry.estimatedFlightDuration > 0
+                    ? geometry.estimatedFlightDuration
+                    : presentationFlightDuration,
+                presentationFlightDuration: presentationFlightDuration
+            )
 
-        if let timedObservedPath {
-            addTimedObservedStroke(
-                trajectory: timedObservedPath,
-                beginTime: observedTrailStartTime,
+        if let fullFlightTimeline {
+            addFullFlightTimelineStroke(
+                timeline: fullFlightTimeline,
+                sourceRangeStartTime: sourceRangeStartTime,
                 renderSize: renderSize,
                 to: container
             )
@@ -305,49 +334,45 @@ actor TracedVideoExporter {
             )
         }
 
-        if !geometry.inferredLaunchSegmentPoints.isEmpty {
-            addStaticTracerStroke(
-                points: geometry.inferredLaunchSegmentPoints,
-                estimated: true,
-                fadeInTime: estimatedRevealTime,
-                renderSize: renderSize,
-                to: container
-            )
-        }
-
-        if !geometry.inferredSegmentPoints.isEmpty {
-            addStaticTracerStroke(
-                points: geometry.inferredSegmentPoints,
-                estimated: true,
-                fadeInTime: estimatedRevealTime,
-                renderSize: renderSize,
-                to: container
-            )
-        }
-
         addApexMarker(
             geometry: geometry,
+            fullFlightTimeline: fullFlightTimeline,
             observedStartTime: observedStartTime,
             observedTrailLag: observedTrailLag,
-            estimatedRevealTime: estimatedRevealTime,
+            sourceRangeStartTime: sourceRangeStartTime,
+            renderSize: renderSize,
+            to: container
+        )
+        addEstimatedLandingMarker(
+            geometry: geometry,
+            fullFlightTimeline: fullFlightTimeline,
             sourceRangeStartTime: sourceRangeStartTime,
             renderSize: renderSize,
             to: container
         )
 
         let metricText = geometry.estimatedCarry.map { "MODEL CARRY  \($0.displayText)" }
-        if let metricText {
+        if let metricText,
+           fullFlightTimeline?.revealsEstimatedLanding == true {
+            let metricFontSize = max(22, min(46, renderSize.width * 0.012))
+            let metricWidth = min(
+                renderSize.width - 56,
+                max(360, metricFontSize * CGFloat(metricText.count) * 0.72 + 32)
+            )
             let metricBadge = textBadge(
                 metricText,
-                fontSize: max(22, min(46, renderSize.width * 0.012)),
+                fontSize: metricFontSize,
                 frame: CGRect(
                     x: 28,
                     y: renderSize.height - 82,
-                    width: min(renderSize.width - 56, 520),
+                    width: metricWidth,
                     height: 54
                 )
             )
-            fadeIn(metricBadge, beginTime: estimatedRevealTime)
+            let landingRevealTime = fullFlightTimeline
+                .map { max(0, $0.endTime - sourceRangeStartTime) }
+                ?? observedEndTime
+            fadeIn(metricBadge, beginTime: landingRevealTime, duration: 0.08)
             container.addSublayer(metricBadge)
         }
 
@@ -365,9 +390,9 @@ actor TracedVideoExporter {
         )
         fadeIn(
             provenanceBadge,
-            beginTime: geometry.provenance == .observedAndInferred
-                ? estimatedRevealTime
-                : observedStartTime
+            beginTime: fullFlightTimeline
+                .map { max(0, $0.impactTime - sourceRangeStartTime) }
+                ?? observedStartTime
         )
         container.addSublayer(provenanceBadge)
 
@@ -384,70 +409,135 @@ actor TracedVideoExporter {
     ) {
         guard points.count >= 2 else { return }
         let tracerPurple = CGColor(red: 0.57, green: 0.28, blue: 0.98, alpha: 1)
-        let estimatedPurple = CGColor(red: 0.74, green: 0.58, blue: 1.00, alpha: 0.92)
-        let lineWidth = max(4, renderSize.width * (estimated ? 0.0038 : 0.0048))
+        let provenanceOpacity: CGFloat = estimated ? 0.74 : 1
+        let lineWidth = max(4, renderSize.width * 0.0048)
         let tracerPath = path(from: points, in: renderSize)
 
         let glow = CAShapeLayer()
         glow.path = tracerPath
         glow.fillColor = nil
-        glow.strokeColor = tracerPurple.copy(alpha: estimated ? 0.30 : 0.48)
+        glow.strokeColor = tracerPurple.copy(alpha: 0.48 * provenanceOpacity)
         glow.lineWidth = max(10, lineWidth * 2.25)
         glow.lineCap = .round
         glow.lineJoin = .round
         glow.shadowColor = tracerPurple
         glow.shadowRadius = max(8, lineWidth * 0.8)
-        glow.shadowOpacity = estimated ? 0.55 : 0.88
-        if estimated {
-            glow.lineDashPattern = [
-                NSNumber(value: Double(lineWidth * 1.8)),
-                NSNumber(value: Double(lineWidth * 1.25))
-            ]
-        }
+        glow.shadowOpacity = Float(0.88 * provenanceOpacity)
         container.addSublayer(glow)
 
         let stroke = CAShapeLayer()
         stroke.path = tracerPath
         stroke.fillColor = nil
-        stroke.strokeColor = estimated ? estimatedPurple : tracerPurple
+        stroke.strokeColor = tracerPurple.copy(alpha: provenanceOpacity)
         stroke.lineWidth = lineWidth
         stroke.lineCap = .round
         stroke.lineJoin = .round
-        if estimated {
-            stroke.lineDashPattern = [
-                NSNumber(value: Double(lineWidth * 1.8)),
-                NSNumber(value: Double(lineWidth * 1.25))
-            ]
-        }
         container.addSublayer(stroke)
 
         animateStroke(glow, beginTime: beginTime, duration: duration)
         animateStroke(stroke, beginTime: beginTime, duration: duration)
     }
 
-    private static func addTimedObservedStroke(
-        trajectory: TimedTrajectoryPath,
-        beginTime: TimeInterval,
+    private static func addFullFlightTimelineStroke(
+        timeline: FullFlightRevealTimeline,
+        sourceRangeStartTime: TimeInterval,
         renderSize: CGSize,
         to container: CALayer
     ) {
-        let keyframes = trajectory.strokeRevealKeyframes()
-        guard keyframes.samples.count >= 2 else { return }
-        let layers = tracerLayers(
-            points: keyframes.samples.map(\.point),
-            estimated: false,
-            renderSize: renderSize
-        )
-        for layer in layers {
-            container.addSublayer(layer)
+        let keyframes = timeline.strokeRevealKeyframes()
+        let points = timeline.smoothedSamples.map(\.point)
+        let tracerPath = path(from: points, in: renderSize)
+        let beginTime = max(0, timeline.impactTime - sourceRangeStartTime)
+        let duration = max(0.01, timeline.endTime - timeline.impactTime)
+        let tracerPurple = CGColor(red: 0.57, green: 0.28, blue: 0.98, alpha: 1)
+        let baseWidth = max(4, renderSize.width * 0.0048)
+
+        func addSegment(_ range: FullFlightPathRange?, estimated: Bool) {
+            guard let range, range.isDrawable else { return }
+            let rangeLength = range.upperBound - range.lowerBound
+            let provenanceOpacity: CGFloat = estimated ? 0.74 : 1
+            let rangeValues = keyframes.strokeValues.map {
+                min(range.upperBound, max(range.lowerBound, $0))
+            }
+            let rangeMidpoint = (range.lowerBound + range.upperBound) / 2
+            let averageWidth = baseWidth * CGFloat(1 - (0.50 * pow(rangeMidpoint, 1.08)))
+
+            let glow = CAShapeLayer()
+            glow.path = tracerPath
+            glow.fillColor = nil
+            glow.strokeColor = tracerPurple.copy(alpha: 0.42 * provenanceOpacity)
+            glow.lineWidth = averageWidth * 1.9
+            glow.lineCap = .round
+            glow.lineJoin = .round
+            glow.shadowColor = tracerPurple
+            glow.shadowRadius = max(8, averageWidth * 0.8)
+            glow.shadowOpacity = Float(0.70 * provenanceOpacity)
+            glow.strokeStart = CGFloat(range.lowerBound)
+            container.addSublayer(glow)
             animateStroke(
-                layer,
+                glow,
                 beginTime: beginTime,
-                duration: max(0.01, trajectory.duration),
+                duration: duration,
                 keyTimes: keyframes.keyTimes,
-                strokeValues: keyframes.strokeValues
+                strokeValues: rangeValues
+            )
+
+            let sliceCount = max(1, Int(ceil(rangeLength * 40)))
+            for index in 0..<sliceCount {
+                let lower = range.lowerBound
+                    + (rangeLength * Double(index) / Double(sliceCount))
+                let upper = range.lowerBound
+                    + (rangeLength * Double(index + 1) / Double(sliceCount))
+                let midpoint = (lower + upper) / 2
+                let lineWidth = baseWidth * CGFloat(1 - (0.50 * pow(midpoint, 1.08)))
+                let values = keyframes.strokeValues.map {
+                    min(upper, max(lower, $0))
+                }
+                let outlineWidth = lineWidth + max(2.4, renderSize.width * 0.0007)
+                let layers: [(CAShapeLayer, CGColor, CGFloat)] = [
+                    (CAShapeLayer(), CGColor(gray: 0.02, alpha: 0.34 * provenanceOpacity), outlineWidth),
+                    (CAShapeLayer(), tracerPurple.copy(alpha: provenanceOpacity)!, lineWidth)
+                ]
+                for (layer, colour, width) in layers {
+                    layer.path = tracerPath
+                    layer.fillColor = nil
+                    layer.strokeColor = colour
+                    layer.lineWidth = width
+                    layer.lineCap = .butt
+                    layer.lineJoin = .round
+                    layer.strokeStart = CGFloat(lower)
+                    container.addSublayer(layer)
+                    animateStroke(
+                        layer,
+                        beginTime: beginTime,
+                        duration: duration,
+                        keyTimes: keyframes.keyTimes,
+                        strokeValues: values
+                    )
+                }
+            }
+
+            let highlight = CAShapeLayer()
+            highlight.path = tracerPath
+            highlight.fillColor = nil
+            highlight.strokeColor = CGColor(gray: 1, alpha: 0.64 * provenanceOpacity)
+            highlight.lineWidth = max(1, renderSize.width * 0.00024)
+            highlight.lineCap = .round
+            highlight.lineJoin = .round
+            highlight.strokeStart = CGFloat(range.lowerBound)
+            container.addSublayer(highlight)
+            animateStroke(
+                highlight,
+                beginTime: beginTime,
+                duration: duration,
+                keyTimes: keyframes.keyTimes,
+                strokeValues: rangeValues
             )
         }
+
+        addSegment(timeline.launchRange, estimated: true)
+        addSegment(timeline.observedRange, estimated: false)
+        addSegment(timeline.continuationRange, estimated: true)
     }
 
     private static func addStaticTracerStroke(
@@ -470,45 +560,37 @@ actor TracedVideoExporter {
     ) -> [CAShapeLayer] {
         guard points.count >= 2 else { return [] }
         let tracerPurple = CGColor(red: 0.57, green: 0.28, blue: 0.98, alpha: 1)
-        let estimatedPurple = CGColor(red: 0.74, green: 0.58, blue: 1.00, alpha: 0.92)
-        let lineWidth = max(4, renderSize.width * (estimated ? 0.0038 : 0.0048))
+        let provenanceOpacity: CGFloat = estimated ? 0.74 : 1
+        let lineWidth = max(4, renderSize.width * 0.0048)
         let tracerPath = path(from: points, in: renderSize)
 
         let glow = CAShapeLayer()
         glow.path = tracerPath
         glow.fillColor = nil
-        glow.strokeColor = tracerPurple.copy(alpha: estimated ? 0.30 : 0.48)
+        glow.strokeColor = tracerPurple.copy(alpha: 0.48 * provenanceOpacity)
         glow.lineWidth = max(10, lineWidth * 2.25)
         glow.lineCap = .round
         glow.lineJoin = .round
         glow.shadowColor = tracerPurple
         glow.shadowRadius = max(8, lineWidth * 0.8)
-        glow.shadowOpacity = estimated ? 0.55 : 0.88
+        glow.shadowOpacity = Float(0.88 * provenanceOpacity)
 
         let stroke = CAShapeLayer()
         stroke.path = tracerPath
         stroke.fillColor = nil
-        stroke.strokeColor = estimated ? estimatedPurple : tracerPurple
+        stroke.strokeColor = tracerPurple.copy(alpha: provenanceOpacity)
         stroke.lineWidth = lineWidth
         stroke.lineCap = .round
         stroke.lineJoin = .round
 
-        if estimated {
-            let dashPattern = [
-                NSNumber(value: Double(lineWidth * 1.8)),
-                NSNumber(value: Double(lineWidth * 1.25))
-            ]
-            glow.lineDashPattern = dashPattern
-            stroke.lineDashPattern = dashPattern
-        }
         return [glow, stroke]
     }
 
     private static func addApexMarker(
         geometry: TracedVideoTracerGeometry,
+        fullFlightTimeline: FullFlightRevealTimeline?,
         observedStartTime: TimeInterval,
         observedTrailLag: TimeInterval,
-        estimatedRevealTime: TimeInterval,
         sourceRangeStartTime: TimeInterval,
         renderSize: CGSize,
         to container: CALayer
@@ -517,8 +599,9 @@ actor TracedVideoExporter {
         let hasEstimatedGeometry = !geometry.inferredLaunchConnector.isEmpty
             || !geometry.inferredContinuation.isEmpty
         let appearTime: TimeInterval
-        if hasEstimatedGeometry {
-            appearTime = estimatedRevealTime
+        if let fullFlightTimeline {
+            guard let revealTime = fullFlightTimeline.revealTime(for: apex) else { return }
+            appearTime = max(0, revealTime - sourceRangeStartTime)
         } else if let apexTime = geometry.timedObservedPath?.presentationTime(for: apex) {
             appearTime = max(
                 observedStartTime + observedTrailLag,
@@ -557,6 +640,56 @@ actor TracedVideoExporter {
         )
         fadeIn(apexLabel, beginTime: appearTime)
         container.addSublayer(apexLabel)
+    }
+
+    private static func addEstimatedLandingMarker(
+        geometry: TracedVideoTracerGeometry,
+        fullFlightTimeline: FullFlightRevealTimeline?,
+        sourceRangeStartTime: TimeInterval,
+        renderSize: CGSize,
+        to container: CALayer
+    ) {
+        guard let landing = geometry.inferredContinuation.last,
+              let fullFlightTimeline,
+              fullFlightTimeline.revealsEstimatedLanding else {
+            return
+        }
+        let appearTime = max(0, fullFlightTimeline.endTime - sourceRangeStartTime)
+        let centre = point(from: landing, in: renderSize)
+        let radius = max(8, renderSize.width * 0.0036)
+
+        let marker = CAShapeLayer()
+        marker.path = CGPath(
+            ellipseIn: CGRect(
+                x: centre.x - radius,
+                y: centre.y - radius,
+                width: radius * 2,
+                height: radius * 2
+            ),
+            transform: nil
+        )
+        marker.fillColor = CGColor(red: 0.57, green: 0.28, blue: 0.98, alpha: 1)
+        marker.strokeColor = CGColor(gray: 1, alpha: 0.96)
+        marker.lineWidth = max(3, radius * 0.28)
+        marker.shadowColor = CGColor(red: 0.57, green: 0.28, blue: 0.98, alpha: 1)
+        marker.shadowRadius = radius
+        marker.shadowOpacity = 0.8
+        fadeIn(marker, beginTime: appearTime, duration: 0.08)
+        container.addSublayer(marker)
+
+        let labelWidth = max(130, renderSize.width * 0.072)
+        let label = textBadge(
+            "EST. LANDING",
+            fontSize: max(15, min(28, renderSize.width * 0.0075)),
+            frame: CGRect(
+                x: min(renderSize.width - labelWidth - 12, centre.x + radius + 10),
+                y: max(12, min(renderSize.height - 36, centre.y - radius - 38)),
+                width: labelWidth,
+                height: 34
+            )
+        )
+        fadeIn(label, beginTime: appearTime, duration: 0.08)
+        container.addSublayer(label)
     }
 
     private static func textBadge(
@@ -620,12 +753,16 @@ actor TracedVideoExporter {
         return context.makeImage()
     }
 
-    private static func fadeIn(_ layer: CALayer, beginTime: TimeInterval) {
+    private static func fadeIn(
+        _ layer: CALayer,
+        beginTime: TimeInterval,
+        duration: TimeInterval = 0.16
+    ) {
         let fade = CABasicAnimation(keyPath: "opacity")
         fade.fromValue = 0
         fade.toValue = 1
         fade.beginTime = AVCoreAnimationBeginTimeAtZero + beginTime
-        fade.duration = 0.16
+        fade.duration = duration
         fade.fillMode = .both
         fade.isRemovedOnCompletion = false
         layer.add(fade, forKey: "fadeIn")
@@ -679,6 +816,7 @@ actor TracedVideoExporter {
             basic.toValue = 1
             animation = basic
         }
+        layer.strokeEnd = CGFloat(strokeValues?.first ?? 0)
         animation.beginTime = AVCoreAnimationBeginTimeAtZero + beginTime
         animation.duration = duration
         animation.fillMode = .both

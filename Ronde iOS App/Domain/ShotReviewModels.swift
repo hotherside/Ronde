@@ -650,6 +650,340 @@ struct TimedTrajectoryPath: Sendable, Equatable {
     }
 }
 
+/// A cumulative-distance interval on one renderer-smoothed flight path.
+///
+/// Provenance is represented by the stroke applied to the interval. It does not create a second
+/// path or a second reveal clock, so changing from estimated to observed geometry cannot reorder
+/// the shot or introduce a spatial seam.
+struct FullFlightPathRange: Sendable, Equatable {
+    let lowerBound: Double
+    let upperBound: Double
+
+    init(lowerBound: Double, upperBound: Double) {
+        self.lowerBound = min(1, max(0, lowerBound))
+        self.upperBound = min(1, max(self.lowerBound, upperBound))
+    }
+
+    var isDrawable: Bool { upperBound - lowerBound > 0.000_001 }
+
+    func visibleRange(through visibleDistance: Double) -> ClosedRange<Double>? {
+        let upper = min(upperBound, max(lowerBound, visibleDistance))
+        guard upper - lowerBound > 0.000_001 else { return nil }
+        return lowerBound...upper
+    }
+}
+
+/// Renderer-only chronology for a complete evidence-anchored ball flight.
+///
+/// The input detector timestamps remain authoritative for the observed segment. Estimated launch
+/// and continuation samples receive monotonic model times around those observations. The complete
+/// sequence is then smoothed exactly once and exposed as cumulative-distance ranges, allowing
+/// SwiftUI playback and Core Animation export to share the same geometry and reveal keyframes.
+struct FullFlightRevealTimeline: Sendable, Equatable {
+    let impactTime: TimeInterval
+    let firstObservedTime: TimeInterval
+    let lastObservedTime: TimeInterval
+    let endTime: TimeInterval
+    let observedTrailLag: TimeInterval
+    let smoothedSamples: [TimedTrajectorySample]
+    let launchRange: FullFlightPathRange?
+    let observedRange: FullFlightPathRange
+    let continuationRange: FullFlightPathRange?
+    /// False when the source ends too early to preserve the modelled apex causally. The timeline
+    /// may still reveal the model-timed ascent prefix, but landing markers and carry must remain
+    /// hidden because the fitted landing was not reached.
+    let revealsEstimatedLanding: Bool
+
+    private let sourceSamples: [TimedTrajectorySample]
+    private let distanceFractions: [Double]
+
+    /// Fits the modelled reveal inside the available source while preserving the detector's timed
+    /// segment and leaving a short final hold on the completed tracer. This changes presentation
+    /// timing only; it does not shorten the modelled flight or convert its landing into evidence.
+    static func presentationFlightDuration(
+        modelFlightDuration: TimeInterval,
+        impactTime: TimeInterval,
+        lastObservedTime: TimeInterval,
+        availablePostImpactDuration: TimeInterval,
+        observedTrailLag: TimeInterval = 0
+    ) -> TimeInterval {
+        let modelDuration = max(0.18, modelFlightDuration)
+        let available = max(0.18, availablePostImpactDuration)
+        let causalLag = min(0.050, max(0, observedTrailLag))
+        let modelRevealDuration = modelDuration + causalLag
+        guard modelRevealDuration > available else { return modelRevealDuration }
+        let finalHold = min(0.120, available * 0.07)
+        let minimumEvidenceDuration = max(
+            0.18,
+            lastObservedTime - impactTime + causalLag
+        )
+        return min(
+            modelRevealDuration,
+            min(available, max(minimumEvidenceDuration, available - finalHold))
+        )
+    }
+
+    init?(
+        impactTime: TimeInterval,
+        inferredLaunchConnector: [NormalizedPoint],
+        observedPoints: [NormalizedPoint],
+        observedPresentationTimes: [TimeInterval],
+        inferredContinuation: [NormalizedPoint],
+        estimatedFlightDuration: TimeInterval,
+        presentationFlightDuration: TimeInterval? = nil
+    ) {
+        guard impactTime.isFinite,
+              estimatedFlightDuration.isFinite,
+              estimatedFlightDuration > 0,
+              presentationFlightDuration.map({ $0.isFinite && $0 > 0 }) ?? true,
+              let observedPath = TimedTrajectoryPath(
+                  points: observedPoints,
+                  presentationTimes: observedPresentationTimes
+              ),
+              impactTime <= observedPath.startTime else {
+            return nil
+        }
+
+        var launchPoints = inferredLaunchConnector
+        while launchPoints.last == observedPoints.first {
+            launchPoints.removeLast()
+        }
+        var continuationPoints = inferredContinuation
+        while continuationPoints.first == observedPoints.last {
+            continuationPoints.removeFirst()
+        }
+
+        let lag = observedPath.suggestedTrailLag
+        let modelEndTime = impactTime + estimatedFlightDuration
+        let requestedRevealEndTime = impactTime
+            + (presentationFlightDuration ?? (estimatedFlightDuration + lag))
+        let latestCausalSampleTime = requestedRevealEndTime - lag
+        if !continuationPoints.isEmpty,
+           modelEndTime <= observedPath.endTime + lag {
+            return nil
+        }
+
+        var combined: [TimedTrajectorySample] = []
+        combined.reserveCapacity(launchPoints.count + observedPath.samples.count + continuationPoints.count)
+
+        if !launchPoints.isEmpty {
+            let launchDuration = observedPath.startTime - impactTime
+            guard launchDuration > 0 else { return nil }
+            for (index, point) in launchPoints.enumerated() {
+                let fraction = Double(index) / Double(launchPoints.count)
+                combined.append(TimedTrajectorySample(
+                    point: point,
+                    presentationTime: impactTime + (launchDuration * fraction)
+                ))
+            }
+        }
+        combined.append(contentsOf: observedPath.samples)
+
+        var revealsEstimatedLanding = false
+        if !continuationPoints.isEmpty {
+            let continuationDuration = modelEndTime - observedPath.endTime
+            let modelSamples = continuationPoints.enumerated().map { index, point in
+                let fraction = Double(index + 1) / Double(continuationPoints.count)
+                return TimedTrajectorySample(
+                    point: point,
+                    presentationTime: observedPath.endTime + (continuationDuration * fraction)
+                )
+            }
+            let apexIndex = continuationPoints.indices.min {
+                continuationPoints[$0].y < continuationPoints[$1].y
+            } ?? 0
+            let modelApexTime = modelSamples[apexIndex].presentationTime
+            let postApexCount = modelSamples.count - apexIndex - 1
+            let minimumMappedStep = 0.000_001
+            let hasRoomForDescent = latestCausalSampleTime
+                > modelApexTime + (Double(postApexCount) * minimumMappedStep)
+
+            if latestCausalSampleTime + minimumMappedStep < modelApexTime
+                || (postApexCount > 0 && !hasRoomForDescent) {
+                // Never move the apex earlier to force a fitted landing into a source that ends
+                // too soon. Preserve only the model-timed continuation prefix that can be shown
+                // causally and let the presentation withhold apex/landing/carry as necessary.
+                combined.append(contentsOf: modelSamples.prefix {
+                    $0.presentationTime <= latestCausalSampleTime
+                })
+            } else if latestCausalSampleTime < modelEndTime {
+                let compressedDescentDuration = latestCausalSampleTime - modelApexTime
+                let modelDescentDuration = max(minimumMappedStep, modelEndTime - modelApexTime)
+                for sample in modelSamples {
+                    let mappedTime: TimeInterval
+                    if sample.presentationTime <= modelApexTime {
+                        mappedTime = sample.presentationTime
+                    } else {
+                        let progress = (sample.presentationTime - modelApexTime)
+                            / modelDescentDuration
+                        mappedTime = modelApexTime + (compressedDescentDuration * progress)
+                    }
+                    combined.append(TimedTrajectorySample(
+                        point: sample.point,
+                        presentationTime: mappedTime
+                    ))
+                }
+                revealsEstimatedLanding = true
+            } else {
+                combined.append(contentsOf: modelSamples)
+                revealsEstimatedLanding = true
+            }
+        }
+
+        guard let combinedPath = TimedTrajectoryPath(
+            points: combined.map(\.point),
+            presentationTimes: combined.map(\.presentationTime)
+        ) else {
+            return nil
+        }
+        let rendered = combinedPath.smoothedSamples()
+        let fractions = Self.cumulativeDistanceFractions(for: rendered)
+        guard rendered.count == fractions.count,
+              rendered.count >= 2 else {
+            return nil
+        }
+
+        let observedStartDistance = Self.distanceFraction(
+            at: observedPath.startTime,
+            samples: rendered,
+            fractions: fractions
+        )
+        let observedEndDistance = Self.distanceFraction(
+            at: observedPath.endTime,
+            samples: rendered,
+            fractions: fractions
+        )
+
+        self.impactTime = impactTime
+        self.firstObservedTime = observedPath.startTime
+        self.lastObservedTime = observedPath.endTime
+        self.endTime = max(observedPath.endTime, combined.last?.presentationTime ?? 0) + lag
+        self.observedTrailLag = lag
+        self.smoothedSamples = rendered
+        self.sourceSamples = combined
+        self.distanceFractions = fractions
+        self.launchRange = launchPoints.isEmpty
+            ? nil
+            : FullFlightPathRange(lowerBound: 0, upperBound: observedStartDistance)
+        self.observedRange = FullFlightPathRange(
+            lowerBound: observedStartDistance,
+            upperBound: observedEndDistance
+        )
+        self.continuationRange = continuationPoints.isEmpty
+            || combined.count == launchPoints.count + observedPath.samples.count
+            ? nil
+            : FullFlightPathRange(lowerBound: observedEndDistance, upperBound: 1)
+        self.revealsEstimatedLanding = revealsEstimatedLanding
+    }
+
+    /// The cumulative path distance visible at a media time. Estimated launch, observation and
+    /// continuation can only become visible in that order. The sampling-derived lag remains
+    /// attached from the observed range through continuation so the rendered head cannot lead
+    /// the source ball or the model-timed apex.
+    func visibleDistance(at presentationTime: TimeInterval, reducesMotion: Bool = false) -> Double {
+        guard presentationTime >= impactTime else { return 0 }
+        if reducesMotion { return 1 }
+
+        if presentationTime < firstObservedTime {
+            return pathDistance(at: presentationTime)
+        }
+
+        let causalSampleTime = presentationTime - observedTrailLag
+        return max(observedRange.lowerBound, pathDistance(at: causalSampleTime))
+    }
+
+    /// Linear Core Animation keyframes generated from the same function used by SwiftUI playback.
+    /// Denormalising each key time and calling `visibleDistance(at:)` produces the paired value.
+    func strokeRevealKeyframes() -> (keyTimes: [Double], strokeValues: [Double]) {
+        let duration = max(0.000_001, endTime - impactTime)
+        var eventTimes = [impactTime, firstObservedTime]
+
+        for sample in smoothedSamples {
+            if sample.presentationTime < firstObservedTime {
+                eventTimes.append(sample.presentationTime)
+            } else {
+                eventTimes.append(sample.presentationTime + observedTrailLag)
+            }
+        }
+        eventTimes.append(endTime)
+        eventTimes = eventTimes
+            .filter { $0 >= impactTime && $0 <= endTime }
+            .sorted()
+
+        var uniqueTimes: [TimeInterval] = []
+        for time in eventTimes where uniqueTimes.last.map({ abs($0 - time) > 0.000_001 }) ?? true {
+            uniqueTimes.append(time)
+        }
+        guard uniqueTimes.count >= 2 else { return ([0, 1], [0, 1]) }
+        return (
+            uniqueTimes.map { ($0 - impactTime) / duration },
+            uniqueTimes.map { visibleDistance(at: $0) }
+        )
+    }
+
+    func revealTime(for point: NormalizedPoint) -> TimeInterval? {
+        guard let sample = sourceSamples.first(where: { $0.point == point }) else { return nil }
+        if sample.presentationTime < firstObservedTime {
+            return sample.presentationTime
+        }
+        return sample.presentationTime + observedTrailLag
+    }
+
+    func distance(for point: NormalizedPoint) -> Double? {
+        guard let sample = sourceSamples.first(where: { $0.point == point }) else {
+            return nil
+        }
+        return pathDistance(at: sample.presentationTime)
+    }
+
+    private func pathDistance(at presentationTime: TimeInterval) -> Double {
+        Self.distanceFraction(
+            at: presentationTime,
+            samples: smoothedSamples,
+            fractions: distanceFractions
+        )
+    }
+
+    private static func cumulativeDistanceFractions(
+        for samples: [TimedTrajectorySample]
+    ) -> [Double] {
+        guard !samples.isEmpty else { return [] }
+        var cumulative = [Double](repeating: 0, count: samples.count)
+        for index in samples.indices.dropFirst() {
+            let dx = samples[index].point.x - samples[index - 1].point.x
+            let dy = samples[index].point.y - samples[index - 1].point.y
+            cumulative[index] = cumulative[index - 1] + hypot(dx, dy)
+        }
+        let total = max(0.000_001, cumulative.last ?? 0)
+        return cumulative.map { $0 / total }
+    }
+
+    private static func distanceFraction(
+        at presentationTime: TimeInterval,
+        samples: [TimedTrajectorySample],
+        fractions: [Double]
+    ) -> Double {
+        guard let first = samples.first,
+              let last = samples.last,
+              samples.count == fractions.count else {
+            return 0
+        }
+        if presentationTime <= first.presentationTime { return fractions[0] }
+        if presentationTime >= last.presentationTime { return fractions.last ?? 1 }
+        guard let nextIndex = samples.firstIndex(where: {
+            $0.presentationTime > presentationTime
+        }), nextIndex > 0 else {
+            return fractions.last ?? 1
+        }
+        let previous = samples[nextIndex - 1]
+        let next = samples[nextIndex]
+        let interval = max(0.000_001, next.presentationTime - previous.presentationTime)
+        let progress = (presentationTime - previous.presentationTime) / interval
+        return fractions[nextIndex - 1]
+            + ((fractions[nextIndex] - fractions[nextIndex - 1]) * progress)
+    }
+}
+
 /// A deliberately broad carry estimate from an uncalibrated single-camera fit.
 ///
 /// A range is used instead of a precise value because multiple launch speeds, camera distances
@@ -802,6 +1136,10 @@ struct BallFlightEstimate: Codable, Sendable, Equatable {
     var launch: NormalizedPoint
     var apex: NormalizedPoint
     var landing: NormalizedPoint
+    /// A compact source-frame ball detected at impact before it departs the launch area. This is
+    /// independent of the first accepted mid-air track point and may be absent when the source
+    /// does not provide enough before/after evidence.
+    var observedLaunchAnchor: NormalizedPoint?
     var source: BallFlightEstimateSource
     var confidence: Double
     var observedPointCount: Int
@@ -811,6 +1149,7 @@ struct BallFlightEstimate: Codable, Sendable, Equatable {
         launch: NormalizedPoint,
         apex: NormalizedPoint,
         landing: NormalizedPoint,
+        observedLaunchAnchor: NormalizedPoint? = nil,
         source: BallFlightEstimateSource,
         confidence: Double,
         observedPointCount: Int,
@@ -819,6 +1158,7 @@ struct BallFlightEstimate: Codable, Sendable, Equatable {
         self.launch = launch
         self.apex = apex
         self.landing = landing
+        self.observedLaunchAnchor = observedLaunchAnchor
         self.source = source
         self.confidence = min(max(confidence, 0), 1)
         self.observedPointCount = max(0, observedPointCount)
