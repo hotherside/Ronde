@@ -25,16 +25,17 @@ If product intent and implementation disagree, report both. Do not silently desc
 
 ## Product invariants
 
-- Ronde is a watchOS-first, offline-first golf shot counter.
-- The Apple Watch app is the product; the iOS target is currently a minimal companion required for packaging.
+- Ronde is an offline-first Apple Watch golf shot counter with a local-only universal iPhone/iPad Shot Reviewer.
+- The Apple Watch app remains the independent core product; the iOS target is now an active reviewer product surface as well as the required packaging companion.
 - A golfer must be able to start, count, undo, change holes and finish a round without connectivity.
 - Action Button, HealthKit, location and motion permissions must degrade honestly when unavailable or denied.
 - Never infer App Store publication, hardware behaviour or persistence reliability from a successful build.
+- Reviewer uploads accept any source FPS and use source timestamps. Estimated geometry must never be presented as observed ball flight or numerical distance.
 
 ## Repository map
 
 - `Ronde Watch App/`: watchOS application, views, models, services, intents and resources.
-- `Ronde iOS App/`: minimal iPhone companion target.
+- `Ronde iOS App/`: universal iPhone/iPad Shot Reviewer and packaging companion target.
 - `project.yml`: XcodeGen source configuration.
 - `Ronde.xcodeproj/`: generated Xcode project and shared schemes.
 - `docs/context/`: cross-tool context library.
