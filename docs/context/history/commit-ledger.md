@@ -2,9 +2,9 @@
 
 > Generated from Git. Git remains authoritative. Context-only refresh commits are excluded.
 
-- Source commit: `2ee91bb9a21ac20d55644cccbfe809a515691e86`
+- Source commit: `84aa14dd52c41e713a3cf8d53e4f61e329f8f331`
 - Source commit date: 2026-08-30
-- Tracked commit count: 53
+- Tracked commit count: 55
 
 | Date | Commit | Subject |
 | --- | --- | --- |
@@ -56,3 +56,5 @@
 | 2026-08-29 | `1f2e815` | feat(ios): add evidence-backed shot reviewer |
 | 2026-08-30 | `bbdcda6` | feat(ios): complete evidence-backed shot reviewer |
 | 2026-08-30 | `babf929` | Merge pull request #3 from hotherside/codex/ronde-shot-reviewer-v1 |
+| 2026-08-30 | `b5ff93d` | chore(context): reconcile reviewer merge state |
+| 2026-08-30 | `84aa14d` | Merge pull request #4 from hotherside/codex/reconcile-reviewer-merge-context |
