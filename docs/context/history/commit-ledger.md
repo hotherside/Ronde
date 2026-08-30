@@ -2,9 +2,9 @@
 
 > Generated from Git. Git remains authoritative. Context-only refresh commits are excluded.
 
-- Source commit: `5a121df9b1e44aaa0209d60915e63c8cd0bef915`
+- Source commit: `d249512f8ca313698fb6af802f75f8b240286e61`
 - Source commit date: 2026-08-30
-- Tracked commit count: 63
+- Tracked commit count: 66
 
 | Date | Commit | Subject |
 | --- | --- | --- |
@@ -63,3 +63,5 @@
 | 2026-08-30 | `7db177b` | feat(ios): checkpoint experimental shot tracer |
 | 2026-08-30 | `2b9b0c8` | Merge remote-tracking branch 'origin/main' into codex/redesignapp |
 | 2026-08-30 | `5a121df` | Merge pull request #6 from hotherside/codex/redesignapp |
+| 2026-08-30 | `1d93e30` | feat(ios): deliver immersive reviewer redesign |
+| 2026-08-30 | `d249512` | Merge pull request #7 from hotherside/codex/immersive-review-redesign |
