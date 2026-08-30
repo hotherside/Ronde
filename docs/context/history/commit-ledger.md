@@ -2,9 +2,9 @@
 
 > Generated from Git. Git remains authoritative. Context-only refresh commits are excluded.
 
-- Source commit: `0afaa0a02bc663fdc2ef96fdcfa734d98e3608a2`
+- Source commit: `61dbc2916c38c76e0d5b79a869d2f897a9ea9472`
 - Source commit date: 2026-08-30
-- Tracked commit count: 68
+- Tracked commit count: 70
 
 | Date | Commit | Subject |
 | --- | --- | --- |
@@ -66,3 +66,5 @@
 | 2026-08-30 | `1d93e30` | feat(ios): deliver immersive reviewer redesign |
 | 2026-08-30 | `d249512` | Merge pull request #7 from hotherside/codex/immersive-review-redesign |
 | 2026-08-30 | `0afaa0a` | fix(ios): preserve near-30fps tracer samples |
+| 2026-08-30 | `d618dbe` | chore(context): refresh tracer delivery indexes |
+| 2026-08-30 | `61dbc29` | Merge pull request #8 from hotherside/codex/shot-tracer-cadence |
