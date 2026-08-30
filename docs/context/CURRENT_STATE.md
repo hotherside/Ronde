@@ -2,7 +2,7 @@
 
 **Reviewed:** 30 August 2026
 
-**Release branch:** `codex/ronde-shot-reviewer-v1`; this branch is the active reviewer implementation lane. `main` currently points to `823c10d`.
+**Release branch:** `main` contains the merged reviewer release candidate. The original `codex/ronde-shot-reviewer-v1` branch remains available as its source branch.
 
 **Release-candidate scope:** independent watchOS shot-counter hardening plus the accepted universal iPhone/iPad Shot Reviewer expansion.
 
@@ -16,7 +16,7 @@ Ronde is in pre-release product hardening and reviewer validation. The release c
 | --- | --- | --- |
 | watchOS product | Implemented | Standalone watchOS 10+ SwiftUI app; it remains the independent core shot counter. |
 | iPhone/iPad reviewer contract | Accepted | Universal light-theme reviewer with direct single-shot playback, evidence-backed tracer gating, multi-shot Range Session segmentation, Live Review, editable impact-5/+5 clips and local-only processing. See ADR 0006. |
-| iPhone/iPad reviewer | Implemented locally | Local Photos/Files import, explicit One Shot/Range routing, audio/body-motion proposal cues, logical impact-5/+5 playback and portrait-safe video are present. One Shot reviews autoplay once. A passing observed launch seeds a bounded complete tracer whose observed and estimated portions are visually and verbally distinct; unsupported clips fail closed. Manual placement/editing and local traced-video export/share are connected. No persistent session library yet. |
+| iPhone/iPad reviewer | Implemented in `main` | Local Photos/Files import, explicit One Shot/Range routing, audio/body-motion proposal cues, logical impact-5/+5 playback and portrait-safe video are present. One Shot reviews autoplay once. A passing observed launch seeds a bounded complete tracer whose observed and estimated portions are visually and verbally distinct; unsupported clips fail closed. Manual placement/editing and local traced-video export/share are connected. No persistent session library yet. |
 | Live Review automatic loop | Missing | In-app Range recording, rolling segment writer, fused hands-free detection, automatic post-roll replay and temporary-buffer cleanup are not implemented. |
 | Automatic segmentation and tracer quality | Functional; release validation open | The tracker decodes sequentially by source presentation timestamp, samples at a 30 Hz analysis cadence, lets competing full-frame paths establish a launch before local-ROI tracking, trims early detector hand-offs and reports cost instrumentation. Tiled inference now reuses one input tensor per model window and drains prediction temporaries per tile. A displayable observed launch may seed an evidence-anchored estimated continuation. Three supplied private positive originals pass the exact production path, but representative positive/negative metrics and physical-device performance are still missing. |
 | Round setup | Implemented | Quick 9, Quick 18, manual par and bundled Sydney course selection exist. |
@@ -34,7 +34,7 @@ Ronde is in pre-release product hardening and reviewer validation. The release c
 
 ## Current risks
 
-- The release candidate is not available from `main` until its pull request is merged.
+- The reviewer release candidate is merged into `main`, but merging does not replace the remaining physical-device, held-out footage, signing or distribution gates.
 - Watch scoring, persistence and workout state transitions still have no dedicated automated test target.
 - Simulator success cannot prove Action Button or HealthKit behaviour on hardware.
 - Location, HealthKit and motion data increase privacy and permission-copy obligations.
@@ -78,7 +78,7 @@ Ronde is in pre-release product hardening and reviewer validation. The release c
 - The watch scheme built successfully for both a specific Apple Watch Ultra 3 simulator and the generic watchOS Simulator destination.
 - The iOS companion scheme built successfully for the generic iOS Simulator destination.
 - No automated test target exists, so no test pass is claimed.
-- The current Git baseline is `823c10d`, where the Watch hardening release candidate is committed; the reviewer contract and configuration changes in this branch are not yet merged to `main`.
+- At that validation time, the Git baseline was `823c10d`, where the Watch hardening release candidate was committed; the reviewer contract and configuration changes had not yet merged to `main`.
 
 ## Validation completed on 21 August 2026
 

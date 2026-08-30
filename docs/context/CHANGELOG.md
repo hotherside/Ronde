@@ -2,6 +2,10 @@
 
 ## 30 August 2026
 
+### Delivery
+
+- Merged the evidence-backed iOS Shot Reviewer release candidate into `main` through PR #3. The automatic context refresh followed the merge. Physical-device performance, held-out footage, signing and distribution remain separate open gates.
+
 ### Physical-device memory-pressure correction
 
 - Reproduced the One Shot termination as an unbounded inference-allocation problem: the tracker created a new 5.3 MB `MLMultiArray` for every tile prediction. The supplied Landscape B clip evaluated 3,217 tiles and reached a measured 19.19 GB peak process footprint in the macOS production-code diagnostic, which would exceed an iPhone's memory budget.
