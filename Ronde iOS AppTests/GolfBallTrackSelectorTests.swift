@@ -103,7 +103,11 @@ struct GolfBallTrackSelectorTests {
         }
     }
 
-    @Test func optionalRealClipProducesTheObservedBallTrack() async throws {
+    @Test(.enabled(if:
+        ProcessInfo.processInfo.environment["RONDE_TEST_VIDEO_PATH"]?.isEmpty == false
+            || Bundle(for: GolfBallTrackerTestBundleMarker.self).url(forResource: "RondeRealVideoProbe", withExtension: "mov") != nil
+    ))
+    func optionalRealClipProducesTheObservedBallTrack() async throws {
         let environmentURL = ProcessInfo.processInfo.environment["RONDE_TEST_VIDEO_PATH"]
             .flatMap { $0.isEmpty ? nil : URL(fileURLWithPath: $0) }
         let bundledURL = Bundle(for: GolfBallTrackerTestBundleMarker.self)
@@ -332,7 +336,8 @@ struct GolfBallTrackSelectorTests {
                 $1.presentationTime - $0.presentationTime
             }
             #expect(candidates.count >= 15, "\(sourceRate) fps should still provide enough samples")
-            #expect(intervals.allSatisfy { $0 >= (1.0 / 30.0) - 0.000_01 && $0 <= (1.0 / 25.0) + 0.000_01 })
+            #expect(intervals.allSatisfy { $0 > 0 && $0 <= (1.0 / 30.0) + (1.0 / sourceRate) + 0.000_01 })
+            #expect(candidates.count <= Int(0.72 * 31) + 2)
 
             let selected = GolfBallTrackSelector.select(from: candidates, impactTime: impactTime)
             #expect(selected != nil, "\(sourceRate) fps should select the same physical motion")
@@ -415,5 +420,130 @@ struct GolfBallTrackSelectorTests {
         let emptyGate = TrackingContinuationGate()
         #expect(!emptyGate.shouldAbandonInitialSearch(startedAt: 2, at: 2.89))
         #expect(emptyGate.shouldAbandonInitialSearch(startedAt: 2, at: 2.9))
+    }
+}
+
+extension GolfBallTrackSelectorTests {
+    private static func detection(_ index: Int, time: Double, x: Double = 0.5, y: Double, confidence: Double = 0.8) -> GolfBallDetectionCandidate {
+        GolfBallDetectionCandidate(frameIndex: index, presentationTime: time, point: NormalizedPoint(x: x, y: y), confidence: confidence)
+    }
+
+    @Test func finalisationRetainsTheCommittedIdentityInsteadOfAShorterChallenger() throws {
+        let established = (0..<8).map {
+            Self.detection($0, time: 0.1 + Double($0) / 15, x: 0.2, y: 0.6 - Double($0) * 0.003, confidence: 0.08)
+        }
+        let challenger = (0..<6).map {
+            Self.detection($0 + 3, time: 0.3 + Double($0) / 15, x: 0.8, y: 0.85 - Double($0) * 0.09, confidence: 0.99)
+        }
+        var acquisition = CompetitiveTrackAcquisitionGate(impactTime: 0)
+        let acquisitionResult = acquisition.record(established + challenger, at: 0.667)
+        let committed = try #require(acquisitionResult)
+        #expect(committed.detections == established)
+        // This is the formerly displayed challenger; it still does not have eight observations.
+        #expect(GolfBallTrackSelector.select(from: established + challenger, impactTime: 0)?.detections == challenger)
+        #expect(GolfBallTrackSelector.finalise(committedTrack: committed, linkedDetections: challenger, impactTime: 0) == nil)
+        #expect(GolfBallTrackSelector.finalise(committedTrack: committed, linkedDetections: established, impactTime: 0)?.detections == established)
+    }
+
+    @Test func trimmingCannotLeaveASubthresholdObservedDuration() {
+        let raw: [(Double, Double)] = [
+            (0.502315, 0.492188), (0.529630, 0.414323), (0.562500, 0.351042),
+            (0.556944, 0.331250), (0.552315, 0.319792), (0.548611, 0.310417),
+            (0.545833, 0.303125)
+        ]
+        let candidates = raw.enumerated().map { index, point in
+            Self.detection(index, time: 0.1 + Double(index) / 30, x: point.0 * 0.5, y: point.1 * 0.5)
+        }
+        let trimmed = GolfBallTrackSelector.trimmingLeadingDetectorHandoff(from: candidates)
+        #expect(trimmed.count == 5)
+        #expect(GolfBallTrackSelector.select(from: candidates, impactTime: 0) == nil)
+    }
+
+    @Test func sourceTimeAcquisitionCanCommitPerfectEvidenceAcrossFrameRatesAndJitter() {
+        for rate in [15.0, 20, 24, 25, 29.97, 30.087, 31, 32, 40, 50, 59.94, 60, 120, 240] {
+            for jitter in [0.0, 0.0015] {
+                let impact = 1.0
+                let start = impact + 0.04 - 2.0 / 30.0
+                var decoderSampler = PresentationTimestampFrameSampler(startTime: start, cadence: 1.0 / 30.0)
+                var acquisitionSampler = PresentationTimestampFrameSampler(startTime: start, cadence: 1.0 / 15.0)
+                var acquisition = CompetitiveTrackAcquisitionGate(impactTime: impact)
+                var samples = 0
+                for frame in 0...Int(rate * 2) {
+                    let time = Double(frame) / rate + (frame.isMultiple(of: 2) ? jitter : 0)
+                    guard time >= start, decoderSampler.accepts(presentationTime: time) else { continue }
+                    samples += 1
+                    if samples >= 3, acquisitionSampler.accepts(presentationTime: time) {
+                        _ = acquisition.record([Self.detection(frame, time: time, y: 0.8 - 0.3 * (time - impact))], at: time)
+                    }
+                    if acquisition.hasCommittedTrack || (samples >= 3 && time - start >= 0.9) { break }
+                }
+                #expect(acquisition.hasCommittedTrack, "Correct evidence should remain eligible at \(rate) fps with \(jitter) s jitter")
+            }
+        }
+    }
+
+    @Test func samplerRejectsInvalidDuplicateAndReversedTimestamps() {
+        var sampler = PresentationTimestampFrameSampler(startTime: 1, cadence: 1.0 / 30.0)
+        let times: [Double] = [.nan, .infinity, -1, 1, 1, 0.9, 1.04]
+        let results = times.map { sampler.accepts(presentationTime: $0) }
+        #expect(results == [false, false, false, true, false, false, true])
+    }
+
+    @Test func lostTrackRequiresThreeUniqueReturningObservations() {
+        var gate = TrackingContinuationGate()
+        let seed = (0..<3).map { Self.detection($0, time: Double($0) / 30, y: 0.7 - Double($0) * 0.01) }
+        gate.seed(with: seed)
+        #expect(gate.needsReacquisition(at: 0.2))
+        for index in 0..<3 {
+            let time = 0.2 + Double(index) / 30
+            let candidate = Self.detection(index + 6, time: time, y: 0.7 - time * 0.3)
+            let result = gate.acceptBest(from: [candidate], at: time)
+            #expect((result != nil) == (index == 2))
+            if index < 2 { #expect(gate.linkedDetections == seed) }
+        }
+        #expect(gate.linkedDetections.count == 6)
+        #expect(gate.linkedDetections.map(\.presentationTime) == seed.map(\.presentationTime) + [0.2, 0.2 + 1.0 / 30, 0.2 + 2.0 / 30])
+        #expect(!gate.needsReacquisition(at: 0.3))
+    }
+
+    @Test func ambiguousOrDistantReacquisitionDoesNotInheritTheTrack() {
+        var gate = TrackingContinuationGate()
+        let seed = (0..<3).map { Self.detection($0, time: Double($0) / 30, y: 0.7 - Double($0) * 0.01) }
+        gate.seed(with: seed)
+        for index in 0..<3 {
+            let time = 0.2 + Double(index) / 30
+            let expectedY = 0.7 - time * 0.3
+            let choices = [
+                Self.detection(index + 6, time: time, y: expectedY),
+                Self.detection(index + 6, time: time, x: 0.501, y: expectedY, confidence: 0.99)
+            ]
+            #expect(gate.acceptBest(from: choices, at: time) == nil)
+        }
+        #expect(gate.acceptBest(from: [Self.detection(10, time: 0.3, x: 0.8, y: 0.61)], at: 0.3) == nil)
+        #expect(gate.linkedDetections == seed)
+        #expect(gate.shouldStopAfterMisses(at: 0.47))
+    }
+
+    @Test func supportedApexRetainsTheVisibleDescent() throws {
+        let arc = (0..<31).map { index in
+            let time = 0.1 + Double(index) / 30
+            return Self.detection(index, time: time, y: 0.25 + 0.6 * pow(time - 0.6, 2))
+        }
+        let selected = try #require(GolfBallTrackSelector.select(from: arc, impactTime: 0))
+        #expect(selected.detections == arc)
+        var continuation = TrackingContinuationGate()
+        continuation.seed(with: Array(arc.prefix(8)))
+        for candidate in arc.dropFirst(8) {
+            #expect(continuation.acceptBest(from: [candidate], at: candidate.presentationTime) == candidate)
+        }
+        #expect(continuation.linkedDetections == arc)
+    }
+
+    @Test func stationaryPeaksAndAnUnpredictedReversalRemainIneligible() {
+        let stationary = (0..<12).map { Self.detection($0, time: 0.1 + Double($0) / 30, y: 0.5) }
+        #expect(GolfBallTrackSelector.select(from: stationary, impactTime: 0) == nil)
+        let history = (0..<8).map { Self.detection($0, time: 0.1 + Double($0) / 30, y: 0.7 - Double($0) * 0.01) }
+        let reversed = Self.detection(8, time: 0.1 + 8.0 / 30, y: 0.64)
+        #expect(GolfBallTrackMotion.linkPenalty(history: history, candidate: reversed) == nil)
     }
 }

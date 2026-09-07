@@ -235,52 +235,55 @@ struct GolfBallLaunchAnchorDetector: Sendable {
 /// the last three linked observations for prediction and stops after a sustained miss rather than
 /// scanning a whole upload forever.
 struct TrackingContinuationGate: Sendable, Equatable {
-    private static let maximumObservationGap: TimeInterval = 0.115
     private static let maximumMissDuration: TimeInterval = 0.4
     private static let maximumInitialSearchDuration: TimeInterval = 0.9
 
     private(set) var observations: [GolfBallDetectionCandidate] = []
+    private(set) var linkedDetections: [GolfBallDetectionCandidate] = []
+    private var reacquisitionTracklet: [GolfBallDetectionCandidate] = []
 
-    var lastObservation: GolfBallDetectionCandidate? {
-        observations.last
-    }
+    var lastObservation: GolfBallDetectionCandidate? { observations.last }
+    var isAcquired: Bool { observations.count >= 3 }
 
-    var isAcquired: Bool {
-        observations.count >= 3
+    func needsReacquisition(at time: TimeInterval) -> Bool {
+        guard isAcquired, let lastObservation else { return false }
+        return time - lastObservation.presentationTime > GolfBallTrackMotion.maximumObservationGap
     }
 
     mutating func acceptBest(
         from candidates: [GolfBallDetectionCandidate],
         at time: TimeInterval
     ) -> GolfBallDetectionCandidate? {
+        if needsReacquisition(at: time) {
+            return acceptReacquisition(from: candidates, at: time)
+        }
+        reacquisitionTracklet.removeAll(keepingCapacity: true)
         guard !candidates.isEmpty else { return nil }
-
-        let prediction = lastObservation.map {
-            predictedCentre(at: time, fallingBackTo: $0.point)
-        }
-        let ranked = candidates.sorted {
-            score($0, around: prediction) > score($1, around: prediction)
-        }
-        guard let selected = ranked.first(where: { canLink($0) }) else {
-            // Before acquisition there is no defensible motion history. Re-anchor to the best
-            // local observation and keep searching, but never call it a linked track.
+        let prediction = predictedCentre(at: time, fallingBackTo: lastObservation?.point ?? candidates[0].point)
+        let ranked = candidates.sorted { score($0, around: prediction) > score($1, around: prediction) }
+        guard let selected = ranked.first(where: {
+            GolfBallTrackMotion.linkPenalty(history: linkedDetections, candidate: $0) != nil
+        }) else {
             if !isAcquired, let anchor = ranked.first {
-                observations = [anchor]
+                seed(with: [anchor])
                 return anchor
             }
             return nil
         }
-        observations.append(selected)
-        if observations.count > 3 { observations.removeFirst() }
+        appendLinked([selected])
         return selected
     }
 
     mutating func reset() {
         observations.removeAll(keepingCapacity: true)
+        linkedDetections.removeAll(keepingCapacity: true)
+        reacquisitionTracklet.removeAll(keepingCapacity: true)
     }
 
     mutating func seed(with linkedObservations: [GolfBallDetectionCandidate]) {
+        linkedDetections = linkedObservations
         observations = Array(linkedObservations.suffix(3))
+        reacquisitionTracklet.removeAll(keepingCapacity: true)
     }
 
     func shouldStopAfterMisses(at time: TimeInterval) -> Bool {
@@ -292,66 +295,54 @@ struct TrackingContinuationGate: Sendable, Equatable {
         !isAcquired && time - startedAt + 1e-9 >= Self.maximumInitialSearchDuration
     }
 
-    func predictedCentre(
-        at time: TimeInterval,
-        fallingBackTo fallback: NormalizedPoint
-    ) -> NormalizedPoint {
-        guard observations.count >= 2,
-              let previous = observations.dropLast().last,
-              let last = observations.last else {
-            return fallback
+    func predictedCentre(at time: TimeInterval, fallingBackTo fallback: NormalizedPoint) -> NormalizedPoint {
+        guard let lastObservation,
+              time - lastObservation.presentationTime <= Self.maximumMissDuration else { return fallback }
+        return GolfBallTrackMotion.predictedPoint(history: linkedDetections, at: time) ?? fallback
+    }
+
+    private mutating func appendLinked(_ detections: [GolfBallDetectionCandidate]) {
+        linkedDetections.append(contentsOf: detections)
+        observations = Array(linkedDetections.suffix(3))
+    }
+
+    private mutating func acceptReacquisition(
+        from candidates: [GolfBallDetectionCandidate],
+        at time: TimeInterval
+    ) -> GolfBallDetectionCandidate? {
+        guard let last = lastObservation,
+              time - last.presentationTime <= Self.maximumMissDuration,
+              observations.count >= 2 else { return nil }
+        let previous = observations[observations.count - 2]
+        let interval = last.presentationTime - previous.presentationTime
+        guard interval > 0 else { return nil }
+        let speed = hypot(last.point.x - previous.point.x, last.point.y - previous.point.y) / interval
+        let radius = max(0.008, min(0.03, speed * (time - last.presentationTime) * 0.25 + 0.004))
+        let prediction = predictedCentre(at: time, fallingBackTo: last.point)
+        let plausible = candidates.filter {
+            $0.presentationTime == time && hypot($0.point.x - prediction.x, $0.point.y - prediction.y) <= radius
         }
-        let previousElapsed = last.presentationTime - previous.presentationTime
-        let projectedElapsed = max(0, time - last.presentationTime)
-        guard previousElapsed > 0, projectedElapsed <= Self.maximumMissDuration else { return fallback }
-        return NormalizedPoint(
-            x: last.point.x + ((last.point.x - previous.point.x) / previousElapsed * projectedElapsed),
-            y: last.point.y + ((last.point.y - previous.point.y) / previousElapsed * projectedElapsed)
-        )
-    }
-
-    private func canLink(_ candidate: GolfBallDetectionCandidate) -> Bool {
-        guard let last = observations.last else { return true }
-        let elapsed = candidate.presentationTime - last.presentationTime
-        guard elapsed > 0, elapsed <= Self.maximumObservationGap else { return false }
-        let velocity = vector(from: last.point, to: candidate.point, dividedBy: elapsed)
-        let speed = hypot(velocity.x, velocity.y)
-        guard speed >= 0.008, speed <= 2.4 else { return false }
-
-        guard observations.count >= 2,
-              let previous = observations.dropLast().last else {
-            return true
+        // Ambiguous returns do not inherit an established identity. Require three fresh, linked
+        // observations inside the old track's narrow prediction corridor before adding any of them.
+        guard plausible.count == 1, let candidate = plausible.first else {
+            reacquisitionTracklet.removeAll(keepingCapacity: true)
+            return nil
         }
-        let previousElapsed = last.presentationTime - previous.presentationTime
-        guard previousElapsed > 0 else { return false }
-        let previousVelocity = vector(from: previous.point, to: last.point, dividedBy: previousElapsed)
-        let previousSpeed = hypot(previousVelocity.x, previousVelocity.y)
-        guard previousSpeed > 0 else { return false }
-        let cosine = ((previousVelocity.x * velocity.x) + (previousVelocity.y * velocity.y))
-            / (previousSpeed * speed)
-        guard cosine >= 0.45 else { return false }
-        let predicted = NormalizedPoint(
-            x: last.point.x + (previousVelocity.x * elapsed),
-            y: last.point.y + (previousVelocity.y * elapsed)
-        )
-        let predictionError = hypot(candidate.point.x - predicted.x, candidate.point.y - predicted.y)
-        return predictionError <= max(0.006, (previousSpeed * elapsed * 1.7) + 0.008)
+        if GolfBallTrackMotion.linkPenalty(history: reacquisitionTracklet, candidate: candidate) == nil {
+            reacquisitionTracklet = [candidate]
+            return nil
+        }
+        reacquisitionTracklet.append(candidate)
+        guard reacquisitionTracklet.count >= 3,
+              let first = reacquisitionTracklet.first,
+              time - first.presentationTime >= 0.06 else { return nil }
+        appendLinked(reacquisitionTracklet)
+        reacquisitionTracklet.removeAll(keepingCapacity: true)
+        return candidate
     }
 
-    private func score(_ candidate: GolfBallDetectionCandidate, around prediction: NormalizedPoint?) -> Double {
-        guard let prediction else { return candidate.confidence }
-        return candidate.confidence - (hypot(
-            candidate.point.x - prediction.x,
-            candidate.point.y - prediction.y
-        ) * 0.35)
-    }
-
-    private func vector(
-        from start: NormalizedPoint,
-        to end: NormalizedPoint,
-        dividedBy divisor: Double
-    ) -> (x: Double, y: Double) {
-        ((end.x - start.x) / divisor, (end.y - start.y) / divisor)
+    private func score(_ candidate: GolfBallDetectionCandidate, around prediction: NormalizedPoint) -> Double {
+        candidate.confidence - hypot(candidate.point.x - prediction.x, candidate.point.y - prediction.y) * 0.35
     }
 }
 
@@ -577,7 +568,6 @@ actor WASBGolfBallTrackingService {
         var sampler = PresentationTimestampFrameSampler(startTime: startTime, cadence: cadence)
         var frameWindow: [RGBFrame] = []
         var launchEvidenceFrames: [(time: TimeInterval, frame: RGBFrame)] = []
-        var detections: [GolfBallDetectionCandidate] = []
         var frameIndex = 0
         var searchState = SearchState(
             analysisStartTime: startTime,
@@ -650,7 +640,6 @@ actor WASBGolfBallTrackingService {
                     inputBufferAllocationCount += batch.inputBufferAllocationCount
                     tilesEvaluated += batch.tileCount
                     candidateCount += batch.detections.count
-                    detections.append(contentsOf: batch.detections)
                     searchState.record(batch.detections, from: searchPlan, at: sampleTime)
                 }
                 if searchState.shouldTerminate(at: sampleTime) {
@@ -669,14 +658,7 @@ actor WASBGolfBallTrackingService {
         }
         progress?(1)
 
-        guard searchState.hasCommittedTrack else {
-            throw WASBGolfBallTrackingError.noDefensibleBallTrack
-        }
-
-        guard let selectedTrack = GolfBallTrackSelector.select(
-            from: detections,
-            impactTime: impactTime
-        ) else {
+        guard let selectedTrack = searchState.finalisedTrack else {
             throw WASBGolfBallTrackingError.noDefensibleBallTrack
         }
         selectedTrackPointCount = selectedTrack.detections.count
@@ -1014,7 +996,8 @@ actor WASBGolfBallTrackingService {
         private let reacquisitionInterval: TimeInterval
         private var continuation = TrackingContinuationGate()
         private var acquisition: CompetitiveTrackAcquisitionGate
-        private var acquisitionPlanCount = 0
+        private var acquisitionSampler: PresentationTimestampFrameSampler
+        private let impactTime: TimeInterval
         private var lastFullSearchTime: TimeInterval?
 
         init(
@@ -1025,27 +1008,33 @@ actor WASBGolfBallTrackingService {
             self.analysisStartTime = analysisStartTime
             self.reacquisitionInterval = reacquisitionInterval
             acquisition = CompetitiveTrackAcquisitionGate(impactTime: impactTime)
+            self.impactTime = impactTime
+            acquisitionSampler = PresentationTimestampFrameSampler(startTime: analysisStartTime, cadence: 1.0 / 15.0)
         }
 
-        var hasCommittedTrack: Bool {
-            acquisition.hasCommittedTrack
+        var finalisedTrack: GolfBallTrack? {
+            guard let committed = acquisition.committedTrack else { return nil }
+            return GolfBallTrackSelector.finalise(
+                committedTrack: committed,
+                linkedDetections: continuation.linkedDetections,
+                impactTime: impactTime
+            )
         }
 
         mutating func plan(at time: TimeInterval) -> SearchPlan {
             guard acquisition.hasCommittedTrack else {
-                lastFullSearchTime = time
-                defer { acquisitionPlanCount += 1 }
-                return SearchPlan(
-                    kind: .acquisition,
-                    normalizedRegion: nil,
-                    shouldEvaluate: acquisitionPlanCount.isMultiple(of: 2)
-                )
+                let shouldEvaluate = acquisitionSampler.accepts(presentationTime: time)
+                if shouldEvaluate { lastFullSearchTime = time }
+                return SearchPlan(kind: .acquisition, normalizedRegion: nil, shouldEvaluate: shouldEvaluate)
             }
             guard let lastPeak = continuation.lastObservation else {
                 lastFullSearchTime = time
                 return SearchPlan(kind: .acquisition, normalizedRegion: nil, shouldEvaluate: true)
             }
-            if let lastFullSearchTime, time - lastFullSearchTime >= reacquisitionInterval {
+            let elapsedSinceFullSearch = lastFullSearchTime.map { time - $0 } ?? .infinity
+            let lostSearchIsDue = continuation.needsReacquisition(at: time)
+                && elapsedSinceFullSearch >= GolfBallTrackMotion.maximumObservationGap
+            if lostSearchIsDue || elapsedSinceFullSearch >= reacquisitionInterval {
                 self.lastFullSearchTime = time
                 return SearchPlan(kind: .reacquisition, normalizedRegion: nil, shouldEvaluate: true)
             }
@@ -1073,12 +1062,6 @@ actor WASBGolfBallTrackingService {
                 return
             }
 
-            guard !detections.isEmpty else {
-                if !continuation.isAcquired, plan.kind != .tracking {
-                    continuation.reset()
-                }
-                return
-            }
             _ = continuation.acceptBest(from: detections, at: time)
         }
 

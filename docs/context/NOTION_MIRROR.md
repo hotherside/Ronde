@@ -18,3 +18,7 @@ Notion is the lightweight product and stage mirror. The repository remains canon
 | Git ledger and generated inventory | No full mirror | Link or summarise. |
 
 Ronde is a child of the main Notion Home page and is linked from its Startup section.
+
+## Last reconciliation
+
+7 September 2026: refreshed the mapped Ronde product, stage and priorities after native studio validation. The mirror now records the library/trim/export workflow, source-only privacy, 112 passing checks and the unresolved real-video accuracy and signed-device gates. The repository remains authoritative.

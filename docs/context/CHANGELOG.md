@@ -1,5 +1,14 @@
 # Context Changelog
 
+## 7 September 2026
+
+- Replaced Home/Library/Profile dashboards with one neutral Shot library and media studio. Consolidated playback, source-frame navigation, thumbnail trimming, trace selection and social export; simplified import, details, settings and manual editing.
+- Added reversible saved edit settings and local H.264 MP4 export for original, 9:16, 1:1 and 16:9 fit canvases with available source audio. Untracked shots remain shareable. The active automatic overlay uses observed samples only and omits model carry/landing.
+- Preserved committed ball-track lineage, repaired source-time acquisition cadence, added guarded loss/reacquisition and prediction-supported low-speed apex continuation. The existing model and real-footage accuracy remain experimental.
+- Added corrupt-archive write protection, visible save/retry states, relative owned-media paths, picker-to-analysis account ownership and recoverable interrupted analysis.
+- Passed the integrated iOS scheme: 112 passed, three optional external-media checks skipped, zero failures, including native edit/share flows and actual MP4 pixel/audio/rotation/cancellation checks. Generic Watch Simulator build and context checks passed.
+- Recorded ADR 0011 and the evidence-based review. Reconciled stale current-state claims against the current source. Git delivery and integrated validation are recorded in the final review/PR.
+
 ## 30 August 2026
 
 ### Source-cadence recall correction and search-scale rejections

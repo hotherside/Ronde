@@ -3,17 +3,17 @@ import SwiftUI
 /// The reviewer is intentionally separate from the watch's OLED field
 /// instrument theme. It is a calm, light workspace for studying video.
 enum RondeReviewDesign {
-    static let canvas = Color(red: 0.966, green: 0.958, blue: 0.932)
-    static let surface = Color(red: 0.995, green: 0.991, blue: 0.977)
-    static let surfaceRaised = Color(red: 0.982, green: 0.974, blue: 0.946)
-    static let graphite = Color(red: 0.075, green: 0.180, blue: 0.135)
-    static let graphiteMuted = Color(red: 0.285, green: 0.370, blue: 0.315)
-    static let graphiteFaint = Color(red: 0.445, green: 0.515, blue: 0.460)
-    static let border = Color(red: 0.240, green: 0.315, blue: 0.265).opacity(0.14)
-    static let borderStrong = Color(red: 0.190, green: 0.270, blue: 0.220).opacity(0.25)
-    static let fairway = Color(red: 0.095, green: 0.285, blue: 0.205)
-    static let fairwayBright = Color(red: 0.330, green: 0.555, blue: 0.420)
-    static let fairwayWash = Color(red: 0.855, green: 0.908, blue: 0.856)
+    static let canvas = Color(red: 0.975, green: 0.975, blue: 0.980)
+    static let surface = Color.white
+    static let surfaceRaised = Color.white
+    static let graphite = Color(red: 0.10, green: 0.10, blue: 0.12)
+    static let graphiteMuted = Color(red: 0.36, green: 0.36, blue: 0.40)
+    static let graphiteFaint = Color(red: 0.43, green: 0.43, blue: 0.47)
+    static let border = Color.black.opacity(0.08)
+    static let borderStrong = Color.black.opacity(0.16)
+    static let fairway = graphite
+    static let fairwayBright = Color(red: 0.41, green: 0.35, blue: 0.85)
+    static let fairwayWash = Color(red: 0.94, green: 0.93, blue: 0.99)
     static let amber = Color(red: 0.510, green: 0.390, blue: 0.165)
     static let amberWash = Color(red: 0.949, green: 0.907, blue: 0.795)
     static let tracerPurple = Color(red: 0.570, green: 0.280, blue: 0.980)
@@ -21,14 +21,9 @@ enum RondeReviewDesign {
     static let tracerPurpleWash = Color(red: 0.930, green: 0.895, blue: 1.000)
     static let red = Color(red: 0.705, green: 0.175, blue: 0.160)
     static let redWash = Color(red: 0.990, green: 0.900, blue: 0.895)
-    /// Kept as a semantic compatibility name for existing controls; visually
-    /// it is eucalyptus rather than productivity-app blue.
-    static let blue = Color(red: 0.225, green: 0.405, blue: 0.315)
-    static let blueWash = Color(red: 0.875, green: 0.920, blue: 0.870)
+    static let blue = Color(red: 0.36, green: 0.30, blue: 0.76)
+    static let blueWash = Color(red: 0.94, green: 0.93, blue: 0.99)
 
-    // The reviewer is deliberately quieter than the Watch instrument. A
-    // small family of radii keeps the source footage, rather than chrome,
-    // as the visual anchor.
     static let smallRadius: CGFloat = 7
     static let cardRadius: CGFloat = 11
     static let largeRadius: CGFloat = 15
@@ -100,7 +95,7 @@ struct ReviewTag: View {
             }
             Text(title)
         }
-            .font(.caption.weight(.semibold))
+            .font(.subheadline.weight(.medium))
             .foregroundStyle(tint)
             .padding(.horizontal, 8)
             .padding(.vertical, 5)
@@ -151,6 +146,6 @@ extension Font {
     // like a marketing landing page and overflowed quickly with larger text.
     static var reviewerDisplay: Font { .system(.title, design: .default).weight(.semibold) }
     static var reviewerTitle: Font { .system(.title3, design: .default).weight(.semibold) }
-    static var reviewerSection: Font { .system(.caption2, design: .default).weight(.bold) }
-    static var reviewerTimestamp: Font { .system(.footnote, design: .monospaced).weight(.semibold) }
+    static var reviewerSection: Font { .system(.subheadline, design: .default).weight(.semibold) }
+    static var reviewerTimestamp: Font { .system(.subheadline, design: .monospaced).weight(.medium) }
 }

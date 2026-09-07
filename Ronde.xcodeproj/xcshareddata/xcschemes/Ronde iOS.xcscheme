@@ -50,6 +50,17 @@
                ReferencedContainer = "container:Ronde.xcodeproj">
             </BuildableReference>
          </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "5BEE602315656CBF42180981"
+               BuildableName = "Ronde iOS AppUITests.xctest"
+               BlueprintName = "Ronde iOS AppUITests"
+               ReferencedContainer = "container:Ronde.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
       <CommandLineArguments>
       </CommandLineArguments>

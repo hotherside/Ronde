@@ -161,7 +161,6 @@ final class RondeCloudRepository {
         guard !sessions.isEmpty else { return }
         let rows = sessions.map { session in
             let candidate = session.defaultCandidate
-            let carry = candidate?.evidenceAnchoredPath?.estimatedCarry
             return LibraryItemRow(
                 id: session.id,
                 userID: accountID,
@@ -175,8 +174,8 @@ final class RondeCloudRepository {
                 isFavourite: session.isFavourite,
                 traceProvenance: Self.traceProvenance(for: candidate),
                 observedPointCount: candidate?.observedTracerPointCount ?? 0,
-                estimatedCarryLowerMetres: carry?.lowerMetres,
-                estimatedCarryUpperMetres: carry?.upperMetres,
+                estimatedCarryLowerMetres: nil,
+                estimatedCarryUpperMetres: nil,
                 deviceUpdatedAt: .now
             )
         }

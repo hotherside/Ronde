@@ -34,194 +34,126 @@ struct FullScreenTracerEditor: View {
     }
 
     var body: some View {
-        ZStack {
-            Color.black.ignoresSafeArea()
-
+        NavigationStack {
             GeometryReader { geometry in
-                let ratio = CGFloat(session?.sourceAspectRatio ?? (16.0 / 9.0))
-                let fitted = AVMakeRect(
-                    aspectRatio: CGSize(width: ratio, height: 1),
-                    insideRect: CGRect(origin: .zero, size: geometry.size)
-                )
-
-                ZStack {
-                    RondePlayerSurface(player: playback.player)
-                    AssistedTracerEditor(
-                        points: $draft,
-                        inferredLaunchPoints: [],
-                        observedPoints: [],
-                        observedPresentationTimes: [],
-                        inferredPoints: [],
-                        automaticApex: nil,
-                        estimatedCarry: nil,
-                        playbackTime: candidate?.impactTime ?? 0,
-                        impactTime: candidate?.impactTime ?? 0,
-                        modelFlightDuration: nil,
-                        flightDuration: TracerRevealTimeline.defaultFlightDuration,
-                        isEditing: true,
-                        isManual: true,
-                        onFinishEditing: save,
-                        selectedHandle: selectedHandle,
-                        showsEditingBanner: false,
-                        onSelectHandle: { selectedHandle = $0 },
-                        onBeginHandleAdjustment: rememberDraft
-                    )
+                ScrollView {
+                    VStack(spacing: 0) {
+                        videoCanvas
+                            .frame(height: max(240, min(600, geometry.size.height * 0.57)))
+                        controlDock
+                            .frame(maxWidth: 720)
+                            .padding(20)
+                    }
+                    .frame(maxWidth: .infinity)
                 }
-                .frame(width: fitted.width, height: fitted.height)
-                .position(x: fitted.midX, y: fitted.midY)
+                .background(RondeReviewDesign.canvas)
             }
-            .ignoresSafeArea()
-
-            LinearGradient(
-                colors: [.black.opacity(0.42), .clear, .black.opacity(0.62)],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
-            .allowsHitTesting(false)
+            .navigationTitle("Manual trace")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel", action: dismiss.callAsFunction) }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save", action: save).fontWeight(.semibold)
+                        .disabled(!store.canModifyLibrary)
+                }
+            }
         }
-        .overlay(alignment: .top) { topChrome }
-        .overlay(alignment: .bottom) { controlDock }
-        .statusBarHidden()
-        .persistentSystemOverlays(.hidden)
         .onAppear { prepareFrame() }
         .onDisappear { playback.detach() }
         .accessibilityAction(named: "Save manual trace", save)
     }
 
-    @ViewBuilder
-    private var topChrome: some View {
-        HStack(spacing: 12) {
-            if #available(iOS 26.0, *) {
-                Button("Cancel", action: dismiss.callAsFunction)
-                    .buttonStyle(.glass)
-                    .foregroundStyle(.white)
-            } else {
-                Button("Cancel", action: dismiss.callAsFunction)
-                    .buttonStyle(TracerFallbackGlassButtonStyle())
-            }
-
-            Spacer()
-
-            VStack(spacing: 1) {
-                Text("MANUAL TRACE")
-                    .font(.system(size: 10, weight: .bold))
-                    .tracking(1.4)
-                Text("Place the flight path")
-                    .font(.subheadline.weight(.semibold))
-            }
-            .foregroundStyle(.white)
-            .shadow(color: .black.opacity(0.42), radius: 5, y: 2)
-            .accessibilityElement(children: .combine)
-
-            Spacer()
-
-            if #available(iOS 26.0, *) {
-                Button("Save", action: save)
-                    .buttonStyle(.glassProminent)
-                    .tint(RondeReviewDesign.fairway)
-            } else {
-                Button("Save", action: save)
-                    .buttonStyle(TracerFallbackGlassButtonStyle(prominent: true))
+    private var videoCanvas: some View {
+        GeometryReader { geometry in
+            let ratio = CGFloat(session?.sourceAspectRatio ?? (16.0 / 9.0))
+            let fitted = AVMakeRect(aspectRatio: CGSize(width: ratio, height: 1), insideRect: CGRect(origin: .zero, size: geometry.size))
+            ZStack {
+                Color.black
+                ZStack {
+                    RondePlayerSurface(player: playback.player)
+                    AssistedTracerEditor(
+                        points: $draft, inferredLaunchPoints: [], observedPoints: [],
+                        observedPresentationTimes: [], inferredPoints: [], automaticApex: nil,
+                        estimatedCarry: nil, playbackTime: candidate?.impactTime ?? 0,
+                        impactTime: candidate?.impactTime ?? 0, modelFlightDuration: nil,
+                        flightDuration: TracerRevealTimeline.defaultFlightDuration,
+                        isEditing: true, isManual: true, onFinishEditing: save,
+                        selectedHandle: selectedHandle, showsEditingBanner: false,
+                        onSelectHandle: { selectedHandle = $0 }, onBeginHandleAdjustment: rememberDraft
+                    )
+                }
+                .frame(width: fitted.width, height: fitted.height)
+                .position(x: fitted.midX, y: fitted.midY)
             }
         }
-        .font(.subheadline.weight(.semibold))
-        .padding(.horizontal, horizontalSizeClass == .regular ? 28 : 16)
-        .padding(.top, 12)
     }
 
     private var controlDock: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("SELECTED POINT")
-                        .font(.system(size: 10, weight: .bold))
-                        .tracking(1.2)
-                        .foregroundStyle(.white.opacity(0.64))
-                    Text(selectedHandle.rawValue)
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                    Text(selectedHandle.instruction)
-                        .font(.caption)
-                        .foregroundStyle(.white.opacity(0.72))
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                Spacer(minLength: 10)
-                frameStepper
+        VStack(alignment: .leading, spacing: 20) {
+            Picker("Trace point", selection: $selectedHandle) {
+                ForEach(AssistedTracerHandle.allCases) { Text($0.rawValue).tag($0) }
             }
-
-            HStack(spacing: 8) {
-                ForEach(AssistedTracerHandle.allCases) { handle in
-                    Button {
-                        selectedHandle = handle
-                    } label: {
-                        Label(handle.rawValue, systemImage: handle.systemImage)
-                            .font(.caption.weight(.semibold))
-                            .frame(maxWidth: .infinity)
-                            .frame(minHeight: 40)
-                            .foregroundStyle(selectedHandle == handle ? RondeReviewDesign.graphite : .white.opacity(0.78))
-                            .background(
-                                selectedHandle == handle ? Color.white.opacity(0.90) : Color.white.opacity(0.08),
-                                in: Capsule()
-                            )
-                    }
-                    .buttonStyle(.plain)
-                }
+            .pickerStyle(.segmented)
+            Text(selectedHandle.instruction)
+                .font(.body).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 16) {
+                Button { stepFrame(by: -1) } label: {
+                    Image(systemName: "backward.frame").frame(minWidth: 44, minHeight: 44)
+                }.accessibilityLabel("Previous source frame")
+                Spacer(minLength: 0)
+                Text(frameTimeLabel).font(.body.monospacedDigit()).fixedSize()
+                Spacer(minLength: 0)
+                Button { stepFrame(by: 1) } label: {
+                    Image(systemName: "forward.frame").frame(minWidth: 44, minHeight: 44)
+                }.accessibilityLabel("Next source frame")
             }
-
-            HStack(spacing: 14) {
+            DisclosureGroup("Fine adjustment") {
+                VStack(alignment: .leading, spacing: 12) {
+                    Slider(value: pointCoordinate(horizontal: true), in: 0...1) { Text("Horizontal position") }
+                        .accessibilityLabel("\(selectedHandle.rawValue) horizontal position")
+                    Slider(value: pointCoordinate(horizontal: false), in: 0...1) { Text("Vertical position") }
+                        .accessibilityLabel("\(selectedHandle.rawValue) vertical position")
+                }.padding(.top, 12)
+            }
+            HStack {
                 Button {
                     guard let previous = history.popLast() else { return }
                     draft = previous
-                } label: {
-                    Label("Undo", systemImage: "arrow.uturn.backward")
-                }
+                } label: { Label("Undo", systemImage: "arrow.uturn.backward") }
                 .disabled(history.isEmpty)
-
+                Spacer()
                 Button {
                     rememberDraft()
                     draft = startingPoints
-                } label: {
-                    Label("Reset", systemImage: "arrow.counterclockwise")
-                }
-
-                Spacer()
-
-                Label("User-authored", systemImage: "person.crop.circle.badge.checkmark")
-                    .foregroundStyle(.white.opacity(0.70))
+                } label: { Label("Reset", systemImage: "arrow.counterclockwise") }
             }
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(.white)
-
-            Text("Saving creates a manual visual aid. Ronde keeps the original observed evidence unchanged and never presents this path as automatic tracking or measured distance.")
-                .font(.caption2)
-                .foregroundStyle(.white.opacity(0.62))
+            .labelStyle(.titleOnly)
+            .buttonStyle(ReviewSecondaryButtonStyle())
+            Text("A manual trace is your visual annotation, not tracked ball flight.")
+                .font(.subheadline).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
+            if let error = store.libraryError { LibrarySaveNotice(store: store, message: error) }
         }
-        .padding(horizontalSizeClass == .regular ? 20 : 16)
-        .frame(maxWidth: horizontalSizeClass == .regular ? 720 : .infinity)
-        .rondeDarkGlassSurface(cornerRadius: 26)
-        .padding(.horizontal, horizontalSizeClass == .regular ? 28 : 12)
-        .padding(.bottom, 10)
     }
 
-    private var frameStepper: some View {
-        HStack(spacing: 0) {
-            Button { stepFrame(by: -1) } label: {
-                Image(systemName: "backward.frame.fill")
-                    .frame(width: 40, height: 36)
+    private func pointCoordinate(horizontal: Bool) -> Binding<Double> {
+        Binding {
+            let point: CGPoint
+            switch selectedHandle {
+            case .impact: point = draft.launch
+            case .apex: point = draft.apex
+            case .landing: point = draft.landing
             }
-            Text(frameTimeLabel)
-                .font(.system(.caption2, design: .monospaced).weight(.semibold))
-                .frame(minWidth: 58)
-            Button { stepFrame(by: 1) } label: {
-                Image(systemName: "forward.frame.fill")
-                    .frame(width: 40, height: 36)
+            return horizontal ? point.x : point.y
+        } set: { value in
+            rememberDraft()
+            switch selectedHandle {
+            case .impact: if horizontal { draft.launch.x = value } else { draft.launch.y = value }
+            case .apex: if horizontal { draft.apex.x = value } else { draft.apex.y = value }
+            case .landing: if horizontal { draft.landing.x = value } else { draft.landing.y = value }
             }
         }
-        .foregroundStyle(.white)
-        .background(.black.opacity(0.22), in: Capsule())
-        .accessibilityElement(children: .contain)
     }
 
     private var frameTimeLabel: String {
@@ -236,12 +168,8 @@ struct FullScreenTracerEditor: View {
     }
 
     private func stepFrame(by offset: Int) {
-        guard let candidate else { return }
-        let target = min(
-            candidate.endTime,
-            max(candidate.startTime, playback.currentTime + (Double(offset) / 30.0))
-        )
-        playback.seek(to: target)
+        playback.pause()
+        playback.player?.currentItem?.step(byCount: offset)
     }
 
     private func rememberDraft() {
@@ -258,7 +186,7 @@ struct FullScreenTracerEditor: View {
             return
         }
         store.updateAssistedTracer(draft.path, for: candidate, in: session)
-        dismiss()
+        if store.libraryError == nil { dismiss() }
     }
 
     private static func initialPoints(for candidate: ReviewCandidate) -> AssistedTracerPoints {
@@ -266,9 +194,9 @@ struct FullScreenTracerEditor: View {
             return AssistedTracerPoints(path: manual)
         }
         if let automatic = candidate.evidenceAnchoredPath,
-           let impact = automatic.inferredLaunchConnector.first ?? automatic.observedPoints.first,
-           let landing = automatic.inferredContinuation.last ?? automatic.observedPoints.last {
-            let apex = automatic.apexPoint ?? impact
+           let impact = automatic.observedPoints.first,
+           let landing = automatic.observedPoints.last {
+            let apex = automatic.observedPoints.min(by: { $0.y < $1.y }) ?? impact
             return AssistedTracerPoints(
                 launch: CGPoint(x: impact.x, y: impact.y),
                 apex: CGPoint(x: apex.x, y: apex.y),
@@ -276,23 +204,6 @@ struct FullScreenTracerEditor: View {
             )
         }
         return .default
-    }
-}
-
-private extension View {
-    @ViewBuilder
-    func rondeDarkGlassSurface(cornerRadius: CGFloat) -> some View {
-        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-        if #available(iOS 26.0, *) {
-            self
-                .background(Color.black.opacity(0.22), in: shape)
-                .glassEffect(.regular.tint(.black.opacity(0.62)), in: .rect(cornerRadius: cornerRadius))
-        } else {
-            self
-                .background(.ultraThinMaterial, in: shape)
-                .background(Color.black.opacity(0.48), in: shape)
-                .overlay { shape.stroke(.white.opacity(0.22), lineWidth: 0.8) }
-        }
     }
 }
 
@@ -332,23 +243,5 @@ private struct RondePlayerSurface: UIViewRepresentable {
             super.init(coder: coder)
             playerLayer.videoGravity = .resizeAspect
         }
-    }
-}
-
-private struct TracerFallbackGlassButtonStyle: ButtonStyle {
-    var prominent = false
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 15)
-            .frame(minHeight: 42)
-            .background(
-                prominent ? RondeReviewDesign.fairway.opacity(0.92) : Color.black.opacity(0.34),
-                in: Capsule()
-            )
-            .background(.ultraThinMaterial, in: Capsule())
-            .opacity(configuration.isPressed ? 0.72 : 1)
     }
 }
