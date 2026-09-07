@@ -2,7 +2,7 @@
 
 **Status:** current working contract
 
-**Reviewed:** 30 August 2026
+**Reviewed:** 7 September 2026
 
 ## Product
 
@@ -30,23 +30,25 @@ The essential loop is:
 - The Watch app remains independently usable and does not depend on the reviewer, network access or a paired phone at runtime.
 - The iPhone/iPad reviewer uses a light appearance and supports fixed-tripod, down-the-line range footage.
 - The reviewer uses Sign in with Apple as its only account method. Account access must never become a prerequisite for the independent Watch counter.
-- The primary reviewer navigation is Home, Library and Profile. Import is a labelled toolbar or empty-state action, not a floating action button.
-- Home and Profile summaries use only saved review data. Production empty states show zero or unavailable values rather than fixture statistics.
-- The Library persists each signed-in account's local reviews separately and supports search, favourites, optional place/course, club and notes.
-- The reviewer MVP accepts one shot video up to 60 seconds. It retains the full source range, opens directly into an automatically playing video-first Shot Review and does not expose long-session slicing, candidate classification or shot-confirmation theatre.
-- Individual review gives the video the full available width and keeps evidence, details and sharing below it. Manual trace placement opens as a dedicated full-screen workspace: Impact, Apex and Landing are adjusted directly over the video, Cancel discards the draft and Save persists a separately labelled user-authored visual aid.
+- The reviewer opens into one Shot library with search and favourites. Settings are a sheet; Home/Profile dashboards and trace-rate charts are not primary product surfaces.
+- Use a neutral, light workspace with large media, clear typography and a small number of grouped actions. The reference is the focus of Linear and Notion, adapted to native iOS and iPadOS, rather than their literal branding.
+- Import is a labelled toolbar or empty-state action. A successful import opens its own editor as soon as the video is safely stored; analysis continues in that shot's state.
+- The MVP accepts one shot video up to 60 seconds. Keep the source intact and save reversible trim, format and overlay settings separately.
+- The Shot studio combines an aspect-fitted player, pause/resume, source-frame stepping, scrubbing, a thumbnail trim timeline and sharing. Export is available with or without a trace.
+- Social export offers original aspect, 9:16, 1:1 and 16:9 canvases. Fit the entire source without stretching or hiding the ball through an implicit crop. Preview and export share that transform. Encode a local H.264 MP4 with available source audio; timing is rebased to the selected source range.
+- Each account's local library supports search, favourites, optional course/range, club and notes. Failed saves remain visible and retryable. An unreadable archive must never silently become a writable empty library.
+- Manual trace editing uses a local draft over the fitted source. Cancel discards changes; Save persists a separately labelled annotation. The user can remove it and return to the original automatic evidence.
 - Impact analysis is an internal timing input for ball acquisition and tracer reveal. The golfer is not asked to identify a start point before an automatic review can appear.
 - Range Session and Live Review foundations remain dormant future work. If long-session segmentation returns, a proposed event may become an automatic shot only after target-golfer impact and a stable, time-aligned golf-ball launch agree.
 - Live Review may use a temporary rolling capture buffer for hands-free one-shot feedback. It retains the candidate clip only after an impact-like event, plays it automatically after post-roll and processing, and discards unrelated buffer segments.
 - The MVP must never fabricate an automatic tracer. A short review without enough ball-specific observations remains playable and says `Ball flight not tracked`; audio, body motion, generic Vision motion and fixed fallback geometry cannot create a visible automatic line.
 - Uploaded files are processed using their own presentation timestamps and orientation. No specific recording frame rate is required; lower temporal or spatial quality may reduce tracking confidence and result in no tracer.
 - Native Vision trajectory analysis may be used as a constrained diagnostic baseline, but generic moving-shape points cannot accept a real shot, enable a tracer or earn an `Observed` golf-ball label. A one-shot review may show an automatic tracer only when the packaged sports-ball model produces a temporally consistent post-impact track. Long-session shot acceptance additionally requires target-golfer association.
-- A confidence-gated, source-timed two-dimensional ball track may seed a perspective-aware ballistic presentation fit. Around impact, a separate compact-bright-object disappearance check may anchor the launch to the visible stationary ball when that source-frame evidence is unique; ambiguity must fail closed. The fit may estimate from that observed launch anchor through the first tracked mid-air point and forwards through a screen-space apex to a bounded landing. Detector-to-model join residual decays down-range instead of being carried unchanged to landing; lateral continuation remains inside a corridor derived from the robust observed displacement, and a displayable landing must remain below the fitted horizon, above the launch point and inside the safe frame. Playback reveals one continuous, smoothly tapered solid-purple ribbon from impact towards landing. The observed causal portion follows source timestamps without reaching a future ball position; fitted launch and continuation portions use subtly lower opacity and explicit estimate labels rather than dashes, seams or a separate reveal order. The apex is visibly marked only when the reveal reaches it. A generic trajectory or an unanchored projection cannot seed this path.
-- If a short source ends before the modelled landing, playback and export preserve the original model timing through apex plus the sampling-derived causal lag, capped at 50 ms. Only the post-apex descent may be compressed, and the completed-path hold may not exceed 120 ms. If the source cannot contain the modelled apex plus lag, landing and carry remain hidden rather than making the tracer lead the ball. This supersedes uniform whole-continuation compression and must not change detector timestamps, fitted geometry, modelled carry or the distinction between observation and estimation.
-- A person may rescue or correct a path with the assisted editor. User-authored geometry must be labelled `Manual trace` and must not be presented as automatic observation.
-- Playback and traced-video export use the same saved geometry. Export does not rerun analysis, and the original source remains unchanged.
-- When multiple similarly plausible perspective fits pass the evidence gate, Ronde may display their rounded carry spread in metres as `Model carry` with `Estimate · uncalibrated`. It is broad directional guidance, not measured distance or launch-monitor precision. Precise carry and physical apex height remain later experiments requiring calibration and known ground truth.
-- Reviewer media, tracer geometry and analysis stay on-device for MVP. Supabase may store the signed-in profile and lightweight private library metadata such as title, date, place, club, favourite state, evidence provenance and broad supported carry range. It must not receive raw video, local file paths, analysis frames, remote round storage, analytics or background location.
+- The active studio's automatic overlay contains only accepted observed samples with their source presentation timestamps. It stops when those samples end. It does not show modelled landing, inferred full-flight continuation or numerical carry.
+- Extrapolation remains experimental analysis code and archived data, not the active studio presentation. Reintroducing it requires a new decision backed by labelled footage and calibrated ground truth; see ADR 0011, which supersedes the active presentation choices in ADRs 0007, 0008 and 0010.
+- A person may annotate the path with a separately labelled `Manual trace`. It is not automatic observation or measured distance. Shared videos preserve this provenance label.
+- Playback and export consume the same saved geometry and source timing. Export does not rerun detection, and it never overwrites the original.
+- Reviewer media, tracer geometry and analysis stay on-device for MVP. Supabase may store the signed-in profile and lightweight private library metadata such as title, date, place, club, favourite state and evidence provenance. It must not receive raw video, local file paths, analysis frames, remote round storage, analytics or background location.
 
 ## Platform boundary
 

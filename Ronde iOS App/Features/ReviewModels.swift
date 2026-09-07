@@ -1,7 +1,7 @@
 import Foundation
 import SwiftUI
 
-enum ReviewMode: String, CaseIterable, Identifiable, Hashable, Codable {
+enum ReviewMode: String, CaseIterable, Identifiable, Hashable, Codable, Sendable {
     case range
     case live
 
@@ -29,7 +29,7 @@ enum ReviewMode: String, CaseIterable, Identifiable, Hashable, Codable {
     }
 }
 
-enum ReviewImportKind: String, Hashable, Codable {
+enum ReviewImportKind: String, Hashable, Codable, Sendable {
     case oneShot
     case rangeSession
 }
@@ -42,7 +42,7 @@ enum ShotVideoImportPolicy {
     }
 }
 
-enum ReviewStatus: String, Hashable, Codable {
+enum ReviewStatus: String, Hashable, Codable, Sendable {
     case ready
     case analysing
     case capturing
@@ -66,7 +66,7 @@ enum ReviewStatus: String, Hashable, Codable {
     }
 }
 
-enum ShotClassification: String, CaseIterable, Hashable, Codable {
+enum ShotClassification: String, CaseIterable, Hashable, Codable, Sendable {
     case likelyShot
     case practice
     case uncertain
@@ -88,7 +88,7 @@ enum ShotClassification: String, CaseIterable, Hashable, Codable {
     }
 }
 
-enum CandidateDecision: String, Hashable, Codable {
+enum CandidateDecision: String, Hashable, Codable, Sendable {
     case unreviewed
     case kept
     case rejected
@@ -102,7 +102,7 @@ enum CandidateDecision: String, Hashable, Codable {
     }
 }
 
-enum ConfidenceLevel: String, Hashable, Codable {
+enum ConfidenceLevel: String, Hashable, Codable, Sendable {
     case high
     case medium
     case low
@@ -110,7 +110,7 @@ enum ConfidenceLevel: String, Hashable, Codable {
     var title: String { rawValue.capitalized + " confidence" }
 }
 
-struct ReviewPoint: Codable, Hashable {
+struct ReviewPoint: Codable, Hashable, Sendable {
     var x: Double
     var y: Double
 
@@ -124,7 +124,7 @@ struct ReviewPoint: Codable, Hashable {
 
 /// User-placed launch-to-landing geometry in normalised video coordinates.
 /// It is an assisted overlay, not an observed or measured ball flight.
-struct AssistedTracerPath: Codable, Hashable {
+struct AssistedTracerPath: Codable, Hashable, Sendable {
     var launch: ReviewPoint
     var apex: ReviewPoint
     var landing: ReviewPoint
@@ -148,7 +148,7 @@ struct AssistedTracerPath: Codable, Hashable {
     }
 }
 
-struct ReviewCandidate: Identifiable, Codable {
+struct ReviewCandidate: Identifiable, Codable, Sendable {
     let id: UUID
     var ordinal: Int
     var impactTime: TimeInterval
@@ -226,13 +226,15 @@ struct ReviewCandidate: Identifiable, Codable {
     var hasManualTracer: Bool { assistedTracer != nil }
 }
 
-struct ReviewSession: Identifiable, Codable {
+struct ReviewSession: Identifiable, Codable, Sendable {
     let id: UUID
     var mode: ReviewMode
     var importKind: ReviewImportKind = .rangeSession
     var title: String
     var sourceName: String?
     var sourceURL: URL?
+    var sourceRelativePath: String? = nil
+    var videoEdit: ShotVideoEdit? = nil
     var createdAt: Date
     var duration: TimeInterval
     /// The source's display width divided by its display height after applying
@@ -415,6 +417,26 @@ enum ReviewFixtures {
     )
 }
 
+/// Captured before a picker begins transferring media. Account changes invalidate it.
+struct ReviewImportOwnership: Equatable, Sendable {
+    fileprivate let accountID: UUID?
+    fileprivate let generation: UUID
+}
+
+enum ReviewImportResult: Sendable {
+    case imported(ReviewSession)
+    case cancelled
+    case failed(String)
+}
+
+protocol ReviewMediaImporting: Sendable {
+    func importVideo(at sourceURL: URL) async throws -> LocalMediaReference
+    func url(for reference: LocalMediaReference) async throws -> URL
+    func delete(_ url: URL) async throws
+}
+
+extension LocalMediaStore: ReviewMediaImporting {}
+
 @MainActor
 final class ReviewerStore: ObservableObject {
     @Published var sessions: [ReviewSession]
@@ -423,11 +445,18 @@ final class ReviewerStore: ObservableObject {
     @Published var playheadTime: TimeInterval = 94
     @Published var isBusy = false
     @Published private(set) var lastExportedTracerURL: URL?
+    @Published private(set) var libraryError: String?
+    @Published private(set) var hasUnsavedChanges = false
+    @Published private(set) var libraryIsReadable = false
 
-    private let mediaStore: LocalMediaStore?
+    private let mediaStore: (any ReviewMediaImporting)?
     private var archive: ReviewSessionArchive?
     private let persistenceEnabled: Bool
     private var activeAccountID: UUID?
+    private let libraryRootURL: URL?
+    private var libraryGeneration = UUID()
+    private var operations: [UUID: Task<ReviewImportResult, Never>] = [:]
+    private var analysisOperations: [UUID: UUID] = [:]
     private let metadataProbe = VideoMetadataProbe()
     private let impactAnalysisService = ImpactCandidateAnalysisService()
     private var longSessionAnalysisService: LongSessionAnalysisService
@@ -440,9 +469,13 @@ final class ReviewerStore: ObservableObject {
         includeFixtures: Bool = false,
         previewSourceURL: URL? = nil,
         fixedSingleGolferSessionEvidence: FixedCameraSingleGolferSessionEvidence? = nil,
-        persistenceEnabled: Bool = false
+        persistenceEnabled: Bool = false,
+        libraryRootURL: URL? = nil,
+        mediaStore: (any ReviewMediaImporting)? = nil
     ) {
         self.persistenceEnabled = persistenceEnabled
+        self.libraryRootURL = libraryRootURL
+        libraryIsReadable = !persistenceEnabled
         archive = nil
         if let fixedSingleGolferSessionEvidence,
            fixedSingleGolferSessionEvidence.permitsAssociation {
@@ -460,27 +493,102 @@ final class ReviewerStore: ObservableObject {
         sessions = initialSessions
         selectedSessionID = initialSessions.first?.id
         selectedCandidateID = initialSessions.first?.defaultCandidate?.id
-        mediaStore = try? LocalMediaStore()
+        self.mediaStore = mediaStore ?? (try? LocalMediaStore(rootURL: libraryRootURL))
     }
 
-    /// Opens the local library that belongs to the signed-in Apple account. This prevents a
-    /// second account on the same device from seeing or syncing the first account's reviews.
+    var canModifyLibrary: Bool {
+        !persistenceEnabled || (activeAccountID != nil && archive != nil && libraryIsReadable)
+    }
+
+    /// Opens the local library that belongs to the signed-in Apple account. Pending work from a
+    /// former account can never acquire this archive after its asynchronous transfer completes.
     func activateLibrary(for accountID: UUID) {
         guard persistenceEnabled, activeAccountID != accountID else { return }
-        archive = try? ReviewSessionArchive(accountID: accountID)
+        invalidateOperations()
         activeAccountID = accountID
-        sessions = archive?.load() ?? []
-        selectedSessionID = sessions.first?.id
-        selectedCandidateID = sessions.first?.defaultCandidate?.id
+        hasUnsavedChanges = false
+        openLibrary()
     }
 
     func deactivateLibrary() {
         guard persistenceEnabled else { return }
+        invalidateOperations()
         archive = nil
         activeAccountID = nil
+        libraryIsReadable = false
+        libraryError = nil
+        hasUnsavedChanges = false
         sessions = []
         selectedSessionID = nil
         selectedCandidateID = nil
+        lastExportedTracerURL = nil
+    }
+
+    func retryLibraryLoad() {
+        guard persistenceEnabled, activeAccountID != nil else { return }
+        if hasUnsavedChanges {
+            _ = persistSessions()
+        } else {
+            invalidateOperations()
+            openLibrary()
+        }
+    }
+
+    func retrySavingLibrary() {
+        _ = persistSessions()
+    }
+
+    /// Call this when opening Photos/Files, not after the selected media has downloaded.
+    func captureImportOwnership() -> ReviewImportOwnership? {
+        guard canModifyLibrary else { return nil }
+        return ReviewImportOwnership(accountID: activeAccountID, generation: libraryGeneration)
+    }
+
+    private func ownsLibrary(_ ownership: ReviewImportOwnership) -> Bool {
+        canModifyLibrary && ownership.accountID == activeAccountID && ownership.generation == libraryGeneration
+    }
+
+    private func invalidateOperations() {
+        libraryGeneration = UUID()
+        for task in operations.values { task.cancel() }
+        operations.removeAll()
+        analysisOperations.removeAll()
+        isBusy = false
+    }
+
+    private func openLibrary() {
+        guard let accountID = activeAccountID else { return }
+        libraryError = nil
+        libraryIsReadable = false
+        do {
+            let opened = try ReviewSessionArchive(accountID: accountID, rootURL: libraryRootURL)
+            archive = opened
+            switch opened.read() {
+            case .missing:
+                sessions = []
+                libraryIsReadable = true
+            case .loaded(let restored):
+                sessions = restored.map { session in
+                    var value = session
+                    if value.status == .analysing {
+                        value.status = .needsAttention
+                        value.progress = 0
+                        value.errorMessage = "Analysis was interrupted. Play the original or try again."
+                    }
+                    return value
+                }
+                libraryIsReadable = true
+            case .failed(let error):
+                sessions = []
+                libraryError = error.localizedDescription
+            }
+        } catch {
+            archive = nil
+            sessions = []
+            libraryError = "Ronde could not open your local library. Its existing files have been kept."
+        }
+        selectedSessionID = sessions.first?.id
+        selectedCandidateID = sessions.first?.defaultCandidate?.id
     }
 
     /// Explicitly enables the narrow range-session detector path after the person reviewing the
@@ -599,23 +707,48 @@ final class ReviewerStore: ObservableObject {
         }
     }
 
-    func delete(_ session: ReviewSession) async {
-        if let sourceURL = session.sourceURL {
-            try? await mediaStore?.delete(sourceURL)
-        }
+    @discardableResult
+    func setVideoEdit(_ edit: ShotVideoEdit, for session: ReviewSession) -> Bool {
+        updateSession(session) { $0.videoEdit = edit }
+    }
+
+    @discardableResult
+    func delete(_ session: ReviewSession) async -> Bool {
+        guard let owner = captureImportOwnership(),
+              let current = sessions.first(where: { $0.id == session.id }) else { return false }
+        let previous = sessions
+        let wasUnsaved = hasUnsavedChanges
         sessions.removeAll { $0.id == session.id }
+        guard persistSessions() else {
+            sessions = previous
+            hasUnsavedChanges = wasUnsaved
+            libraryError = "The deletion could not be saved. Your review and video have been kept. Try again."
+            return false
+        }
+        cancelAnalysis(for: current)
+        analysisOperations[current.id] = nil
         if selectedSessionID == session.id {
             selectedSessionID = sessions.first?.id
             selectedCandidateID = sessions.first?.defaultCandidate?.id
         }
-        persistSessions()
+        if let sourceURL = current.sourceURL {
+            do {
+                try await mediaStore?.delete(sourceURL)
+            } catch {
+                if ownsLibrary(owner) {
+                    libraryError = "The review was removed, but its local video could not be cleared from storage."
+                }
+            }
+        }
+        return true
     }
 
     /// Produces a local MOV using the exact geometry already stored on the selected candidate.
     /// It is intentionally separate from analysis: sharing a video cannot rerun detection, invent
     /// missing points, or turn a manual rescue into observed flight.
     func exportTracedVideo(for candidate: ReviewCandidate, in session: ReviewSession) async throws -> URL {
-        guard let sourceURL = session.sourceURL else {
+        guard let ownership = captureImportOwnership(),
+              sessions.contains(where: { $0.id == session.id }), let sourceURL = session.sourceURL else {
             throw TracedVideoExportError.sourceUnavailable
         }
         let geometry: TracedVideoTracerGeometry
@@ -647,6 +780,10 @@ final class ReviewerStore: ObservableObject {
             revealStartTime: revealStartTime,
             geometry: geometry
         ))
+        guard ownsLibrary(ownership), !Task.isCancelled else {
+            try? FileManager.default.removeItem(at: output)
+            throw CancellationError()
+        }
         lastExportedTracerURL = output
         return output
     }
@@ -659,91 +796,210 @@ final class ReviewerStore: ObservableObject {
             sourceDuration: session.duration,
             classification: .uncertain,
             confidence: .low,
-            evidence: ["Added manually"]
+            evidence: ["Added manually"],
+            usesFullSourceRange: session.isSingleShotImport
         )
         updateSession(session) { $0.candidates.append(marker); $0.status = .reviewing }
         selectedCandidateID = marker.id
     }
 
+    @discardableResult
     func importVideo(
         at sourceURL: URL,
         sourceName: String,
-        importKind: ReviewImportKind
-    ) async {
-        guard let mediaStore else {
-            let session = makeSession(title: sourceName, sourceName: sourceName, sourceURL: nil, duration: 0, importKind: importKind, status: .needsAttention, progress: 0, errorMessage: "Ronde could not prepare local media storage.")
-            sessions.insert(session, at: 0)
-            select(session)
-            persistSessions()
-            return
+        importKind: ReviewImportKind,
+        ownership: ReviewImportOwnership? = nil,
+        onPrepared: (@MainActor (ReviewSession) -> Void)? = nil
+    ) async -> ReviewImportResult {
+        guard let owner = ownership ?? captureImportOwnership() else {
+            return .failed(libraryError ?? "Open your local library before importing a video.")
         }
+        guard ownsLibrary(owner), !Task.isCancelled else { return .cancelled }
+        let operationID = UUID()
+        let task = Task { @MainActor in
+            await self.performImport(
+                at: sourceURL, sourceName: sourceName, importKind: importKind,
+                ownership: owner, operationID: operationID, onPrepared: onPrepared
+            )
+        }
+        return await awaitOperation(task, id: operationID)
+    }
 
+    @discardableResult
+    func retryAnalysis(for session: ReviewSession) async -> ReviewImportResult {
+        guard let owner = captureImportOwnership(),
+              sessions.contains(where: { $0.id == session.id }) else {
+            return .failed(libraryError ?? "This review is no longer in the open library.")
+        }
+        guard analysisOperations[session.id] == nil else {
+            return .failed("This video is already being analysed.")
+        }
+        let operationID = UUID()
+        analysisOperations[session.id] = operationID
+        let task = Task { @MainActor in
+            await self.performAnalysis(sessionID: session.id, ownership: owner, operationID: operationID)
+        }
+        return await awaitOperation(task, id: operationID)
+    }
+
+    func cancelAnalysis(for session: ReviewSession) {
+        guard let operationID = analysisOperations[session.id] else { return }
+        operations[operationID]?.cancel()
+    }
+
+    private func awaitOperation(_ task: Task<ReviewImportResult, Never>, id: UUID) async -> ReviewImportResult {
+        operations[id] = task
+        isBusy = true
+        let result = await withTaskCancellationHandler {
+            await task.value
+        } onCancel: {
+            task.cancel()
+        }
+        operations[id] = nil
+        analysisOperations = analysisOperations.filter { $0.value != id }
+        isBusy = !operations.isEmpty
+        return result
+    }
+
+    private func performImport(
+        at sourceURL: URL,
+        sourceName: String,
+        importKind: ReviewImportKind,
+        ownership: ReviewImportOwnership,
+        operationID: UUID,
+        onPrepared: (@MainActor (ReviewSession) -> Void)?
+    ) async -> ReviewImportResult {
+        guard let mediaStore else { return .failed("Ronde could not prepare local media storage.") }
+        var stagedURL: URL?
         do {
+            try Task.checkCancellation()
+            guard ownsLibrary(ownership) else { return .cancelled }
             let reference = try await mediaStore.importVideo(at: sourceURL)
             let localURL = try await mediaStore.url(for: reference)
-            let session = makeSession(title: sourceName, sourceName: reference.originalFilename, sourceURL: localURL, duration: 0, importKind: importKind, status: .analysing, progress: 0, errorMessage: nil)
-            sessions.insert(session, at: 0)
-            select(session)
-            persistSessions()
+            stagedURL = localURL
+            try Task.checkCancellation()
+            guard ownsLibrary(ownership) else { throw CancellationError() }
 
             let metadata = try await metadataProbe.probe(url: localURL)
-            let safeDuration = metadata.duration.isFinite && metadata.duration > 0 ? metadata.duration : 0
-            let sourceAspectRatio = metadata.displayAspectRatio
-            updateSession(session) {
-                $0.duration = safeDuration
-                $0.sourceAspectRatio = sourceAspectRatio
+            try Task.checkCancellation()
+            guard ownsLibrary(ownership) else { throw CancellationError() }
+            let duration = metadata.duration
+            guard duration.isFinite, duration > 0,
+                  importKind != .oneShot || ShotVideoImportPolicy.accepts(duration: duration) else {
+                try? await mediaStore.delete(localURL)
+                return .failed("Choose one shot video that is 1 minute or shorter.")
             }
-
-            if importKind == .oneShot, !ShotVideoImportPolicy.accepts(duration: safeDuration) {
-                updateSession(session) {
-                    $0.progress = 1
-                    $0.status = .needsAttention
-                    $0.errorMessage = "Choose one shot video that is 1 minute or shorter. Automatic session slicing is outside this MVP."
-                }
-                return
+            var session = makeSession(
+                title: sourceName, sourceName: reference.originalFilename, sourceURL: localURL,
+                duration: duration, importKind: importKind, status: .analysing, progress: 0, errorMessage: nil
+            )
+            session.sourceRelativePath = reference.relativePath
+            session.sourceAspectRatio = metadata.displayAspectRatio
+            let priorSelection = selectedSessionID
+            let priorCandidate = selectedCandidateID
+            let wasUnsaved = hasUnsavedChanges
+            sessions.insert(session, at: 0)
+            select(session)
+            guard persistSessions() else {
+                sessions.removeAll { $0.id == session.id }
+                selectedSessionID = priorSelection
+                selectedCandidateID = priorCandidate
+                hasUnsavedChanges = wasUnsaved
+                try? await mediaStore.delete(localURL)
+                return .failed(libraryError ?? "The video could not be saved. Your original is unchanged.")
             }
+            stagedURL = nil // The durable archive now owns the copied source.
+            onPrepared?(session)
+            return await performAnalysis(sessionID: session.id, ownership: ownership, operationID: operationID)
+        } catch {
+            if let stagedURL { try? await mediaStore.delete(stagedURL) }
+            if error is CancellationError || Task.isCancelled || !ownsLibrary(ownership) { return .cancelled }
+            return .failed("The video could not be imported. Check that it is available and your device has free storage.")
+        }
+    }
 
-            let reviewCandidates: [ReviewCandidate]
-            if importKind == .rangeSession {
-                reviewCandidates = await analyseLongSession(
-                    url: localURL,
-                    duration: safeDuration,
-                    sessionID: session.id
+    private func performAnalysis(
+        sessionID: UUID,
+        ownership: ReviewImportOwnership,
+        operationID: UUID
+    ) async -> ReviewImportResult {
+        guard ownsLibrary(ownership), let initial = sessions.first(where: { $0.id == sessionID }) else { return .cancelled }
+        guard analysisOperations[sessionID] == nil || analysisOperations[sessionID] == operationID else {
+            return .failed("This video is already being analysed.")
+        }
+        guard let sourceURL = initial.sourceURL, FileManager.default.fileExists(atPath: sourceURL.path) else {
+            updateSession(initial) {
+                $0.status = .needsAttention
+                $0.errorMessage = "The local video is unavailable. Import the original again to analyse it."
+            }
+            return .failed("The local source video is unavailable.")
+        }
+        analysisOperations[sessionID] = operationID
+        defer {
+            if analysisOperations[sessionID] == operationID { analysisOperations[sessionID] = nil }
+        }
+        updateSession(initial) { $0.status = .analysing; $0.progress = 0; $0.errorMessage = nil }
+        do {
+            try Task.checkCancellation()
+            var candidates: [ReviewCandidate]
+            if initial.importKind == .rangeSession {
+                candidates = try await analyseLongSession(
+                    url: sourceURL, duration: initial.duration, sessionID: sessionID,
+                    ownership: ownership, operationID: operationID
                 )
             } else {
-                reviewCandidates = try await analyseSingleShot(
-                    url: localURL,
-                    duration: safeDuration,
-                    sessionID: session.id
+                candidates = try await analyseSingleShot(
+                    url: sourceURL, duration: initial.duration, sessionID: sessionID,
+                    ownership: ownership, operationID: operationID
                 )
             }
-            guard let current = self.sessions.first(where: { $0.id == session.id }) else { return }
-            self.updateSession(current) {
-                $0.candidates = reviewCandidates
-                $0.progress = 1
-                $0.status = reviewCandidates.isEmpty ? .needsAttention : .reviewing
-                $0.errorMessage = reviewCandidates.isEmpty
-                    ? "No real shots were confirmed. The recording is preserved, and you can add a shot manually."
-                    : nil
-            }
-            let defaultCandidate = self.sessions.first(where: { $0.id == session.id })?.defaultCandidate
-            self.selectedCandidateID = defaultCandidate?.id
-            self.playheadTime = defaultCandidate?.impactTime ?? 0
-        } catch is CancellationError {
-            guard let current = sessions.first(where: { $0.sourceName == sourceName }) else { return }
-            updateSession(current) { $0.status = .needsAttention; $0.errorMessage = "Analysis was cancelled. You can add markers manually." }
-        } catch {
-            // Import succeeds even if analysis cannot produce candidates. The
-            // review surface remains usable with manual markers.
-            let title = sourceName.replacingOccurrences(of: ".MOV", with: "").replacingOccurrences(of: ".mov", with: "")
-            if let current = sessions.first(where: { $0.title == title }) {
-                updateSession(current) {
-                    $0.status = .needsAttention
-                    $0.progress = 1
-                    $0.errorMessage = "The video is imported, but automatic analysis could not finish. Add a shot marker to continue."
+            try Task.checkCancellation()
+            guard ownsLibrary(ownership), let current = sessions.first(where: { $0.id == sessionID }) else { return .cancelled }
+            // Retrying automatic analysis must not discard a person's separately saved trace.
+            if current.isSingleShotImport, let manual = current.defaultCandidate?.assistedTracer {
+                if candidates.isEmpty, let previous = current.defaultCandidate {
+                    candidates = [previous]
+                } else if !candidates.isEmpty {
+                    candidates[0].assistedTracer = manual
+                    candidates[0].tracerAvailable = true
+                    if !candidates[0].evidence.contains("User-assisted tracer") { candidates[0].evidence.append("User-assisted tracer") }
                 }
             }
+            updateSession(current) {
+                $0.candidates = candidates
+                $0.progress = 1
+                $0.status = candidates.isEmpty ? .needsAttention : .reviewing
+                $0.errorMessage = candidates.isEmpty ? "Ball flight not tracked. Play the original or add a manual trace." : nil
+            }
+            guard let finished = sessions.first(where: { $0.id == sessionID }) else { return .cancelled }
+            if selectedSessionID == sessionID {
+                selectedCandidateID = finished.defaultCandidate?.id
+                playheadTime = finished.defaultCandidate?.impactTime ?? 0
+            }
+            return .imported(finished)
+        } catch {
+            guard ownsLibrary(ownership), let current = sessions.first(where: { $0.id == sessionID }) else { return .cancelled }
+            let wasCancelled = error is CancellationError || Task.isCancelled
+            updateSession(current) {
+                $0.status = .needsAttention
+                $0.errorMessage = wasCancelled
+                    ? "Analysis was interrupted. Play the original or try again."
+                    : "Automatic analysis could not finish. Play the original or try again."
+            }
+            if wasCancelled { return .cancelled }
+            return sessions.first(where: { $0.id == sessionID }).map(ReviewImportResult.imported)
+                ?? .failed("This review is no longer available.")
         }
+    }
+
+    private func updateAnalysisProgress(
+        _ progress: Double, sessionID: UUID,
+        ownership: ReviewImportOwnership, operationID: UUID
+    ) {
+        guard ownsLibrary(ownership), analysisOperations[sessionID] == operationID,
+              let index = sessions.firstIndex(where: { $0.id == sessionID }) else { return }
+        // Progress is transient. Persisting every callback rewrote the full archive on the UI actor.
+        sessions[index].progress = min(max(progress, 0), 1)
     }
 
     /// Short clips remain a direct review flow. A tracer is added only when the on-device
@@ -751,13 +1007,14 @@ final class ReviewerStore: ObservableObject {
     private func analyseSingleShot(
         url: URL,
         duration: TimeInterval,
-        sessionID: UUID
+        sessionID: UUID,
+        ownership: ReviewImportOwnership,
+        operationID: UUID
     ) async throws -> [ReviewCandidate] {
         let candidates = try await impactAnalysisService.analyse(url: url) { [weak self] progress in
             guard let self else { return }
             Task { @MainActor in
-                guard let current = self.sessions.first(where: { $0.id == sessionID }) else { return }
-                self.updateSession(current) { $0.progress = progress * 0.72; $0.status = .analysing }
+                self.updateAnalysisProgress(progress * 0.72, sessionID: sessionID, ownership: ownership, operationID: operationID)
             }
         }
         // Impact audio is the closest available timing anchor for a direct one-shot clip. Silent
@@ -778,13 +1035,10 @@ final class ReviewerStore: ObservableObject {
         ) { [weak self] progress in
             guard let self else { return }
             Task { @MainActor in
-                guard let current = self.sessions.first(where: { $0.id == sessionID }) else { return }
-                self.updateSession(current) {
-                    $0.progress = 0.72 + (progress * 0.27)
-                    $0.status = .analysing
-                }
+                self.updateAnalysisProgress(0.72 + progress * 0.27, sessionID: sessionID, ownership: ownership, operationID: operationID)
             }
         }
+        try Task.checkCancellation()
         let flight = trackedFlight.flatMap { $0.isDisplayable ? $0 : nil }
         let automaticPath = flight.flatMap { flightPathExtrapolator.path(from: $0, impactTime: impactTime) }
         var evidence = strongest.evidence.map(evidenceLabel)
@@ -814,22 +1068,24 @@ final class ReviewerStore: ObservableObject {
     private func analyseLongSession(
         url: URL,
         duration: TimeInterval,
-        sessionID: UUID
-    ) async -> [ReviewCandidate] {
+        sessionID: UUID,
+        ownership: ReviewImportOwnership,
+        operationID: UUID
+    ) async throws -> [ReviewCandidate] {
         let result = await longSessionAnalysisService.analyse(
             url: url,
             sourceDuration: duration
         ) { [weak self] progress in
             guard let self else { return }
             Task { @MainActor in
-                guard let current = self.sessions.first(where: { $0.id == sessionID }) else { return }
-                self.updateSession(current) { $0.progress = progress * 0.82; $0.status = .analysing }
+                self.updateAnalysisProgress(progress * 0.82, sessionID: sessionID, ownership: ownership, operationID: operationID)
             }
         }
 
         var acceptedCandidates: [ReviewCandidate] = []
         acceptedCandidates.reserveCapacity(result.acceptedShots.count)
         for (index, shot) in result.acceptedShots.enumerated() {
+            try Task.checkCancellation()
             let trackedFlight = try? await ballTrackingService.analyse(
                 url: url,
                 impactTime: shot.impactTime
@@ -837,9 +1093,7 @@ final class ReviewerStore: ObservableObject {
             let flight = trackedFlight.flatMap { $0.isDisplayable ? $0 : nil }
             let automaticPath = flight.flatMap { flightPathExtrapolator.path(from: $0, impactTime: shot.impactTime) }
             let progress = 0.82 + (0.17 * (Double(index + 1) / Double(max(result.acceptedShots.count, 1))))
-            if let current = sessions.first(where: { $0.id == sessionID }) {
-                updateSession(current) { $0.progress = progress; $0.status = .analysing }
-            }
+            updateAnalysisProgress(progress, sessionID: sessionID, ownership: ownership, operationID: operationID)
             acceptedCandidates.append(ReviewCandidate(
                 id: shot.id,
                 ordinal: index + 1,
@@ -907,6 +1161,7 @@ final class ReviewerStore: ObservableObject {
             sourceURL: nil, createdAt: .now, duration: 0, status: .paused,
             progress: 0, candidates: [], errorMessage: "Live capture is waiting for the capture controller."
         )
+        guard canModifyLibrary else { return session }
         sessions.insert(session, at: 0)
         select(session)
         persistSessions()
@@ -947,21 +1202,37 @@ final class ReviewerStore: ObservableObject {
         }
     }
 
-    private func updateSession(_ session: ReviewSession, _ update: (inout ReviewSession) -> Void) {
-        guard let index = sessions.firstIndex(where: { $0.id == session.id }) else { return }
+    @discardableResult
+    private func updateSession(_ session: ReviewSession, _ update: (inout ReviewSession) -> Void) -> Bool {
+        guard canModifyLibrary, let index = sessions.firstIndex(where: { $0.id == session.id }) else { return false }
         update(&sessions[index])
-        persistSessions()
+        return persistSessions()
     }
 
     private func updateCandidate(_ candidate: ReviewCandidate, in session: ReviewSession, _ update: (inout ReviewCandidate) -> Void) {
-        guard let sessionIndex = sessions.firstIndex(where: { $0.id == session.id }),
+        guard canModifyLibrary, let sessionIndex = sessions.firstIndex(where: { $0.id == session.id }),
               let candidateIndex = sessions[sessionIndex].candidates.firstIndex(where: { $0.id == candidate.id }) else { return }
         update(&sessions[sessionIndex].candidates[candidateIndex])
         persistSessions()
     }
 
-    private func persistSessions() {
-        try? archive?.save(sessions)
+    @discardableResult
+    private func persistSessions() -> Bool {
+        guard persistenceEnabled else { return true }
+        guard canModifyLibrary, let archive else {
+            libraryError = libraryError ?? "Open your existing library before saving changes."
+            return false
+        }
+        do {
+            try archive.save(sessions)
+            hasUnsavedChanges = false
+            libraryError = nil
+            return true
+        } catch {
+            hasUnsavedChanges = true
+            libraryError = "Your latest changes have not been saved. Check free storage, then try saving again."
+            return false
+        }
     }
 
     private static func cleanOptional(_ value: String, limit: Int) -> String? {

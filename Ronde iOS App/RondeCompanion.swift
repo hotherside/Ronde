@@ -71,7 +71,7 @@ struct RondeCompanionApp: App {
                     FullScreenTracerEditor(store: store, session: session, candidate: candidate)
                 } else if isQuickReviewPreview, let session = store.selectedSession {
                     NavigationStack {
-                        SessionWorkspaceView(store: store, session: session)
+                        RondeMediaDetailRoute(store: store, accountStore: accountStore, sessionID: session.id)
                     }
                 } else if isMediaDetailPreview, let session = store.selectedSession {
                     NavigationStack {

@@ -14,7 +14,8 @@ This is the durable handoff library for Ronde. It separates accepted intent, liv
 8. [Decisions](decisions/README.md)
 9. [Shot tracer validation](TRACER_VALIDATION.md)
 10. [History](history/README.md)
-11. [Generated inventory](generated/repository-inventory.md)
+11. [September app review](reviews/2026-09-07-app-review.md)
+12. [Generated inventory](generated/repository-inventory.md)
 
 ## Authority
 

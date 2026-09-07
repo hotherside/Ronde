@@ -4,3 +4,5 @@
 - [Commit ledger](commit-ledger.md): generated readable index of all Git commits.
 
 Git is authoritative. The ledger excludes automatic context-refresh commits from its table.
+
+- [Archived reviewer state, 30 August 2026](2026-08-30-reviewer-state.md)

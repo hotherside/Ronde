@@ -71,10 +71,27 @@ targets:
     productName: Ronde AppTests
     sources:
       - path: Ronde iOS AppTests
+      - path: Ronde iOS AppUITests/Resources/studio-fixture.mp4
+        buildPhase: resources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.ronde.RondeAppTests
         PRODUCT_NAME: Ronde AppTests
+        IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+        SWIFT_VERSION: "6.0"
+        GENERATE_INFOPLIST_FILE: YES
+        TARGETED_DEVICE_FAMILY: "1,2"
+    dependencies:
+      - target: Ronde iOS
+
+  Ronde iOS AppUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: Ronde iOS AppUITests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.ronde.RondeUITests
         IPHONEOS_DEPLOYMENT_TARGET: "17.0"
         SWIFT_VERSION: "6.0"
         GENERATE_INFOPLIST_FILE: YES
@@ -131,5 +148,6 @@ schemes:
       config: Debug
       targets:
         - Ronde iOS AppTests
+        - Ronde iOS AppUITests
     archive:
       config: Release

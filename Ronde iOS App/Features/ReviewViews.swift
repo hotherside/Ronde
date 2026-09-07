@@ -457,285 +457,144 @@ struct RangeSessionEntryView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var store: ReviewerStore
     let intent: ReviewLaunchIntent
+    let onImported: (ReviewSession) -> Void
     @State private var selectedSource: PhotosPickerItem?
-    @State private var isImporterPresented = false
-    @State private var entryTab: RangeEntryTab = .importVideo
+    @State private var showsPhotos = false
+    @State private var showsFiles = false
     @State private var isLoading = false
     @State private var importError: String?
-    @State private var fixedCameraConfirmed = false
-    @State private var targetGolferConfirmed = false
-    @State private var singleGolferConfirmed = false
-    let onImported: (ReviewSession) -> Void
+    @State private var ownership: ReviewImportOwnership?
+    @State private var importTask: Task<Void, Never>?
+    @State private var didPrepare = false
+    @State private var fixedCamera = false
+    @State private var targetGolfer = false
+    @State private var singleGolfer = false
 
-    enum RangeEntryTab: String, CaseIterable, Identifiable {
-        case importVideo
-        case record
-
-        var id: String { rawValue }
-
-        var title: String {
-            switch self {
-            case .importVideo: return "Import"
-            case .record: return "Record"
-            }
-        }
+    private var canImport: Bool {
+        !isLoading && store.canModifyLibrary && (intent != .range || (fixedCamera && targetGolfer && singleGolfer))
     }
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
-                    entryHeader
-
-                    if intent != .oneShot {
-                        Text("IMPORT A SESSION")
-                            .font(.reviewerSection)
-                            .tracking(1.3)
-                            .foregroundStyle(RondeReviewDesign.graphiteFaint)
+                VStack(alignment: .leading, spacing: 28) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Image(systemName: "video.badge.plus")
+                            .font(.largeTitle).foregroundStyle(RondeReviewDesign.tracerPurple)
+                        Text("Start with your video.")
+                            .font(.title.weight(.semibold))
+                        Text(intent == .oneShot ? "Choose a shot up to one minute. You can trim it and add a trace in the editor." : "Choose a fixed-camera range recording to review.")
+                            .font(.body).foregroundStyle(.secondary)
                     }
-
-                    importPanel
-
+                    if intent == .range {
+                        VStack(spacing: 16) {
+                            Toggle("The camera stays still", isOn: $fixedCamera)
+                            Toggle("I am the target golfer", isOn: $targetGolfer)
+                            Toggle("No other golfer is in frame", isOn: $singleGolfer)
+                        }
+                    }
+                    VStack(spacing: 12) {
+                        Button {
+                            ownership = store.captureImportOwnership()
+                            selectedSource = nil
+                            showsPhotos = ownership != nil
+                        } label: {
+                            Label("Choose from Photos", systemImage: "photo.on.rectangle")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(ReviewPrimaryButtonStyle(tint: RondeReviewDesign.graphite))
+                        .disabled(!canImport)
+                        Button {
+                            ownership = store.captureImportOwnership()
+                            showsFiles = ownership != nil
+                        } label: {
+                            Label("Browse Files", systemImage: "folder")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(ReviewSecondaryButtonStyle())
+                        .disabled(!canImport)
+                    }
+                    if isLoading {
+                        ProgressView("Preparing your video…")
+                            .font(.body).frame(maxWidth: .infinity)
+                    }
                     if let importError {
-                        Label(importError, systemImage: "exclamationmark.triangle.fill")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(RondeReviewDesign.red)
-                            .padding(14)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(RondeReviewDesign.redWash, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        Text(importError).font(.body).foregroundStyle(RondeReviewDesign.red)
                     }
+                    Text("Your original stays untouched. Editing happens on this device.")
+                        .font(.subheadline).foregroundStyle(.secondary)
                 }
-                .frame(maxWidth: 700, alignment: .leading)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 24)
-                .frame(maxWidth: .infinity, alignment: .top)
+                .padding(24)
+                .frame(maxWidth: 540, alignment: .leading)
+                .frame(maxWidth: .infinity)
             }
             .reviewCanvasBackground()
-            .navigationTitle(intent == .oneShot ? "Shot Video" : "Range Session")
+            .navigationTitle("Add video")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") { dismiss() }
+                    Button("Cancel") { importTask?.cancel(); dismiss() }
                 }
             }
-            .fileImporter(
-                isPresented: $isImporterPresented,
-                allowedContentTypes: [.movie, .mpeg4Movie, .quickTimeMovie],
-                allowsMultipleSelection: false
-            ) { result in
-                handleFileImport(result)
+            .photosPicker(isPresented: $showsPhotos, selection: $selectedSource, matching: .videos)
+            .fileImporter(isPresented: $showsFiles, allowedContentTypes: [.movie, .mpeg4Movie, .quickTimeMovie]) { result in
+                switch result {
+                case .success(let url):
+                    guard let ownership else { return }
+                    importTask = Task { await importVideo(url, name: url.lastPathComponent, ownership: ownership) }
+                case .failure(let error): importError = error.localizedDescription
+                }
             }
             .onChange(of: selectedSource) { _, item in
-                guard let item else { return }
-                Task { await loadPhotoSelection(item) }
-            }
-        }
-        .preferredColorScheme(.light)
-    }
-
-    private var entryHeader: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                Image(systemName: intent == .oneShot ? "play.rectangle.fill" : "film.stack")
-                    .foregroundStyle(RondeReviewDesign.tracerPurple)
-                Text(intent == .oneShot ? "Shot video" : "Range session")
-            }
-            .font(.reviewerSection)
-            .tracking(1.2)
-            .foregroundStyle(RondeReviewDesign.fairway)
-            Text(intent == .oneShot ? "One video. One shot." : "Review the session that matters.")
-                .font(.reviewerTitle)
-                .foregroundStyle(RondeReviewDesign.graphite)
-            Text(intent == .oneShot
-                 ? "Choose a shot video up to 1 minute. Ronde keeps the complete clip and finds impact timing automatically."
-                 : "Potential moments are reviewed locally. Only supported shots earn a tracer; the rest stay in the queue.")
-                .font(.subheadline)
-                .foregroundStyle(RondeReviewDesign.graphiteMuted)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .accessibilityElement(children: .combine)
-    }
-
-    private var importPanel: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            VStack(alignment: .leading, spacing: 5) {
-                Label("Choose a recording", systemImage: "video.badge.plus")
-                    .font(.headline.weight(.semibold))
-                    .foregroundStyle(RondeReviewDesign.graphite)
-                Text("Photos or Files · H.264 and HEVC first")
-                    .font(.footnote)
-                    .foregroundStyle(RondeReviewDesign.graphiteMuted)
-            }
-
-            if intent == .range {
-                rangeEvidenceChecklist
-            }
-
-            HStack(spacing: 10) {
-                PhotosPicker(selection: $selectedSource, matching: .videos) {
-                    Label("Photos", systemImage: "photo.on.rectangle")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(ReviewPrimaryButtonStyle())
-                .disabled(isLoading || !canImportRangeSession)
-
-                Button {
-                    isImporterPresented = true
-                } label: {
-                    Label("Files", systemImage: "folder")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(ReviewSecondaryButtonStyle())
-                .disabled(isLoading || !canImportRangeSession)
-            }
-
-            if intent == .range, !canImportRangeSession {
-                Text("Confirm all three conditions before Ronde can assess a range session.")
-                    .font(.caption)
-                    .foregroundStyle(RondeReviewDesign.amber)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            if isLoading {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 8) {
-                        ProgressView()
-                            .tint(RondeReviewDesign.fairway)
-                        Text(analysisStage.title)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(RondeReviewDesign.graphite)
-                    }
-                    ProgressView(value: analysisProgress)
-                        .tint(RondeReviewDesign.fairway)
-                        .accessibilityLabel("Analysis progress")
-                    Text(analysisStage.detail)
-                        .font(.caption)
-                        .foregroundStyle(RondeReviewDesign.graphiteMuted)
+                guard let item, let ownership else { return }
+                importTask = Task {
+                    isLoading = true
+                    defer { isLoading = false }
+                    do {
+                        guard let transferred = try await item.loadTransferable(type: VideoFileTransferable.self) else {
+                            importError = "Could not read that video. Choose another recording."
+                            return
+                        }
+                        defer { try? FileManager.default.removeItem(at: transferred.url) }
+                        try Task.checkCancellation()
+                        await importVideo(transferred.url, name: "Photos recording", ownership: ownership)
+                    } catch is CancellationError {
+                        return
+                    } catch { importError = error.localizedDescription }
                 }
             }
         }
-        .reviewCard()
+        .interactiveDismissDisabled(isLoading)
+        .onDisappear { if !didPrepare { importTask?.cancel() } }
     }
 
-    private var canImportRangeSession: Bool {
-        intent != .range || (fixedCameraConfirmed && targetGolferConfirmed && singleGolferConfirmed)
-    }
-
-    private var rangeEvidenceChecklist: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("SHOT ASSOCIATION")
-                .font(.reviewerSection)
-                .tracking(1.2)
-                .foregroundStyle(RondeReviewDesign.fairway)
-            Text("For automatic range review, confirm the footage setup.")
-                .font(.caption)
-                .foregroundStyle(RondeReviewDesign.graphiteMuted)
-
-            RangeEvidenceToggle(
-                title: "Camera is fixed or braced",
-                isOn: $fixedCameraConfirmed,
-                hint: "The phone stays still through the shot"
-            )
-            RangeEvidenceToggle(
-                title: "I am the target golfer",
-                isOn: $targetGolferConfirmed,
-                hint: "The intended golfer remains in frame"
-            )
-            RangeEvidenceToggle(
-                title: "No other golfer is in frame",
-                isOn: $singleGolferConfirmed,
-                hint: "Ronde will not infer which golfer launched the ball"
-            )
-        }
-        .padding(11)
-        .background(RondeReviewDesign.canvas, in: RoundedRectangle(cornerRadius: RondeReviewDesign.smallRadius, style: .continuous))
-        .accessibilityElement(children: .contain)
-    }
-
-    private var recordPanel: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Label("Record a range session", systemImage: "camera")
-                .font(.body.weight(.bold))
-                .foregroundStyle(RondeReviewDesign.graphite)
-            Text("In-app range recording is not available in this build. Import footage from Photos or Files to begin a review.")
-                .font(.body)
-                .foregroundStyle(RondeReviewDesign.graphiteMuted)
-            Button {
-                entryTab = .importVideo
-            } label: {
-                Label("Back to Import", systemImage: "arrow.left.circle")
-            }
-            .buttonStyle(ReviewSecondaryButtonStyle(tint: RondeReviewDesign.blue))
-        }
-        .reviewCard()
-    }
-
-    private var analysisProgress: Double {
-        min(max(store.selectedSession?.progress ?? 0, 0), 1)
-    }
-
-    private var analysisStage: (title: String, detail: String) {
-        switch analysisProgress {
-        case ..<0.2:
-            return ("Preparing", "Keeping the original recording on this device.")
-        case ..<0.72:
-            return ("Finding launch", "Locating impact and the first visible ball movement.")
-        case ..<0.99:
-            return ("Tracking the ball", "Following the launch frame by frame on this device.")
-        default:
-            return ("Ready", "Opening the review surface now.")
-        }
-    }
-
-    private func handleFileImport(_ result: Result<[URL], Error>) {
-        switch result {
-        case .success(let urls):
-            guard let url = urls.first else { return }
-            Task { await importVideo(url: url, sourceName: url.lastPathComponent) }
-        case .failure(let error):
-            importError = error.localizedDescription
-        }
-    }
-
-    private func loadPhotoSelection(_ item: PhotosPickerItem) async {
+    private func importVideo(_ url: URL, name: String, ownership: ReviewImportOwnership) async {
         isLoading = true
-        defer { isLoading = false }
-        do {
-            guard let transferred = try await item.loadTransferable(type: VideoFileTransferable.self) else {
-                importError = "Ronde could not read that video. Choose another recording."
-                return
-            }
-            await importVideo(url: transferred.url, sourceName: "Photos recording")
-            try? FileManager.default.removeItem(at: transferred.url)
-        } catch {
-            importError = error.localizedDescription
-        }
-    }
-
-    private func importVideo(url: URL, sourceName: String) async {
-        isLoading = true
+        importError = nil
         defer { isLoading = false }
         if intent == .range {
             let evidence = FixedCameraSingleGolferSessionEvidence(
-                cameraWasFixedForSession: fixedCameraConfirmed,
-                targetGolferWasExplicitlyConfirmed: targetGolferConfirmed,
-                noOtherGolferWasConfirmedInFrame: singleGolferConfirmed,
-                confirmationDescription: "Reviewer confirmed a fixed camera, named target golfer and no other golfer in frame before importing this range session."
+                cameraWasFixedForSession: fixedCamera,
+                targetGolferWasExplicitlyConfirmed: targetGolfer,
+                noOtherGolferWasConfirmedInFrame: singleGolfer,
+                confirmationDescription: "The reviewer confirmed a fixed camera and one target golfer."
             )
-            guard store.configureFixedSingleGolferRangeAnalysis(with: evidence) else {
-                importError = "Confirm the fixed-camera and single-golfer setup before importing a range session."
-                return
-            }
+            guard store.configureFixedSingleGolferRangeAnalysis(with: evidence) else { return }
         }
-        await store.importVideo(
-            at: url,
-            sourceName: sourceName,
-            importKind: intent == .oneShot ? .oneShot : .rangeSession
-        )
-        if let session = store.selectedSession {
-            onImported(session)
+        let result = await store.importVideo(at: url, sourceName: name,
+            importKind: intent == .oneShot ? .oneShot : .rangeSession,
+            ownership: ownership,
+            onPrepared: { session in
+                didPrepare = true
+                onImported(session)
+                dismiss()
+            })
+        switch result {
+        case .imported(let session):
+            if !didPrepare { onImported(session); dismiss() }
+        case .cancelled: break
+        case .failed(let message): importError = message
         }
-        dismiss()
     }
 }
 
@@ -1115,16 +974,14 @@ final class ClipPlaybackController: NSObject, ObservableObject {
     func play(candidate: ReviewCandidate) {
         guard let player, let item = player.currentItem else { return }
         item.forwardPlaybackEndTime = CMTime(seconds: candidate.endTime, preferredTimescale: 600)
-        player.seek(
-            to: CMTime(seconds: candidate.startTime, preferredTimescale: 600),
-            toleranceBefore: .zero,
-            toleranceAfter: .zero
-        ) { [weak self, weak player] _ in
-            guard let self, let player else { return }
+        let target = currentTime >= candidate.startTime && currentTime < candidate.endTime - 0.03
+            ? currentTime : candidate.startTime
+        player.seek(to: CMTime(seconds: target, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero) { [weak self, weak player] finished in
+            guard finished else { return }
             DispatchQueue.main.async {
-                player.play()
-                self.isPlaying = true
-                self.currentTime = candidate.startTime
+                player?.play()
+                self?.isPlaying = true
+                self?.currentTime = target
             }
         }
     }
