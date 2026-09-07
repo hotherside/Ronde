@@ -2,9 +2,9 @@
 
 > Generated from Git. Git remains authoritative. Context-only refresh commits are excluded.
 
-- Source commit: `6ff89b056bc0771e40a0beb015f1ee03707d67d9`
-- Source commit date: 2026-08-30
-- Tracked commit count: 71
+- Source commit: `cbf6c565ef4890a5b037ddf011c5b28fe32251d8`
+- Source commit date: 2026-09-07
+- Tracked commit count: 73
 
 | Date | Commit | Subject |
 | --- | --- | --- |
@@ -68,3 +68,5 @@
 | 2026-08-30 | `0afaa0a` | fix(ios): preserve near-30fps tracer samples |
 | 2026-08-30 | `d618dbe` | chore(context): refresh tracer delivery indexes |
 | 2026-08-30 | `61dbc29` | Merge pull request #8 from hotherside/codex/shot-tracer-cadence |
+| 2026-09-07 | `1c0151a` | Rebuild shot review around a local media studio |
+| 2026-09-07 | `cbf6c56` | Merge pull request #9 from hotherside/codex/media-workspace-redesign |
