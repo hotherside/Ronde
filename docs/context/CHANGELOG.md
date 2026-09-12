@@ -1,5 +1,13 @@
 # Context Changelog
 
+## 12 September 2026
+
+### Portable project handoff
+
+- Clarified the existing brief and session-completion contract for local, cloud and ChatGPT/Work use: explicit source revision, accepted decisions versus proposals, verified evidence and the next gate.
+- Prepared from `main` at [`886478e`](https://github.com/hotherside/Ronde/commit/886478e58ea7f54f4b2222d7a51fa32ef9b166b1) on `codex/portable-context-2026-09-12`. The review/merge gate remains separate from sharing a task-branch snapshot.
+- Refreshed generated indexes and checked the context library and documentation diff. Product, runtime and external-service evidence was not revalidated by this documentation change.
+
 ## 7 September 2026
 
 - Replaced Home/Library/Profile dashboards with one neutral Shot library and media studio. Consolidated playback, source-frame navigation, thumbnail trimming, trace selection and social export; simplified import, details, settings and manual editing.

@@ -4,11 +4,11 @@
 
 ## Repository baseline
 
-- Source commit: `cbf6c565ef4890a5b037ddf011c5b28fe32251d8`
+- Source commit: `886478e58ea7f54f4b2222d7a51fa32ef9b166b1`
 - Source commit date: 2026-09-07
-- Commit count: 73
-- Working-tree entries when generated: 0
-- Origin: `https://github.com/hotherside/Ronde`
+- Commit count: 74
+- Working-tree entries when generated: 5
+- Origin: `https://github.com/hotherside/Ronde.git`
 
 ## File composition
 
