@@ -2,9 +2,9 @@
 
 > Generated from Git. Git remains authoritative. Context-only refresh commits are excluded.
 
-- Source commit: `886478e58ea7f54f4b2222d7a51fa32ef9b166b1`
-- Source commit date: 2026-09-07
-- Tracked commit count: 74
+- Source commit: `7f294b43c54c3d5e877ab4657726dd0756bb651f`
+- Source commit date: 2026-09-12
+- Tracked commit count: 76
 
 | Date | Commit | Subject |
 | --- | --- | --- |
@@ -70,3 +70,5 @@
 | 2026-08-30 | `61dbc29` | Merge pull request #8 from hotherside/codex/shot-tracer-cadence |
 | 2026-09-07 | `1c0151a` | Rebuild shot review around a local media studio |
 | 2026-09-07 | `cbf6c56` | Merge pull request #9 from hotherside/codex/media-workspace-redesign |
+| 2026-09-12 | `012a6b3` | docs: make project handoff portable across sessions |
+| 2026-09-12 | `7f294b4` | Merge pull request #10 from hotherside/codex/portable-context-2026-09-12 |
