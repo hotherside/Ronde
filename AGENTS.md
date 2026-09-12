@@ -40,6 +40,10 @@ If product intent and implementation disagree, report both. Do not silently desc
 - `Ronde.xcodeproj/`: generated Xcode project and shared schemes.
 - `docs/context/`: cross-tool context library.
 
+## Portable session handoff
+
+Use repository-relative sources at the selected branch/commit in local and cloud sessions. At completion, follow [the documentation contract](docs/context/DOCUMENTATION_CONTRACT.md#session-completion-across-tools) to record accepted decisions, evidence and the next gate in the task branch; committed `main` is the shared baseline. Never assume local uncommitted work or memory reaches cloud or ChatGPT/Work.
+
 ## Documentation maintenance
 
 For every material product, behaviour, architecture, persistence, permission, release or user-visible change:

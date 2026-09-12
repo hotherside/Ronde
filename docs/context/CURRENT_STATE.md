@@ -2,6 +2,8 @@
 
 **Reviewed:** 7 September 2026
 
+**Context maintenance:** 12 September 2026, documentation-only review from committed `main` at `886478e`. The product and external verification dates below are unchanged. Inspect the current checkout/ref and the existing next gates before continuing; follow the [session-completion contract](DOCUMENTATION_CONTRACT.md#session-completion-across-tools).
+
 **Delivery scope:** library and shot-studio redesign, local archive/import safety and deterministic tracker repairs. Git is authoritative for the current branch, commit and merge state.
 
 ## Stage

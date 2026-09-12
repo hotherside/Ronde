@@ -21,3 +21,10 @@ Pre-release product hardening and reviewer validation. The September 2026 redesi
 - [History](docs/context/history/TIMELINE.md)
 
 Git is the exact committed history. Documentation records accepted intent, verified snapshots and known uncertainty.
+
+## Repository source
+
+- Canonical repository: [hotherside/Ronde](https://github.com/hotherside/Ronde).
+- Shared baseline: committed `main`; verify the selected branch and commit before continuing.
+
+Use this file as the compact brief for local, cloud and ChatGPT/Work discussions, with the relevant linked context pages. Any uploaded copy is a dated snapshot: identify its source commit and verify that the destination can read it. Follow the [session-completion contract](docs/context/DOCUMENTATION_CONTRACT.md#session-completion-across-tools) to carry accepted changes back into the repository.
