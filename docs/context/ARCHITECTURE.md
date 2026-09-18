@@ -2,21 +2,10 @@
 
 ## Runtime shape
 
-### Watch runtime
-
-```text
-RondeApp
-  -> SwiftData ModelContainer
-  -> ContentView
-      -> setup flow
-      -> active ShotCounterView
-      -> RoundSummaryView and history
-```
-
 ### iOS reviewer runtime
 
 ```text
-RondeCompanionApp -> RondeRootView -> Apple account boundary
+RondeApp -> RondeRootView -> Apple account boundary
   -> RondeAppShell: Shot library, search/favourites and Settings
   -> RangeSessionEntryView: capture account ownership before Photos/Files work
   -> ReviewerStore: durable prepared import -> owned cancellable analysis
@@ -32,33 +21,12 @@ RondeCompanionApp -> RondeRootView -> Apple account boundary
 
 `ShotVideoLayout` supplies the source-to-canvas geometry for preview and output. Full-source media is never overwritten. Export does not rerun detection. The active studio does not consume modelled carry, inferred landing or full-flight completion. Legacy perspective and Core Animation export components below remain experimental/compatibility code; ADR 0011 defines the current presentation.
 
-The source retains dormant range-session association and live camera foundations. Neither is exposed in the single-shot studio. The Watch remains independent of all reviewer and account services.
-
-### Watch round lifecycle
-
-```text
-Round lifecycle
-  -> SwiftData Round + HoleScore
-  -> optional HealthKit golf workout
-  -> optional pedometer and location context
-  -> App Intents shot action
-```
+The source retains dormant range-session association and live camera foundations. Neither is exposed in the single-shot studio.
 
 ## Boundaries
 
-- `Ronde Watch App/RondeApp.swift`: application entry, persistence container and debug preview routing.
-- `ContentView.swift`: selects home, active round or summary from persisted state.
-- `Models/`: SwiftData round and hole state plus course data structures.
-- `Views/SetupFlow/`: course, hole, par and ready flow.
-- `Views/InRound/`: scoring and hole-transition surfaces.
-- `Views/Summary/`: completed-round review.
-- `Services/WorkoutManager.swift`: HealthKit workout lifecycle and recovery.
-- `Services/LocationService.swift`: permission and nearby-course location.
-- `Services/PedometerService.swift`: walking metrics.
-- `Services/CourseLibrary.swift` and `Resources/SydneyCourses.json`: bundled course data.
-- `Intents/ShotCountIntent.swift`: Action Button-compatible App Intents.
 - `project.yml`: XcodeGen definition for targets, settings, entitlements and schemes.
-- `Ronde iOS App/`: universal iPhone/iPad reviewer source and packaging companion. The Watch does not call into this runtime to count shots.
+- `Ronde iOS App/`: universal iPhone/iPad media library, reviewer, tracer and capture foundations.
 - `Ronde iOS App/App/RondeAppShell.swift`: Apple-only entry, Shot library, Settings and studio routing with native navigation.
 - `Ronde iOS App/Features/FullScreenTracerEditor.swift`: immersive manual trace placement over the fitted source video. It owns an unsaved local draft, direct Impact/Apex/Landing handles, frame stepping and Undo/Reset; only Save writes user-authored geometry through `ReviewerStore`.
 - `Ronde iOS App/Persistence/ReviewSessionArchive.swift`: account-scoped JSON persistence for review metadata and saved geometry with atomic writes and complete file protection.
@@ -90,9 +58,7 @@ Round lifecycle
 
 ## Data and privacy
 
-Round history is local SwiftData. HealthKit, location and motion access are optional capability inputs. Do not add analytics, remote round storage or background location without an explicit product, privacy and operational decision.
-
-Reviewer raw media, app-owned URLs, tracer geometry and analysis are local-only for MVP. Camera, microphone, photo-library import, add-only export and Sign in with Apple capability are declared through `project.yml`; denial or network failure must leave the Watch counter usable and preserve an already activated local reviewer library.
+Raw media, app-owned URLs, tracer geometry and analysis are local-only for MVP. Camera, microphone, photo-library import, add-only export and Sign in with Apple capability are declared through `project.yml`; denial or network failure must preserve access to an already activated local library wherever the requested feature does not require that capability.
 
 The Supabase project stores only `profiles` and lightweight `library_items` metadata. Both tables have row-level security, authenticated ownership policies and no anonymous grants. The iOS app uses the public publishable key; no service-role credential belongs in the app or repository. Remote metadata is currently an account record and sync target, not a source for reconstructing missing local videos or geometry.
 

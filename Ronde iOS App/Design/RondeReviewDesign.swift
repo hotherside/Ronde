@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// The reviewer is intentionally separate from the watch's OLED field
-/// instrument theme. It is a calm, light workspace for studying video.
+/// A calm, light workspace for studying shot video.
 enum RondeReviewDesign {
     static let canvas = Color(red: 0.975, green: 0.975, blue: 0.980)
     static let surface = Color.white

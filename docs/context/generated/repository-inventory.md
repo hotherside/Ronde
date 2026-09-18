@@ -4,30 +4,34 @@
 
 ## Repository baseline
 
-- Source commit: `7f294b43c54c3d5e877ab4657726dd0756bb651f`
-- Source commit date: 2026-09-12
-- Commit count: 76
+- Source commit: `794db87e86cf7b13b8894d9abf49479fb7b1f6f6`
+- Source commit date: 2026-09-19
+- Commit count: 78
 - Working-tree entries when generated: 0
-- Origin: `https://github.com/hotherside/Ronde`
+- Origin: `https://github.com/hotherside/Ronde.git`
 
 ## File composition
 
 | Type | Count |
 | --- | ---: |
-| Swift | 73 |
+| Swift | 47 |
 | XCTest files | 13 |
-| Markdown | 41 |
-| JSON resources | 8 |
+| Markdown | 42 |
+| JSON resources | 3 |
 
 ## Source areas
 
-- `Ronde Watch App/Assets.xcassets`
-- `Ronde Watch App/Intents`
-- `Ronde Watch App/Models`
-- `Ronde Watch App/Preview Content`
-- `Ronde Watch App/Resources`
-- `Ronde Watch App/Services`
-- `Ronde Watch App/Views`
+- `Ronde iOS App/Analysis`
+- `Ronde iOS App/App`
+- `Ronde iOS App/Assets.xcassets`
+- `Ronde iOS App/Auth`
+- `Ronde iOS App/Capture`
+- `Ronde iOS App/Design`
+- `Ronde iOS App/Domain`
+- `Ronde iOS App/Features`
+- `Ronde iOS App/Media`
+- `Ronde iOS App/Persistence`
+- `Ronde iOS App/Resources`
 
 ## Canonical context
 

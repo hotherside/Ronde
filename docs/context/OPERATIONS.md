@@ -3,7 +3,6 @@
 ## Prerequisites
 
 - Xcode compatible with the checked-in project.
-- watchOS 10+ simulator runtime.
 - XcodeGen when changing `project.yml`.
 - Supabase CLI or an authenticated Supabase project connector when changing hosted metadata schema.
 - A configured development team only for signing or hardware work.
@@ -27,7 +26,6 @@ git diff -- Ronde.xcodeproj project.yml
 ## Build
 
 ```bash
-xcodebuild -project Ronde.xcodeproj -scheme 'Ronde Watch App' -destination 'generic/platform=watchOS Simulator' build
 xcodebuild -project Ronde.xcodeproj -scheme 'Ronde iOS' -destination 'generic/platform=iOS Simulator' build
 xcodebuild -project Ronde.xcodeproj -scheme 'Ronde iOS' -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.0' test
 ```
@@ -35,8 +33,6 @@ xcodebuild -project Ronde.xcodeproj -scheme 'Ronde iOS' -destination 'platform=i
 After changing `project.yml`, regenerate deliberately and inspect the generated diff. The iOS target is universal (`TARGETED_DEVICE_FAMILY=1,2`) and light-only, with camera, microphone, photo-library and Sign in with Apple capability configuration plus the exact Supabase Swift package. Do not treat the checked-in generated project as updated until regeneration has been reviewed.
 
 The iOS test target is `Ronde iOS AppTests`. Keep tests focused on deterministic media range arithmetic, local media behaviour, account-scoped archive isolation, reversible edit settings, social export/audio, archive failure recovery, proposal/evidence decisions, import routing, audio/body-motion grouping, timestamp-based track association, evidence-anchored completion, capture-quality classification and tracer timing/geometry. The current baseline is recorded in `CURRENT_STATE.md` after each final run. A separate signed local probe may bundle a private clip temporarily, but it must pass the exact Swift decoder, Core ML and linker path and every temporary copy must then be removed. Re-run after changing detector, pixel conversion, association, extrapolation, export or display eligibility.
-
-When selecting a named watch simulator, Xcode can expose paired and standalone devices with the same name. Use `-showdestinations` and an explicit `id=<SIMULATOR_ID>` when a name is ambiguous. Do not commit machine-specific simulator IDs to the canonical command.
 
 ## Reviewer validation boundaries
 
@@ -68,7 +64,7 @@ When selecting a named watch simulator, Xcode can expose paired and standalone d
 
 ## Preview states
 
-The Watch Debug build supports `RONDE_PREVIEW_SCREEN` through `RondePreviewRouter.swift`. The iOS Debug build accepts `ios-redesign-signin`, `ios-redesign-home`, `ios-redesign-library`, `ios-redesign-profile`, `ios-redesign-media`, `ios-redesign-tracer` and `ios-quick-review`. The legacy home/library preview names now open Shot library, profile opens Settings, and media/quick-review open the studio. Fixtures contain archived observed and estimated segments, but the studio renders observed samples only; `RONDE_PREVIEW_VIDEO_PATH` may point to a local simulator-only source. Never commit the referenced private footage. Treat screenshots as layout evidence only after confirming the exact build, destination and requested state.
+The iOS Debug build accepts `ios-redesign-signin`, `ios-redesign-home`, `ios-redesign-library`, `ios-redesign-profile`, `ios-redesign-media`, `ios-redesign-tracer` and `ios-quick-review`. The legacy home/library preview names now open Shot library, profile opens Settings, and media/quick-review open the studio. Fixtures contain archived observed and estimated segments, but the studio renders observed samples only; `RONDE_PREVIEW_VIDEO_PATH` may point to a local simulator-only source. Never commit the referenced private footage. Treat screenshots as layout evidence only after confirming the exact build, destination and requested state.
 
 ## Studio regression checks
 
@@ -80,9 +76,9 @@ Check all output canvases for aspect fit, correct portrait orientation, trace al
 
 - The iOS product is named `Ronde Shot Review` for App Store Connect record creation while `CFBundleDisplayName` remains `Ronde` on the device.
 - The universal iOS AppIcon reuses the current approved 1024 px Ronde artwork and compiles into iPhone and iPad icon variants.
-- An App Store Connect error that the app name is already in use is an app-record naming conflict, not evidence that the Watch target caused the failure. Create or select the `com.ronde` app record using the unique product name, then upload the archive to that record.
-- `project.yml` is the authority for companion bundle IDs. Keep the iOS bundle ID and the Watch app's `WKCompanionAppBundleIdentifier` exactly `com.ronde`; regenerate the Xcode project after any change. Bundle identifiers are case-sensitive on-device.
-- A generic-device archive has succeeded with the compiled universal icon and embedded Watch app. The inspected archive was Apple Development-signed, so App Store distribution signing, record creation and TestFlight upload remain portal-level evidence.
+- An App Store Connect error that the app name is already in use is an app-record naming conflict. Create or select the `com.ronde` app record using the unique product name, then upload the archive to that record.
+- `project.yml` is the authority for the universal iOS bundle ID, capabilities and build settings. Regenerate the Xcode project after any change. Bundle identifiers are case-sensitive on-device.
+- A generic-device archive has succeeded with the compiled universal icon. The inspected archive was Apple Development-signed, so App Store distribution signing, record selection and TestFlight availability remain portal-level evidence.
 
 ## Release evidence levels
 
@@ -92,6 +88,6 @@ Keep these claims separate:
 2. Xcode project generation.
 3. Simulator build.
 4. Simulator interaction.
-5. Physical watch interaction and permission behaviour.
+5. Physical iPhone/iPad interaction and permission behaviour.
 6. Archive and signing.
 7. TestFlight or App Store availability.

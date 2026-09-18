@@ -57,7 +57,7 @@ Use native Sign in with Apple as the only account provider. The native flow shou
 
 ### Resolved account boundary
 
-Sign in with Apple is the only iPhone/iPad account method. A new install requires authentication; after an account activates its local archive, metadata-sync failure does not block local review. The independent Watch counter never depends on this account or network path.
+Sign in with Apple is the only account method. A new install requires authentication; after an account activates its local archive, metadata-sync failure does not block local review.
 
 ## Storage boundary
 

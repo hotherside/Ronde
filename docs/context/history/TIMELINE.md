@@ -13,4 +13,16 @@
 - Established the repository-owned cross-tool context library.
 - Kept real-device behaviour, automated tests and distribution as explicit follow-up evidence gates.
 
+## August to early September 2026: universal shot media app
+
+- Expanded the iOS packaging target into a universal iPhone/iPad Shot library and studio.
+- Added local-first media, evidence-gated automatic tracing, manual annotation, non-destructive trimming and fitted social export.
+- Kept representative footage, signed-device performance and distribution as explicit evidence gates.
+
+## 19 September 2026: iPhone/iPad-only reset
+
+- Retired the Apple Watch product and removed its source, target, scheme, entitlements and iOS embedding relationship.
+- Made the universal shot media library, tracer and editor the whole of Ronde under ADR 0012.
+- Retained earlier Watch details here, in the archived state and in Git only as dated history.
+
 The complete committed sequence is in [commit-ledger.md](commit-ledger.md).

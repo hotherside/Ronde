@@ -41,7 +41,7 @@ RONDE_DIRTY_COUNT="$(git status --porcelain | wc -l | tr -d ' ')"
   printf '| Markdown | %s |\n' "$(count_files '*.md')"
   printf '| JSON resources | %s |\n\n' "$(count_files '*.json')"
   printf '## Source areas\n\n'
-  find 'Ronde Watch App' -mindepth 1 -maxdepth 1 -type d -print | sort | sed 's#^#- `#; s#$#`#'
+  find 'Ronde iOS App' -mindepth 1 -maxdepth 1 -type d -print | sort | sed 's#^#- `#; s#$#`#'
   printf '\n## Canonical context\n\n'
   printf -- '- `AGENTS.md`\n- `PROJECT.md`\n- `docs/product-contract.md`\n- `docs/context/CURRENT_STATE.md`\n- `docs/context/ARCHITECTURE.md`\n- `docs/context/ROADMAP.md`\n- `docs/context/OPERATIONS.md`\n- `docs/context/CHANGELOG.md`\n'
 } > "$RONDE_INVENTORY_TMP"

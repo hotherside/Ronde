@@ -25,17 +25,15 @@ If product intent and implementation disagree, report both. Do not silently desc
 
 ## Product invariants
 
-- Ronde is an offline-first Apple Watch golf shot counter with a local-only universal iPhone/iPad Shot Reviewer.
-- The Apple Watch app remains the independent core product; the iOS target is now an active reviewer product surface as well as the required packaging companion.
-- A golfer must be able to start, count, undo, change holes and finish a round without connectivity.
-- Action Button, HealthKit, location and motion permissions must degrade honestly when unavailable or denied.
-- Never infer App Store publication, hardware behaviour or persistence reliability from a successful build.
+- Ronde is a local-first universal iPhone/iPad media library for golf-shot videos, evidence-backed shot tracing and non-destructive editing/export.
+- Ronde has no watchOS product, Watch target, round counter, Action Button workflow or HealthKit workout boundary.
+- Imported source video, edits and tracer geometry stay on-device unless a later explicit product and privacy decision changes that boundary.
+- Never infer App Store publication, physical-device behaviour, tracer accuracy or persistence reliability from a successful build.
 - Reviewer uploads accept any source FPS and use source timestamps. Estimated geometry must never be presented as observed ball flight or numerical distance.
 
 ## Repository map
 
-- `Ronde Watch App/`: watchOS application, views, models, services, intents and resources.
-- `Ronde iOS App/`: universal iPhone/iPad Shot Reviewer and packaging companion target.
+- `Ronde iOS App/`: universal iPhone/iPad media library, Shot Studio, tracer, capture foundations and account boundary.
 - `project.yml`: XcodeGen source configuration.
 - `Ronde.xcodeproj/`: generated Xcode project and shared schemes.
 - `docs/context/`: cross-tool context library.
@@ -55,4 +53,4 @@ For every material product, behaviour, architecture, persistence, permission, re
 5. Run `./scripts/check-context-library.sh`.
 6. Update the mapped Notion page when the change matters at product or stage level.
 
-Never store credentials, signing secrets, private location traces, HealthKit data or real round data in documentation, logs, fixtures, screenshots, Notion or agent memory.
+Never store credentials, signing secrets, private shot media or account data in documentation, logs, fixtures, screenshots, Notion or agent memory.

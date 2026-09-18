@@ -1,13 +1,9 @@
 import Foundation
 import SwiftUI
 
-/// Ronde's universal iPhone and iPad Shot Reviewer.
-///
-/// The watch app remains independently functional. This target now owns the
-/// light reviewer workspace while Terra's capture and analysis services are
-/// connected through the narrow adapters in Features.
+/// Ronde's universal iPhone and iPad shot media library and tracer.
 @main
-struct RondeCompanionApp: App {
+struct RondeApp: App {
     @StateObject private var store: ReviewerStore
     @StateObject private var accountStore: RondeAccountStore
     private let isQuickReviewPreview: Bool

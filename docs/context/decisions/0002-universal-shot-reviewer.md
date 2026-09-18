@@ -1,6 +1,6 @@
 # 0002: Universal iPhone/iPad Shot Reviewer boundary
 
-**Status:** accepted
+**Status:** superseded by [ADR 0012](0012-ios-ipad-only-product.md)
 
 **Updated:** annotation, tracer and provisional-candidate mechanics are superseded by [ADR 0003](0003-review-markers-and-assisted-tracer.md).
 

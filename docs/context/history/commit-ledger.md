@@ -2,9 +2,9 @@
 
 > Generated from Git. Git remains authoritative. Context-only refresh commits are excluded.
 
-- Source commit: `7f294b43c54c3d5e877ab4657726dd0756bb651f`
-- Source commit date: 2026-09-12
-- Tracked commit count: 76
+- Source commit: `794db87e86cf7b13b8894d9abf49479fb7b1f6f6`
+- Source commit date: 2026-09-19
+- Tracked commit count: 78
 
 | Date | Commit | Subject |
 | --- | --- | --- |
@@ -72,3 +72,4 @@
 | 2026-09-07 | `cbf6c56` | Merge pull request #9 from hotherside/codex/media-workspace-redesign |
 | 2026-09-12 | `012a6b3` | docs: make project handoff portable across sessions |
 | 2026-09-12 | `7f294b4` | Merge pull request #10 from hotherside/codex/portable-context-2026-09-12 |
+| 2026-09-19 | `794db87` | refactor: make Ronde iPhone and iPad only |
