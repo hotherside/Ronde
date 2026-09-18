@@ -2,9 +2,9 @@
 
 > Generated from Git. Git remains authoritative. Context-only refresh commits are excluded.
 
-- Source commit: `794db87e86cf7b13b8894d9abf49479fb7b1f6f6`
+- Source commit: `d825f0a8c5a738f9fc35798e70f71b8dc507957e`
 - Source commit date: 2026-09-19
-- Tracked commit count: 78
+- Tracked commit count: 80
 
 | Date | Commit | Subject |
 | --- | --- | --- |
@@ -73,3 +73,4 @@
 | 2026-09-12 | `012a6b3` | docs: make project handoff portable across sessions |
 | 2026-09-12 | `7f294b4` | Merge pull request #10 from hotherside/codex/portable-context-2026-09-12 |
 | 2026-09-19 | `794db87` | refactor: make Ronde iPhone and iPad only |
+| 2026-09-19 | `d825f0a` | Merge pull request #11 from hotherside/codex/retire-watch-ios-only |
