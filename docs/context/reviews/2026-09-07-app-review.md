@@ -23,7 +23,7 @@ The app needed a useful media workflow and a more honest accuracy boundary. The 
 1. Establish a labelled source-video benchmark before further model tuning. Measure acquisition recall, false-tracer rate, source-pixel error, visible-flight coverage and cost separately. Keep owner-selected regressions separate from held-out evaluation.
 2. Compare a commercially distributable golf-specific detector against the existing tennis-domain model on exactly that benchmark. Check data, code and weight licences independently.
 3. Add explicit social crop/reframe only with matching preview and ball-safe composition. Current fit export is a deliberate first step.
-4. Complete cold offline account access, cloud metadata deletion reconciliation and Watch pending-start lifecycle tests. These are independent reliability gaps, not solved by the redesign.
+4. Complete cold offline account access and cloud metadata deletion reconciliation. These are independent reliability gaps, not solved by the redesign.
 5. Validate the finished editor with representative golfers and physical devices. Simulator layouts and synthetic encoder tests do not measure usability or tracking accuracy.
 
 No private footage, round data or account credentials belong in this record. The prior external audit artifacts and complete pre-cleanup Git bundle were retained outside the repository. Branch cleanup preserved all unique history before removing obsolete branch references.

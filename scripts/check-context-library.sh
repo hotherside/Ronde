@@ -32,7 +32,7 @@ fi
 
 if [[ -n "$RONDE_BASE_COMMIT" ]]; then
   RONDE_CHANGED="$(git diff --name-only "$RONDE_BASE_COMMIT"...HEAD)"
-  RONDE_MATERIAL="$(printf '%s\n' "$RONDE_CHANGED" | rg '^(Ronde Watch App/|Ronde iOS App/|Ronde\.xcodeproj/|project\.yml$)' || true)"
+  RONDE_MATERIAL="$(printf '%s\n' "$RONDE_CHANGED" | rg '^(Ronde iOS App/|Ronde\.xcodeproj/|project\.yml$)' || true)"
   RONDE_CONTEXT="$(printf '%s\n' "$RONDE_CHANGED" | rg '^(docs/context/(CHANGELOG\.md|CURRENT_STATE\.md|ROADMAP\.md|ARCHITECTURE\.md|OPERATIONS\.md|decisions/)|docs/product-contract\.md$)' || true)"
   if [[ -n "$RONDE_MATERIAL" && -z "$RONDE_CONTEXT" ]]; then
     printf 'Material Ronde changes require a context update.\n%s\n' "$RONDE_MATERIAL" >&2

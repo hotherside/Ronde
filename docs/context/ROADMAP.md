@@ -6,7 +6,6 @@
 - Label the exact five rejected owner clips before another detector experiment. Separate acquisition misses, wrong-object association, timing error and renderer error. Keep the automatic studio line observed-only.
 - Build a consented held-out golf set with varied lighting, phone distance, camera angle, ball colours and distractors. Measure acquisition recall, false-tracer rate, point error in source pixels, visible-track coverage and processing cost. Deterministic tracker tests protect invariants; they do not supply these scores.
 - Verify local archive recovery, save failures and two-account import cancellation on hardware. Complete cold offline authentication and durable cloud metadata deletion/reconciliation.
-- Fix and test the Watch pending-workout-start race, then validate Action Button, permission denial, termination recovery and persistence on a real Watch.
 
 ## Next: precision editing and golf-specific perception
 

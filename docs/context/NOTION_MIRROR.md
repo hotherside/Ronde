@@ -21,4 +21,4 @@ Ronde is a child of the main Notion Home page and is linked from its Startup sec
 
 ## Last reconciliation
 
-7 September 2026: refreshed the mapped Ronde product, stage and priorities after native studio validation. The mirror now records the library/trim/export workflow, source-only privacy, 112 passing checks and the unresolved real-video accuracy and signed-device gates. The repository remains authoritative.
+19 September 2026: the repository contract now makes Ronde an iPhone/iPad-only shot media library and tracer. The external Notion page has not been verified or updated in this session; mirror reconciliation is pending. The repository remains authoritative.

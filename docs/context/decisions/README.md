@@ -15,3 +15,4 @@ Each record states status, date, context, decision, alternatives and consequence
 - [0009: Local-first reviewer library and private metadata sync](0009-local-first-library-and-private-metadata-sync.md)
 - [0010: Immersive review and full-screen manual trace editing](0010-immersive-review-and-manual-trace-editor.md)
 - [0011: Library and shot studio with observed-only automatic media](0011-library-and-shot-studio.md)
+- [0012: Make Ronde an iPhone/iPad-only shot media product](0012-ios-ipad-only-product.md)

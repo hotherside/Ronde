@@ -1,5 +1,16 @@
 # Context Changelog
 
+## 19 September 2026
+
+### iPhone/iPad-only product reset
+
+- Retired the Apple Watch shot-counter product and made the universal iPhone/iPad shot media library, tracer and editor the whole of Ronde.
+- Removed the watchOS source tree, XcodeGen target and scheme, iOS embedding dependency, HealthKit entitlement, Action Button intent, round/course implementation and Watch-specific release gates.
+- Rewrote the product contract, current state, architecture, roadmap, operations and repository entry points around the local-first media loop.
+- Recorded ADR 0012. Dated Watch evidence remains in Git and historical context only; it is no longer current product scope.
+- Regenerated the Xcode project with only the universal app and its two test bundles. The generic iOS Simulator build passed; the focused unit run passed 111 tests with three optional external-media checks skipped and zero failures on iPhone 18 Pro iOS 27.0 Simulator.
+- Distribution acceptance for an iOS-only archive on the existing App Store Connect record remains an external gate.
+
 ## 12 September 2026
 
 ### Portable project handoff
