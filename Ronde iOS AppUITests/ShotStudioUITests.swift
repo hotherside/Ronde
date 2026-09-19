@@ -18,7 +18,7 @@ final class ShotStudioUITests: XCTestCase {
         session.tap()
         let add = app.buttons["session-add-recording"]
         XCTAssertTrue(add.waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Shots from this session"].exists)
+        XCTAssertTrue(app.staticTexts["Shots"].exists)
         add.tap()
         XCTAssertTrue(app.buttons["add-recording-photos"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.textFields["recording-session-title"].exists, "Adding a recording must preserve the existing session.")
@@ -36,7 +36,7 @@ final class ShotStudioUITests: XCTestCase {
         XCTAssertTrue(app.buttons["studio-play"].waitForExistence(timeout: 10))
 
         let details = app.buttons["studio-details"]
-        reveal(details, in: app)
+        app.buttons["studio-more-options"].tap()
         details.tap()
         let title = app.textFields["shot-title-field"]
         XCTAssertTrue(title.waitForExistence(timeout: 5))
@@ -47,7 +47,7 @@ final class ShotStudioUITests: XCTestCase {
         XCTAssertNotEqual(title.value as? String, originalTitle)
         app.navigationBars.buttons["Cancel"].firstMatch.tap()
 
-        reveal(details, in: app)
+        app.buttons["studio-more-options"].tap()
         details.tap()
         XCTAssertTrue(title.waitForExistence(timeout: 5))
         XCTAssertEqual(title.value as? String, originalTitle)
@@ -147,6 +147,9 @@ final class ShotStudioUITests: XCTestCase {
 
     func testCancellingManualTraceDoesNotCreateAnAnnotation() throws {
         let app = try launch(screen: "ios-redesign-media")
+        let traceTab = app.buttons["studio-tool-trace"]
+        reveal(traceTab, in: app)
+        traceTab.tap()
         let manual = app.buttons["studio-manual-trace"]
         reveal(manual, in: app)
         manual.tap()
@@ -259,9 +262,49 @@ final class ShotStudioUITests: XCTestCase {
         let formatTab = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Format")).firstMatch
         reveal(formatTab, in: app)
         formatTab.tap()
-        XCTAssertTrue(app.buttons["1:1 square canvas"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["9:16 vertical canvas"].waitForExistence(timeout: 5))
+        let square = app.buttons["1:1 square canvas"]
+        reveal(square, in: app)
+        square.tap()
+        XCTAssertEqual(square.value as? String, "Selected")
+        XCTAssertTrue(app.buttons["9:16 vertical canvas"].exists)
         capture("Shot Studio formats", app: app)
+    }
+
+    func testPopulatedConceptReviewKeepsMediaAndToolsVisible() throws {
+        let app = try launch(screen: "ios-concept-home")
+        let latest = app.buttons["session-card-090F916A-C8E4-449C-B159-990051228290"]
+        XCTAssertTrue(latest.waitForExistence(timeout: 10))
+        let keeper = app.buttons["shot-card-090F916A-C8E4-449C-B159-990051228300"]
+        XCTAssertTrue(keeper.waitForExistence(timeout: 5))
+        capture("Concept Sessions", app: app)
+        XCTAssertLessThan(latest.frame.minY, 220, "Footage should start in the first quarter of a normal phone screen.")
+        XCTAssertTrue(keeper.isHittable, "The latest session and first keeper must share the first viewport.")
+        latest.tap()
+        let recording = app.buttons["recording-card-090F916A-C8E4-449C-B159-990051228292"]
+        XCTAssertTrue(recording.waitForExistence(timeout: 5))
+        capture("Concept Session", app: app)
+        recording.tap()
+        XCTAssertTrue(app.buttons["recording-play"].waitForExistence(timeout: 10))
+        app.buttons["Bookmark at 0:10"].tap()
+        capture("Concept Recording", app: app)
+        app.buttons["Bookmark at 0:06"].tap()
+        let openShot = app.buttons["Edit shot"]
+        reveal(openShot, in: app)
+        openShot.tap()
+
+        let studio = app
+        let play = studio.buttons["studio-play"]
+        XCTAssertTrue(play.waitForExistence(timeout: 10))
+        waitFor(NSPredicate(format: "exists == false"), on: studio.staticTexts["Preparing frame controls…"])
+        let formatTab = studio.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Format")).firstMatch
+        XCTAssertTrue(formatTab.isHittable, "Editing tools should be visible beside the preview on a normal phone.")
+        formatTab.tap()
+        let square = studio.buttons["1:1 square canvas"]
+        XCTAssertTrue(square.isHittable)
+        XCTAssertTrue(play.isHittable, "Choosing a format must keep the video transport visible.")
+        capture("Concept Shot Studio Original", app: studio)
+        square.tap()
+        capture("Concept Shot Studio Square", app: studio)
     }
 
     private func launch(screen: String) throws -> XCUIApplication {
@@ -275,7 +318,14 @@ final class ShotStudioUITests: XCTestCase {
         app.terminate()
         app.launchArguments = ["-AppleLanguages", "(en)", "-AppleLocale", "en_AU"]
         app.launchEnvironment["RONDE_PREVIEW_SCREEN"] = screen
-        app.launchEnvironment["RONDE_PREVIEW_VIDEO_PATH"] = fixture.path
+        if screen.hasPrefix("ios-concept-") {
+            let range = try XCTUnwrap(bundle.url(forResource: "clubhouse-range", withExtension: "mp4"))
+            let course = try XCTUnwrap(bundle.url(forResource: "clubhouse-course", withExtension: "mp4"))
+            app.launchEnvironment["RONDE_PREVIEW_VIDEO_PATH"] = range.path
+            app.launchEnvironment["RONDE_PREVIEW_SECONDARY_VIDEO_PATH"] = course.path
+        } else {
+            app.launchEnvironment["RONDE_PREVIEW_VIDEO_PATH"] = fixture.path
+        }
         app.launch()
         return app
     }

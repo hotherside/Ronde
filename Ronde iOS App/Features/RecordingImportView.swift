@@ -78,8 +78,11 @@ struct RecordingImportView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    header
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Short clips open straight in Shot Studio. Longer recordings let you choose several shots here.")
+                        .font(.rondeCaption)
+                        .foregroundStyle(RondeReviewDesign.graphiteMuted)
+                        .fixedSize(horizontal: false, vertical: true)
                     sessionDetails
                     sourceActions
 
@@ -87,12 +90,11 @@ struct RecordingImportView: View {
                         HStack(spacing: 10) {
                             ProgressView()
                             Text("Preparing your recording…")
-                                .font(.body.weight(.medium))
+                                .font(.rondeBody)
                                 .foregroundStyle(RondeReviewDesign.graphite)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(14)
-                        .background(RondeReviewDesign.surfaceInset, in: RoundedRectangle(cornerRadius: RondeReviewDesign.controlRadius, style: .continuous))
+                        .padding(.vertical, 8)
                         .accessibilityElement(children: .combine)
                         .accessibilityLabel("Preparing your recording")
                     }
@@ -101,19 +103,19 @@ struct RecordingImportView: View {
                         errorCard(importError)
                     }
 
-                    Text("The original stays untouched. Ronde keeps the local copy on this device for review.")
-                        .font(.footnote)
+                    Text("Original video stays untouched and is kept on this device.")
+                        .font(.rondeCaption)
                         .foregroundStyle(RondeReviewDesign.graphiteMuted)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                .frame(maxWidth: 620, alignment: .leading)
+                .frame(maxWidth: 520, alignment: .leading)
                 .padding(.horizontal, 20)
-                .padding(.vertical, 24)
+                .padding(.vertical, 16)
                 .frame(maxWidth: .infinity, alignment: .topLeading)
             }
             .scrollIndicators(.hidden)
             .reviewCanvasBackground()
-            .navigationTitle(isCreatingGroup ? "New session" : "Add recording")
+            .navigationTitle("Add recording")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -175,121 +177,82 @@ struct RecordingImportView: View {
         }
     }
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 9) {
-            Label("RECORDING STUDIO", systemImage: "film.stack")
-                .font(.reviewerSection)
-                .tracking(1.5)
-                .foregroundStyle(RondeReviewDesign.fairway)
-
-            Text("Bring the whole session in.")
-                .font(.reviewerDisplay)
-                .foregroundStyle(RondeReviewDesign.graphite)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Text("Add a recording up to 20 minutes. Short clips open straight in Shot Studio; longer recordings let you choose several shots.")
-                .font(.body)
-                .foregroundStyle(RondeReviewDesign.graphiteMuted)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isHeader)
-    }
-
     private var sessionDetails: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(isCreatingGroup ? "SESSION TITLE" : "SESSION")
-                .font(.reviewerSection)
-                .tracking(1.3)
-                .foregroundStyle(RondeReviewDesign.graphiteFaint)
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Session")
+                .font(.rondeLabel)
+                .foregroundStyle(RondeReviewDesign.graphite)
 
             if isCreatingGroup {
                 TextField("Session title", text: $sessionTitle)
-                    .font(.body)
+                    .font(.rondeBody)
                     .textInputAutocapitalization(.sentences)
                     .submitLabel(.done)
-                    .padding(.horizontal, 14)
-                    .frame(minHeight: RondeReviewDesign.minimumTouchTarget)
-                    .background(RondeReviewDesign.surface, in: RoundedRectangle(cornerRadius: RondeReviewDesign.controlRadius, style: .continuous))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: RondeReviewDesign.controlRadius, style: .continuous)
-                            .strokeBorder(RondeReviewDesign.borderStrong, lineWidth: 0.8)
-                    }
+                    .textFieldStyle(.roundedBorder)
                     .accessibilityIdentifier("recording-session-title")
             } else {
-                HStack(spacing: 11) {
+                HStack(spacing: 8) {
                     Image(systemName: "rectangle.stack")
-                        .font(.body.weight(.semibold))
+                        .font(.rondeLabel)
                         .foregroundStyle(RondeReviewDesign.fairway)
                         .accessibilityHidden(true)
                     Text(displayedGroupTitle)
-                        .font(.body.weight(.semibold))
+                        .font(.rondeBody)
                         .foregroundStyle(RondeReviewDesign.graphite)
                         .lineLimit(2)
                     Spacer(minLength: 0)
                 }
-                .frame(minHeight: RondeReviewDesign.minimumTouchTarget, alignment: .leading)
-                .padding(.horizontal, 14)
-                .background(RondeReviewDesign.surfaceInset, in: RoundedRectangle(cornerRadius: RondeReviewDesign.controlRadius, style: .continuous))
+                .frame(minHeight: 44, alignment: .leading)
                 .accessibilityElement(children: .combine)
             }
-        }
-        .padding(16)
-        .background(RondeReviewDesign.surface, in: RoundedRectangle(cornerRadius: RondeReviewDesign.cardRadius, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: RondeReviewDesign.cardRadius, style: .continuous)
-                .strokeBorder(RondeReviewDesign.border, lineWidth: 0.8)
         }
     }
 
     private var sourceActions: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("ADD RECORDING")
-                .font(.reviewerSection)
-                .tracking(1.3)
-                .foregroundStyle(RondeReviewDesign.graphiteFaint)
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Source")
+                .font(.rondeLabel)
+                .foregroundStyle(RondeReviewDesign.graphite)
+                .padding(.bottom, 4)
 
-            RondeGlassGroup(spacing: 10) {
-                VStack(spacing: 10) {
-                    VStack(spacing: 10) {
-                        Button(action: openPhotos) {
-                            Label("Choose from Photos", systemImage: "photo.on.rectangle")
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .frame(minHeight: RondeReviewDesign.minimumTouchTarget, alignment: .leading)
-                        }
-                        .rondePrimaryAction(tint: RondeReviewDesign.fairway)
-                        .disabled(!canChooseSource)
-                        .accessibilityIdentifier("add-recording-photos")
-
-                        Button(action: openFiles) {
-                            Label("Browse Files", systemImage: "folder")
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .frame(minHeight: RondeReviewDesign.minimumTouchTarget, alignment: .leading)
-                        }
-                        .rondeSecondaryAction(tint: RondeReviewDesign.graphite)
-                        .disabled(!canChooseSource)
-                        .accessibilityIdentifier("add-recording-files")
-                    }
-
-                    Button(action: openCamera) {
-                        Label("Record with Camera", systemImage: "camera")
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .frame(minHeight: RondeReviewDesign.minimumTouchTarget, alignment: .leading)
-                    }
-                    .rondeSecondaryAction(tint: RondeReviewDesign.graphite)
-                    .disabled(!canChooseSource || !cameraAvailable)
-                    .accessibilityIdentifier("add-recording-camera")
-                }
-            }
-
-            Label(
-                cameraAvailable ? "The native camera can record up to 20 minutes." : "Camera recording is unavailable on this device.",
-                systemImage: cameraAvailable ? "camera.badge.ellipsis" : "camera.slash"
-            )
-            .font(.footnote)
-            .foregroundStyle(RondeReviewDesign.graphiteMuted)
-            .fixedSize(horizontal: false, vertical: true)
+            importAction("Photos", detail: "Choose a video", systemImage: "photo.on.rectangle", action: openPhotos)
+                .disabled(!canChooseSource)
+                .accessibilityIdentifier("add-recording-photos")
+            Divider()
+            importAction("Files", detail: "Browse videos", systemImage: "folder", action: openFiles)
+                .disabled(!canChooseSource)
+                .accessibilityIdentifier("add-recording-files")
+            Divider()
+            importAction("Camera", detail: cameraAvailable ? "Record up to 20 minutes" : "Unavailable on this device", systemImage: cameraAvailable ? "camera" : "camera.slash", action: openCamera)
+                .disabled(!canChooseSource || !cameraAvailable)
+                .accessibilityIdentifier("add-recording-camera")
         }
+    }
+
+    private func importAction(
+        _ title: String,
+        detail: String,
+        systemImage: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: systemImage)
+                    .frame(width: 24)
+                    .foregroundStyle(RondeReviewDesign.fairway)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(title).font(.rondeLabel)
+                    Text(detail).font(.rondeCaption).foregroundStyle(RondeReviewDesign.graphiteMuted)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(RondeReviewDesign.graphiteFaint)
+            }
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     private func errorCard(_ message: String) -> some View {
@@ -299,7 +262,7 @@ struct RecordingImportView: View {
         } icon: {
             Image(systemName: "exclamationmark.triangle")
         }
-        .font(.body)
+        .font(.rondeBody)
         .foregroundStyle(RondeReviewDesign.red)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)

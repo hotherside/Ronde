@@ -23,7 +23,11 @@ struct RondeApp: App {
             "ios-redesign-profile",
             "ios-redesign-media",
             "ios-redesign-tracer",
-            "ios-recording-studio"
+            "ios-recording-studio",
+            "ios-concept-home",
+            "ios-concept-library",
+            "ios-concept-media",
+            "ios-concept-recording"
         ]
         let includeFixture = previewScreen.map(fixtureScreens.contains) ?? false
         let previewSourceURL = ProcessInfo.processInfo.environment["RONDE_PREVIEW_VIDEO_PATH"]
@@ -34,12 +38,12 @@ struct RondeApp: App {
         let previewSourceURL: URL? = nil
         #endif
         isQuickReviewPreview = previewScreen == "ios-quick-review"
-        isMediaDetailPreview = previewScreen == "ios-redesign-media"
+        isMediaDetailPreview = previewScreen == "ios-redesign-media" || previewScreen == "ios-concept-media"
         isTracerEditorPreview = previewScreen == "ios-redesign-tracer"
         isSignInPreview = previewScreen == "ios-redesign-signin"
-        isRecordingPreview = previewScreen == "ios-recording-studio"
+        isRecordingPreview = previewScreen == "ios-recording-studio" || previewScreen == "ios-concept-recording"
         switch previewScreen {
-        case "ios-redesign-library": initialTab = .library
+        case "ios-redesign-library", "ios-concept-library": initialTab = .library
         case "ios-redesign-profile": initialTab = .profile
         default: initialTab = .home
         }
@@ -49,7 +53,12 @@ struct RondeApp: App {
             persistenceEnabled: !includeFixture
         )
         #if DEBUG
-        if isRecordingPreview {
+        if previewScreen?.hasPrefix("ios-concept-") == true {
+            let secondaryURL = ProcessInfo.processInfo.environment["RONDE_PREVIEW_SECONDARY_VIDEO_PATH"]
+                .flatMap { $0.isEmpty ? nil : URL(fileURLWithPath: $0) }
+            reviewStore.sessions = Self.conceptSessions(sourceURL: previewSourceURL, secondaryURL: secondaryURL)
+            if let shot = reviewStore.sessions.first(where: { !$0.isRecording }) { reviewStore.select(shot) }
+        } else if isRecordingPreview {
             let recording = ReviewSession(
                 id: UUID(uuidString: "B5522071-A1C8-49D1-9D0B-1F37A852C427")!,
                 mode: .range, importKind: .recording,
@@ -73,6 +82,59 @@ struct RondeApp: App {
                 : nil
         ))
     }
+
+    #if DEBUG
+    /// Populated visual-review data uses fictional concept stills encoded as local movies.
+    /// It never opens an archive, starts tracking, or enters a release build.
+    private static func conceptSessions(sourceURL: URL?, secondaryURL: URL?) -> [ReviewSession] {
+        let groupID = UUID(uuidString: "090F916A-C8E4-449C-B159-990051228290")!
+        let previousID = UUID(uuidString: "090F916A-C8E4-449C-B159-990051228291")!
+        let recordingID = UUID(uuidString: "090F916A-C8E4-449C-B159-990051228292")!
+        let bookmark = RecordingBookmark(sourceTime: 6)
+        let date = Date(timeIntervalSince1970: 1_789_727_400)
+        let recording = ReviewSession(
+            id: recordingID, mode: .range, importKind: .recording,
+            title: "The Friday bucket", sourceName: "Range camera 01.mov", sourceURL: sourceURL,
+            createdAt: date, duration: 16, sourceAspectRatio: 1.5, status: .reviewing,
+            progress: 1, candidates: [], placeName: "Moore Park, Sydney", errorMessage: nil,
+            groupID: groupID, groupTitle: "The Friday bucket",
+            storedBookmarks: [bookmark, RecordingBookmark(sourceTime: 10)]
+        )
+        let second = ReviewSession(
+            id: UUID(uuidString: "090F916A-C8E4-449C-B159-990051228293")!,
+            mode: .range, importKind: .recording, title: recording.title,
+            sourceName: "Range camera 02.mov", sourceURL: sourceURL, createdAt: date.addingTimeInterval(-1),
+            duration: 16, sourceAspectRatio: 1.5, status: .reviewing, progress: 1,
+            candidates: [], errorMessage: nil, groupID: groupID, groupTitle: recording.title
+        )
+        let older = ReviewSession(
+            id: previousID, mode: .range, importKind: .recording, title: "Sunday, by the sea",
+            sourceName: "Coastal nine.mov", sourceURL: secondaryURL ?? sourceURL,
+            createdAt: date.addingTimeInterval(-432_000), duration: 16, sourceAspectRatio: 1.5,
+            status: .reviewing, progress: 1, candidates: [], placeName: "The coast, NSW",
+            errorMessage: nil, groupID: previousID, groupTitle: "Sunday, by the sea"
+        )
+        let shots = ["That finish.", "Right on line.", "One for the reel.", "Last ball, best ball."].enumerated().map { index, title in
+            let coastal = index == 1
+            let candidate = ReviewCandidate(ordinal: index + 1, impactTime: 6, sourceDuration: 16,
+                                            classification: .uncertain, confidence: .low,
+                                            evidence: ["Fictional visual-review fixture"], decision: .kept)
+            return ReviewSession(
+                id: UUID(uuidString: String(format: "090F916A-C8E4-449C-B159-9900512283%02d", index))!,
+                mode: .range, importKind: .oneShot, title: title, sourceName: coastal ? older.sourceName : recording.sourceName,
+                sourceURL: coastal ? older.sourceURL : sourceURL, createdAt: date.addingTimeInterval(-Double(index)),
+                duration: 16, sourceAspectRatio: 1.5, status: .complete, progress: 1, candidates: [candidate],
+                placeName: coastal ? "The coast" : "Moore Park", clubName: index == 2 ? "Driver" : "7 iron",
+                isFavourite: index < 2, errorMessage: nil, groupID: coastal ? previousID : groupID,
+                groupTitle: coastal ? older.title : recording.title,
+                sourceRecordingID: coastal ? previousID : recordingID,
+                sourceBookmarkID: index == 0 ? bookmark.id : nil,
+                sourceClipRange: ReviewTimeRange(start: 1, duration: 10)
+            )
+        }
+        return [recording, second, older] + shots
+    }
+    #endif
 
     var body: some Scene {
         WindowGroup {

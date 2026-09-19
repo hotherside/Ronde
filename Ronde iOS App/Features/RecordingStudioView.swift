@@ -34,18 +34,17 @@ struct RecordingStudioView: View {
                 GeometryReader { geometry in
                     ScrollViewReader { proxy in
                         ScrollView {
-                            VStack(alignment: .leading, spacing: 24) {
+                            VStack(alignment: .leading, spacing: 12) {
                                 if let error = store.libraryError { LibrarySaveNotice(store: store, message: error) }
-                                heading(recording)
                                 if recording.sourceURL != nil {
                                     if geometry.size.width >= 800, !typeSize.isAccessibilitySize {
-                                        HStack(alignment: .top, spacing: 28) {
-                                            mediaWorkspace(recording, height: min(460, geometry.size.height * 0.55))
+                                        HStack(alignment: .top, spacing: 20) {
+                                            mediaWorkspace(recording)
                                                 .frame(maxWidth: .infinity)
                                             inspector(recording).frame(width: RondeReviewDesign.inspectorWidth).id("moments")
                                         }
                                     } else {
-                                        mediaWorkspace(recording, height: min(380, geometry.size.height * 0.42))
+                                        mediaWorkspace(recording)
                                         inspector(recording).id("moments")
                                     }
                                 } else {
@@ -70,7 +69,9 @@ struct RecordingStudioView: View {
                     }
                 }
                 .reviewCanvasBackground()
-                .navigationTitle("Choose shots").navigationBarTitleDisplayMode(.inline)
+                .navigationTitle("Choose shots")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar(.hidden, for: .tabBar)
                 .toolbar {
                     ToolbarItem(placement: .primaryAction) {
                         Menu {
@@ -109,36 +110,14 @@ struct RecordingStudioView: View {
         .onChange(of: scenePhase) { _, phase in if phase != .active { playback.pause() } }
     }
 
-    private func heading(_ recording: ReviewSession) -> some View {
-        VStack(alignment: .leading, spacing: 7) {
-            Text(recording.groupTitle ?? recording.title).font(.caption.weight(.semibold)).textCase(.uppercase).tracking(1)
-                .foregroundStyle(RondeReviewDesign.graphiteMuted)
-            Text("Choose shots.").font(.largeTitle.weight(.semibold)).tracking(-1)
-            Text("Set the clip window, bookmark each moment, then create shots for Shot Studio.").font(.subheadline).foregroundStyle(RondeReviewDesign.graphiteMuted)
-        }
-    }
-
-    private func mediaWorkspace(_ recording: ReviewSession, height: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: 18) {
+    private func mediaWorkspace(_ recording: ReviewSession) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
             RecordingPlayerSurface(player: playback.player)
-                .frame(height: max(150, height))
+                .aspectRatio(3 / 2, contentMode: .fit)
+                .frame(maxWidth: .infinity)
                 .background(RondeReviewDesign.mediaStage)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .clipShape(RoundedRectangle(cornerRadius: RondeReviewDesign.controlRadius, style: .continuous))
                 .accessibilityLabel("Original recording preview")
-            ViewThatFits(in: .horizontal) {
-                if !typeSize.isAccessibilitySize {
-                    HStack(alignment: .firstTextBaseline) {
-                        Text(recording.sourceName ?? "Original recording").font(.caption).lineLimit(1)
-                        Spacer(minLength: 12)
-                        recordingTime(recording)
-                    }
-                }
-                VStack(alignment: .leading, spacing: 5) {
-                    Text(recording.sourceName ?? "Original recording").font(.caption).lineLimit(2)
-                    recordingTime(recording)
-                }
-            }
-            .foregroundStyle(RondeReviewDesign.graphiteMuted)
             transport(recording)
             timeline(recording)
             if let error = playback.error {
@@ -151,14 +130,15 @@ struct RecordingStudioView: View {
         RondeGlassGroup {
             ViewThatFits(in: .horizontal) {
                 if !typeSize.isAccessibilitySize {
-                    HStack(spacing: 10) {
+                    HStack(spacing: 8) {
                         playbackIsland
                         Spacer(minLength: 0)
                         bookmarkAction(recording)
                     }
                 }
-                VStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: 8) {
                     playbackIsland
+                    recordingTime(recording)
                     bookmarkAction(recording)
                 }
             }
@@ -167,7 +147,10 @@ struct RecordingStudioView: View {
 
     private func recordingTime(_ recording: ReviewSession) -> some View {
         Text("\(rondeMediaTime(playback.currentTime)) / \(rondeMediaTime(recording.duration))")
-            .font(.caption.monospacedDigit()).fixedSize()
+            .font(.reviewerTimestamp).fixedSize()
+            .padding(.horizontal, 10)
+            .frame(minHeight: 44)
+            .rondeControlSurface(cornerRadius: 22)
     }
 
     private var playbackIsland: some View {
@@ -181,7 +164,11 @@ struct RecordingStudioView: View {
             Button { playback.seek(to: playback.currentTime + 5) } label: {
                 Image(systemName: "goforward.5").frame(width: 44, height: 44)
             }.accessibilityLabel("Forward 5 seconds")
-        }.font(.system(size: 20, weight: .medium)).buttonStyle(.plain).rondeControlSurface()
+        }
+        .font(.system(size: 18, weight: .medium))
+        .buttonStyle(.plain)
+        .padding(.horizontal, 2)
+        .rondeControlSurface(cornerRadius: 22)
     }
 
     private func bookmarkAction(_ recording: ReviewSession) -> some View {
@@ -192,14 +179,20 @@ struct RecordingStudioView: View {
                 removedBookmark = nil
             }
         } label: {
-            Label("Bookmark", systemImage: "bookmark.fill").font(.subheadline.weight(.semibold)).frame(minHeight: 44)
+            Label("Bookmark", systemImage: "bookmark.fill")
+                .font(.rondeLabel)
+                .padding(.horizontal, 12)
+                .frame(minHeight: 44)
         }
-        .rondePrimaryAction().disabled(!store.canModifyLibrary)
+        .buttonStyle(.plain)
+        .foregroundStyle(RondeReviewDesign.fairway)
+        .rondeControlSurface(interactive: true, tint: RondeReviewDesign.fairwayWash, cornerRadius: 22)
+        .disabled(!store.canModifyLibrary)
         .accessibilityIdentifier("recording-add-bookmark")
     }
 
     private func timeline(_ recording: ReviewSession) -> some View {
-        VStack(spacing: 5) {
+        VStack(spacing: 4) {
             GeometryReader { geometry in
                 ZStack(alignment: .leading) {
                     HStack(spacing: 1) {
@@ -212,24 +205,23 @@ struct RecordingStudioView: View {
                         Rectangle().fill(RondeReviewDesign.fairwayWash).frame(width: 3, height: 48)
                             .offset(x: max(0, min(geometry.size.width - 3, geometry.size.width * bookmark.sourceTime / max(0.1, recording.duration))))
                     }
-                    Rectangle().fill(.white).frame(width: 2, height: 52)
+                    Rectangle().fill(.white).frame(width: 2, height: 48)
                         .offset(x: max(0, min(geometry.size.width - 2, geometry.size.width * playback.currentTime / max(0.1, recording.duration))))
                 }
-            }.frame(height: 52).accessibilityHidden(true)
+            }.frame(height: 48).accessibilityHidden(true)
             Slider(value: Binding(get: { min(recording.duration, playback.currentTime) }, set: playback.seek), in: 0...max(0.01, recording.duration))
                 .accessibilityLabel("Recording position").accessibilityValue(String(format: "%.1f seconds", playback.currentTime))
                 .accessibilityIdentifier("recording-position")
             HStack {
-                if !typeSize.isAccessibilitySize { Text("0:00"); Spacer() }
-                Text("\(recording.bookmarks.count) bookmarks")
+                Text(rondeMediaTime(playback.currentTime))
                 Spacer()
-                if !typeSize.isAccessibilitySize { Text(rondeMediaTime(recording.duration)) }
-            }.font(.caption.monospacedDigit()).foregroundStyle(RondeReviewDesign.graphiteMuted)
+                Text(rondeMediaTime(recording.duration))
+            }.font(.system(.caption, design: .monospaced).weight(.medium)).foregroundStyle(RondeReviewDesign.graphiteMuted)
         }
     }
 
     private func inspector(_ recording: ReviewSession) -> some View {
-        VStack(alignment: .leading, spacing: 18) {
+        VStack(alignment: .leading, spacing: 8) {
             if typeSize.isAccessibilitySize {
                 collectionPicker(recording).pickerStyle(.menu)
             } else {
@@ -237,25 +229,25 @@ struct RecordingStudioView: View {
             }
             if showsShots {
                 if shots.isEmpty {
-                    emptyState("A shorter way to your best shots.", detail: "Create shots from your bookmarks. Then trim, trace and choose a format.", image: "scissors")
+                    emptyState("No shots yet", detail: "Create shots from your bookmarks to start editing.", image: "scissors")
                 } else {
-                    Text("Ready for the finishing touches.").font(.subheadline).foregroundStyle(RondeReviewDesign.graphiteMuted)
                     ForEach(shots) { shot in
                         Button { playback.pause(); onOpenShot(shot.id) } label: {
-                            HStack(spacing: 12) {
+                            HStack(spacing: 10) {
                                 ShotPoster(sourceURL: shot.sourceURL, time: shot.displayRange.start)
-                                    .frame(width: 82, height: 70).clipShape(RoundedRectangle(cornerRadius: 8))
-                                VStack(alignment: .leading, spacing: 5) {
-                                    Text(shot.title).font(.subheadline.weight(.semibold)).lineLimit(2)
+                                    .frame(width: 56, height: 44).clipShape(RoundedRectangle(cornerRadius: 6))
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(shot.title).font(.rondeLabel).lineLimit(2)
                                     Text("\(rondeMediaTime(shot.displayRange.start)) – \(rondeMediaTime(shot.displayRange.end))")
-                                        .font(.caption.monospacedDigit()).foregroundStyle(RondeReviewDesign.graphiteMuted)
-                                    Text("Open in Shot Studio").font(.caption.weight(.semibold))
+                                        .font(.rondeCaption.monospacedDigit()).foregroundStyle(RondeReviewDesign.graphiteMuted)
                                 }
                                 Spacer(minLength: 0)
-                                Image(systemName: "arrow.up.right").font(.caption)
+                                Image(systemName: "arrow.up.right").font(.rondeCaption)
                             }
-                            .padding(12).background(RondeReviewDesign.surface, in: RoundedRectangle(cornerRadius: 12))
+                            .frame(minHeight: 44)
+                            .contentShape(Rectangle())
                         }.buttonStyle(.plain).accessibilityIdentifier("recording-open-shot")
+                        if shot.id != shots.last?.id { Divider() }
                     }
                 }
             } else {
@@ -271,7 +263,7 @@ struct RecordingStudioView: View {
                     Button("Undo removed bookmark") {
                         selectedBookmarkID = store.addBookmark(at: removedBookmark.sourceTime, before: removedBookmark.beforeDuration, after: removedBookmark.afterDuration, to: recording)?.id
                         self.removedBookmark = nil
-                    }.font(.subheadline).frame(minHeight: 44).disabled(!store.canModifyLibrary)
+                    }.font(.rondeBody).frame(minHeight: 44).disabled(!store.canModifyLibrary)
                 }
             }
         }
@@ -329,18 +321,18 @@ struct RecordingStudioView: View {
         let range = bookmark.clipRange(sourceDuration: recording.duration)
         let shot = shots.first { $0.sourceBookmarkID == bookmark.id }
         let selected = selectedBookmarkID == bookmark.id
-        return VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 10) {
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
                 Button {
                     selectedBookmarkID = selected ? nil : bookmark.id
                     playback.seek(to: bookmark.sourceTime)
                 } label: {
-                    HStack(spacing: 12) {
+                    HStack(spacing: 10) {
                         Image(systemName: shot == nil ? "bookmark.fill" : "checkmark.circle.fill")
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(rondeMediaTime(bookmark.sourceTime)).font(.headline.monospacedDigit())
+                            Text(rondeMediaTime(bookmark.sourceTime)).font(.reviewerTimestamp)
                             Text("\(rondeMediaTime(range.start)) – \(rondeMediaTime(range.end)) · \(rondeMediaTime(range.duration))")
-                                .font(.caption.monospacedDigit()).foregroundStyle(RondeReviewDesign.graphiteMuted)
+                                .font(.rondeCaption.monospacedDigit()).foregroundStyle(RondeReviewDesign.graphiteMuted)
                         }
                         Spacer(minLength: 0)
                         Image(systemName: selected ? "chevron.up" : "chevron.down").font(.caption.weight(.semibold))
@@ -359,48 +351,50 @@ struct RecordingStudioView: View {
             }
             if selected {
                 if let shot {
-                    Button { onOpenShot(shot.id) } label: { Label("Continue editing shot", systemImage: "arrow.up.right").frame(minHeight: 44) }
+                    Button { onOpenShot(shot.id) } label: { Label("Edit shot", systemImage: "arrow.up.right").frame(minHeight: 44) }
                         .rondeSecondaryAction()
-                    Text("This moment is already a shot. Adjust its cut in Shot Studio.")
-                        .font(.caption).foregroundStyle(RondeReviewDesign.graphiteMuted)
                 } else {
-                    bufferControl("Before", value: bookmark.beforeDuration, id: "before") { value in
-                        _ = store.updateBookmark(bookmark.id, sourceTime: bookmark.sourceTime, before: value, after: bookmark.afterDuration, in: recording)
-                    }
-                    bufferControl("After", value: bookmark.afterDuration, id: "after") { value in
-                        _ = store.updateBookmark(bookmark.id, sourceTime: bookmark.sourceTime, before: bookmark.beforeDuration, after: value, in: recording)
+                    let layout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8)) : AnyLayout(HStackLayout(spacing: 12))
+                    layout {
+                        bufferControl("Before", value: bookmark.beforeDuration, id: "before") { value in
+                            _ = store.updateBookmark(bookmark.id, sourceTime: bookmark.sourceTime, before: value, after: bookmark.afterDuration, in: recording)
+                        }
+                        bufferControl("After", value: bookmark.afterDuration, id: "after") { value in
+                            _ = store.updateBookmark(bookmark.id, sourceTime: bookmark.sourceTime, before: bookmark.beforeDuration, after: value, in: recording)
+                        }
                     }
                     if bookmark.sourceTime - bookmark.beforeDuration < 0 || bookmark.sourceTime + bookmark.afterDuration > recording.duration {
-                        Text("The cut stops at the edge of your recording.").font(.caption).foregroundStyle(RondeReviewDesign.graphiteMuted)
+                        Text("Clamped to the recording.").font(.rondeCaption).foregroundStyle(RondeReviewDesign.graphiteMuted)
                     }
                     if range.duration == 0 {
-                        Text("Add time before or after this moment to make a shot.").font(.caption).foregroundStyle(RondeReviewDesign.amber)
+                        Text("Add time before or after this moment to make a shot.").font(.rondeCaption).foregroundStyle(RondeReviewDesign.amber)
                     }
                 }
             }
         }
-        .padding(14).rondeSelectionSurface(isSelected: selected)
+        .padding(.horizontal, selected ? 10 : 0)
+        .padding(.vertical, selected ? 8 : 0)
+        .background(selected ? RondeReviewDesign.fairwayWash : .clear, in: RoundedRectangle(cornerRadius: RondeReviewDesign.smallRadius, style: .continuous))
+        .overlay(alignment: .bottom) { Divider() }
     }
 
     private func bufferControl(_ title: String, value: TimeInterval, id: String, change: @escaping (TimeInterval) -> Void) -> some View {
-        let layout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4)) : AnyLayout(HStackLayout(spacing: 8))
-        return layout {
-            Text(title).font(.subheadline)
-            if !typeSize.isAccessibilitySize { Spacer(minLength: 0) }
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title).font(.rondeCaption).foregroundStyle(RondeReviewDesign.graphiteMuted)
             bufferButtons(title, value: value, id: id, change: change)
-        }
+        }.frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func bufferButtons(_ title: String, value: TimeInterval, id: String, change: @escaping (TimeInterval) -> Void) -> some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 4) {
             Button { change(max(0, value - 5)) } label: { Image(systemName: "minus").frame(width: 44, height: 44) }
                 .accessibilityLabel("5 seconds less \(title.lowercased())").accessibilityIdentifier("recording-\(id)-decrease")
                 .disabled(value <= 0 || !store.canModifyLibrary)
-            Text("\(Int(value))s").font(.subheadline.monospacedDigit()).frame(minWidth: 32)
+            Text("\(Int(value))s").font(.subheadline.monospacedDigit()).frame(minWidth: 28)
             Button { change(min(60, value + 5)) } label: { Image(systemName: "plus").frame(width: 44, height: 44) }
                 .accessibilityLabel("5 seconds more \(title.lowercased())").accessibilityIdentifier("recording-\(id)-increase")
                 .disabled(value >= 60 || !store.canModifyLibrary)
-        }.font(.system(size: 20, weight: .medium)).buttonStyle(.borderless)
+        }.font(.system(size: 16, weight: .medium)).buttonStyle(.borderless).rondeControlSurface(cornerRadius: 18)
     }
 
     private func extractionAction(_ recording: ReviewSession, action: @escaping () -> Void) -> some View {
@@ -410,21 +404,23 @@ struct RecordingStudioView: View {
                 Text("Create \(pendingBookmarks.count) \(pendingBookmarks.count == 1 ? "shot" : "shots")").fontWeight(.semibold)
                 Spacer()
                 Image(systemName: "arrow.right")
-            }.frame(minHeight: 44).padding(.horizontal, 8)
+            }.font(.rondeLabel).padding(.horizontal, 16).frame(minHeight: 44)
         }
-        .rondePrimaryAction().disabled(!store.canModifyLibrary)
+        .buttonStyle(.plain)
+        .foregroundStyle(Color.white)
+        .rondeControlSurface(interactive: true, tint: RondeReviewDesign.fairway, cornerRadius: 22).disabled(!store.canModifyLibrary)
         .accessibilityIdentifier("recording-create-shots")
-        .padding(.horizontal, 16).padding(.vertical, 10)
-        .frame(maxWidth: 520)
+        .padding(.horizontal, 16).padding(.vertical, 8)
+        .frame(maxWidth: RondeReviewDesign.inspectorWidth)
         .frame(maxWidth: .infinity)
     }
 
     private func emptyState(_ title: String, detail: String, image: String) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Image(systemName: image).font(.title2).accessibilityHidden(true)
-            Text(title).font(.title3.weight(.semibold))
-            Text(detail).font(.subheadline).foregroundStyle(RondeReviewDesign.graphiteMuted)
-        }.frame(maxWidth: .infinity, alignment: .leading).reviewCard(cardPadding: 20)
+        VStack(alignment: .leading, spacing: 6) {
+            Label(title, systemImage: image).font(.rondeLabel)
+            Text(detail).font(.rondeBody).foregroundStyle(RondeReviewDesign.graphiteMuted)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 16)
     }
 }
 

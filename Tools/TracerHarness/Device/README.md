@@ -10,6 +10,34 @@ model sources from the checkout, together with private media and the compiled mo
 The staging project and its resources must live outside this repository, for example
 at `<private-device-build-directory>`.
 
+Both standalone diagnostic entry points use `UIApplicationDelegate.configurationForConnecting`
+and a dedicated `UIWindowSceneDelegate`; they never construct a window from
+`UIScreen.main.bounds`. The private target must opt into scene sessions in its generated
+Info.plist. No delegate class name is required in the plist because the app delegate supplies it
+programmatically. The required manifest is:
+
+```xml
+<key>UIApplicationSceneManifest</key>
+<dict>
+  <key>UIApplicationSupportsMultipleScenes</key>
+  <false/>
+  <key>UISceneConfigurations</key>
+  <dict>
+    <key>UIWindowSceneSessionRoleApplication</key>
+    <array>
+      <dict>
+        <key>UISceneConfigurationName</key>
+        <string>Default Configuration</string>
+      </dict>
+    </array>
+  </dict>
+</dict>
+```
+
+Without this manifest, iOS 27 terminates the diagnostic target with
+`UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption` before the probe can provide
+model or memory evidence.
+
 The bundled `Config/diagnostic-config.json` is generated privately. It contains opaque
 clip IDs, resource names, source PTS impact times, media SHA-256 values, expected upright
 dimensions, the source revision, source file hashes, and hashes for the source ML package

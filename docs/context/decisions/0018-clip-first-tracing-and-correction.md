@@ -19,7 +19,9 @@ The owner reported a signed-iPhone stall at 10% in ball-point tracking followed 
 
 ## Evidence and limits
 
-The reported 10% state localises to the first inference after resource/model loading. No local crash or jetsam report was available, and the phone was disconnected during investigation. Memory pressure is a hypothesis, not an established crash cause. Runtime changes require a repeat on the actual phone; Simulator checks cannot establish that the crash is fixed.
+The reported 10% state localises to the first inference after resource/model loading. Subsequent device-log retrieval found no matching main-app crash or jetsam report. Older diagnostic-app SIGTRAP reports identify a separate missing scene-lifecycle configuration, now corrected in the diagnostic harnesses. Memory pressure remains a hypothesis for the reported main-app failure.
+
+The supplied-seed app-service test subsequently passed on the physical iPhone 18 Pro/iOS 27 in 73.104 seconds, covering both private clips, short MP4 export/decode and archive round-trip. Tracking took 33.979 seconds for daylight and 38.032 seconds for night; thermal state changed from nominal to fair during night. Offline scoring against provisional agent-reviewed references gives 101/113 and 102/103 positions within 12 source pixels. This confirms this bounded repeat completed without the reported crash; it does not identify the original termination cause or establish repeated-run reliability.
 
 The earlier supplied-point development scores do not validate the new automatic seed acquisition or physical iPhone compute configuration. Preserve those results as assisted Mac evidence and measure the new path separately. See [Current State](../CURRENT_STATE.md) for subsequent validation and delivery.
 

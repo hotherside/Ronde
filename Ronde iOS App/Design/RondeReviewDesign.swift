@@ -28,8 +28,8 @@ enum RondeReviewDesign {
 
     static let smallRadius: CGFloat = 8
     static let controlRadius: CGFloat = 12
-    static let cardRadius: CGFloat = 16
-    static let largeRadius: CGFloat = 20
+    static let cardRadius: CGFloat = 12
+    static let largeRadius: CGFloat = 16
     static let minimumTouchTarget: CGFloat = 44
     static let compactPageInset: CGFloat = 16
     static let regularPageInset: CGFloat = 28
@@ -132,13 +132,15 @@ private struct RondeControlSurface: ViewModifier {
     func body(content: Content) -> some View {
         if reduceTransparency {
             content
-                .background(RondeReviewDesign.surface, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+                .background(tint ?? RondeReviewDesign.surface, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
                 .overlay {
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                         .strokeBorder(RondeReviewDesign.borderStrong, lineWidth: 1)
                 }
         } else if #available(iOS 26.0, *) {
             content.glassEffect(.regular.tint(tint).interactive(interactive), in: .rect(cornerRadius: cornerRadius))
+        } else if let tint {
+            content.background(tint, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
         } else {
             content.background(.regularMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
         }
@@ -235,9 +237,16 @@ struct ReviewSecondaryButtonStyle: ButtonStyle {
 }
 
 extension Font {
-    // Semantic styles retain Dynamic Type while keeping the reviewer compact.
-    // The previous fixed 34/25 point display styles made the home surface feel
-    // like a marketing landing page and overflowed quickly with larger text.
+    // Clubhouse uses Avenir Next: the same identity as the selected HTML concept.
+    // Relative styles retain the user's text-size preference throughout the library.
+    static var rondeBrand: Font { .custom("AvenirNext-Bold", size: 29, relativeTo: .title2) }
+    static var rondePageTitle: Font { .custom("AvenirNext-Bold", size: 26, relativeTo: .title2) }
+    static var rondeCardTitle: Font { .custom("AvenirNext-DemiBold", size: 21, relativeTo: .title3) }
+    static var rondeSectionTitle: Font { .custom("AvenirNext-Bold", size: 18, relativeTo: .headline) }
+    static var rondeBody: Font { .custom("AvenirNext-Medium", size: 15, relativeTo: .body) }
+    static var rondeLabel: Font { .custom("AvenirNext-DemiBold", size: 14, relativeTo: .subheadline) }
+    static var rondeCaption: Font { .custom("AvenirNext-Medium", size: 12, relativeTo: .caption) }
+    static var rondeMicro: Font { .custom("AvenirNext-DemiBold", size: 10, relativeTo: .caption2) }
     static var reviewerDisplay: Font { .system(.title, design: .default).weight(.semibold) }
     static var reviewerTitle: Font { .system(.title3, design: .default).weight(.semibold) }
     static var reviewerSection: Font { .system(.subheadline, design: .default).weight(.semibold) }

@@ -4,7 +4,7 @@ Ronde is a local-first universal iPhone/iPad media library for private golf-shot
 
 ## Product promise
 
-Import or capture a recording or shot, keep it in a private searchable Sessions library, bookmark useful moments, review source-linked Shots in a focused Studio, trim them and export a social-ready file. The active automatic line uses source-timed observed ball samples only. Untracked footage stays editable and shareable; manual annotation remains explicitly labelled. Raw video, geometry and edits stay on device, with only private account and lightweight library metadata in Supabase.
+Import or capture a recording or shot and keep it in a private searchable Sessions library. Clips below 20 seconds open directly in Shot Studio; longer recordings use configurable bookmark windows to create individual Shots first. Tap Trace shot to follow the ball, correct it by selecting the ball or drawing its path, then trim and export. Automatic lines use source-timed model observations; manual paths stay labelled. Raw video, geometry and edits stay on device, with only private account and lightweight library metadata in Supabase.
 
 ## Current stage
 

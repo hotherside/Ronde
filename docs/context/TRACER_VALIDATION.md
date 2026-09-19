@@ -6,9 +6,23 @@ This ledger separates deterministic source and Simulator checks from footage acc
 
 ## 19 September owner crash report and flow revision
 
-The owner reported tracking stalled at 10% followed by an app crash. Code locates this progress state immediately before the first model inference completes; no crash/jetsam log was available and the device was disconnected. Memory pressure is unconfirmed. The local mitigation releases cached upright RGB before inference, adds cancellation checks around Core ML calls and switches physical iOS EdgeTAM to CPU/Neural Engine. This is a validation candidate, not proof of a resolved crash.
+The owner reported tracking stalled at 10% followed by an app crash. Code locates this progress state immediately before the first model inference completes; subsequent device-log retrieval found no matching main-app crash or jetsam report. Older standalone diagnostic SIGTRAP reports identify a separate missing scene-lifecycle configuration, corrected in those harnesses. Memory pressure is unconfirmed. The local mitigation releases cached upright RGB before inference, adds cancellation checks around Core ML calls and switches physical iOS EdgeTAM to CPU/Neural Engine. This is a validation candidate, not proof of a resolved crash.
 
-[ADR 0018](decisions/0018-clip-first-tracing-and-correction.md) changes the entry flow to automatic observed seed discovery, with point selection and drawn paths as correction. Import/bookmark/trace intervals and provenance were updated. The app suite passes 141 checks with two skips on Simulator. The earlier two-clip numbers below remain supplied-point Mac evidence; they do not measure this new automatic seed selector, compute policy or phone behaviour. Physical execution, scoring, cancellation and exported-video inspection remain the next gate.
+[ADR 0018](decisions/0018-clip-first-tracing-and-correction.md) changes the entry flow to automatic observed seed discovery, with point selection and drawn paths as correction. Import/bookmark/trace intervals and provenance were updated. The app suite passes 141 checks with two skips on Simulator. The earlier Mac numbers below remain supplied-point evidence. The subsequent physical run is recorded separately here; automatic discovery and repeated-use reliability require separate measurement.
+
+The actual app service passed the supplied-seed integration test on iPhone 18 Pro/iOS 27 in 73.104 seconds (`ronde-feedback-phone-v2.xcresult`). Both clips verified source/model identity, completed tracking, exported and decoded a one-second MP4, and round-tripped their trace/edit through the archive.
+
+| Physical supplied-seed result | Daylight | Night |
+| --- | --- | --- |
+| Visible reference positions within 12 source pixels | 101/113 (89.38%) | 102/103 (99.03%) |
+| Missing visible positions | 12 | 0 |
+| Incorrect matched positions above 12 pixels | 0 | 1 (48.49 px launch streak) |
+| Median / p95 matched error | 0.82 / 1.47 px | 1.02 / 5.89 px |
+| Tracking time | 33.979 s | 38.032 s |
+| One-second export time | 0.565 s | 0.322 s |
+| Thermal state | nominal → nominal | nominal → fair |
+
+Combined visible-reference coverage is 203/216 (93.98%), compared with 206/216 (95.37%) in the earlier Mac run; the daylight run loses three additional positions. No predictions fall on the eleven explicitly absent labelled frames. Each run used one supplied point with zero later corrections. These references are provisional and agent-reviewed, not independent human ground truth. This bounded repeat completed without the reported crash, but does not identify its original cause, measure peak process memory or prove sustained thermal/repeated-use safety. Sampled visual inspection of three frames per physical export found no obvious source-coordinate displacement or crop/reseed seam. Each one-second export contains 31 consecutive visible frames, so these selected windows do not empirically test gap discontinuities; their later gaps remain outside the export. Private canonical evidence, scores and exports remain outside Git.
 
 ## Release matrix
 

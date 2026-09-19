@@ -4,6 +4,8 @@ struct RondeSessionsCollection: View {
     @ObservedObject var store: ReviewerStore
     let search: String
     let onImport: () -> Void
+    let onShowKeepers: () -> Void
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     private var groups: [ReviewSessionGroup] {
         store.sessionGroups.filter { group in
@@ -13,71 +15,87 @@ struct RondeSessionsCollection: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 28) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(Date.now.formatted(.dateTime.weekday(.wide).day().month(.wide)))
-                    .font(.caption.weight(.semibold)).textCase(.uppercase).tracking(1.1)
-                    .foregroundStyle(RondeReviewDesign.graphiteMuted)
-                Text("Out there.\nKept here.")
-                    .font(.largeTitle.weight(.semibold)).tracking(-1.2)
-                    .fixedSize(horizontal: false, vertical: true)
-                Text("The sessions, the swings, the ones worth sharing.")
-                    .font(.subheadline).foregroundStyle(RondeReviewDesign.graphiteMuted)
-            }
+        VStack(alignment: .leading, spacing: 22) {
+            RondeCollectionHeading(title: "Sessions", count: groups.count)
             if let latest = groups.first {
-                VStack(alignment: .leading, spacing: 14) {
-                    Text("Your latest session").font(.title3.weight(.semibold))
-                    NavigationLink(value: RondeNavigationRoute.session(latest.id)) {
-                        RondeSessionCover(group: latest)
-                    }
-                    .buttonStyle(.plain).accessibilityIdentifier("session-card-\(latest.id)")
+                NavigationLink(value: RondeNavigationRoute.session(latest.id)) {
+                    RondeSessionCover(group: latest)
                 }
+                .buttonStyle(.plain).accessibilityIdentifier("session-card-\(latest.id)")
+
                 let keepers = store.sessions.filter { !$0.isRecording && $0.isFavourite }
+                    .sorted { $0.createdAt > $1.createdAt }
                 if search.isEmpty, !keepers.isEmpty {
-                    VStack(alignment: .leading, spacing: 14) {
-                        Text("The good ones.").font(.title3.weight(.semibold))
-                        ScrollView(.horizontal) {
-                            LazyHStack(alignment: .top, spacing: 16) {
-                                ForEach(keepers.prefix(8)) { shot in
-                                    NavigationLink(value: RondeNavigationRoute.shot(shot.id)) {
-                                        ShotLibraryCard(session: shot).frame(width: 230)
-                                    }.buttonStyle(.plain)
-                                }
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(alignment: .firstTextBaseline) {
+                            Text("Keepers").font(.rondeSectionTitle)
+                            Spacer()
+                            Button("View all", action: onShowKeepers)
+                                .font(.rondeLabel).frame(minHeight: 44)
+                                .accessibilityLabel("View all keepers")
+                        }
+                        LazyVGrid(columns: RondeShotGrid.columns(accessibility: typeSize.isAccessibilitySize), spacing: 16) {
+                            ForEach(keepers.prefix(2)) { shot in
+                                NavigationLink(value: RondeNavigationRoute.shot(shot.id)) {
+                                    ShotLibraryCard(session: shot)
+                                }.buttonStyle(.plain)
                             }
                         }
-                        .scrollIndicators(.hidden)
                     }
                 }
                 if groups.count > 1 {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("More time out there").font(.title3.weight(.semibold))
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Earlier sessions").font(.rondeSectionTitle)
                         ForEach(Array(groups.dropFirst())) { group in
                             NavigationLink(value: RondeNavigationRoute.session(group.id)) {
                                 RondeSessionRow(group: group)
                             }.buttonStyle(.plain)
+                            if group.id != groups.last?.id { Divider().overlay(RondeReviewDesign.border) }
                         }
                     }
                 }
             } else {
-                VStack(alignment: .leading, spacing: 20) {
-                    Image(systemName: search.isEmpty ? "figure.golf" : "magnifyingglass")
-                        .font(.system(size: 60, weight: .light))
-                        .foregroundStyle(RondeReviewDesign.fairway).padding(.vertical, 16)
+                VStack(alignment: .leading, spacing: 16) {
+                    Image(systemName: search.isEmpty ? "video.badge.plus" : "magnifyingglass")
+                        .font(.system(size: 34, weight: .medium))
+                        .foregroundStyle(RondeReviewDesign.fairway).padding(.top, 28)
                         .accessibilityHidden(true)
-                    Text(search.isEmpty ? "A whole session.\nA few worth keeping." : "No sessions found.")
-                        .font(.title2.weight(.semibold))
-                    Text(search.isEmpty ? "Bring in your recordings. Bookmark a swing, make a shot and give it a place to live." : "Try another session name or place.")
-                        .font(.body).foregroundStyle(RondeReviewDesign.graphiteMuted)
+                    Text(search.isEmpty ? "Your first session starts here." : "No sessions found.")
+                        .font(.rondeCardTitle)
+                    Text(search.isEmpty ? "Add a recording, bookmark your best swings and turn them into shots." : "Try another session name or place.")
+                        .font(.rondeBody).foregroundStyle(RondeReviewDesign.graphiteMuted)
                     if search.isEmpty {
                         Button(action: onImport) {
-                            Label("Add your first recording", systemImage: "plus").frame(minHeight: 44)
+                            Label("Add recording", systemImage: "plus").font(.rondeLabel)
                         }.rondePrimaryAction().disabled(!store.canModifyLibrary)
                     }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading).reviewCard(cardPadding: 24)
+                .frame(maxWidth: 440, alignment: .leading)
             }
         }
         .foregroundStyle(RondeReviewDesign.graphite)
+    }
+}
+
+struct RondeCollectionHeading: View {
+    let title: String
+    let count: Int
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            Text(title).font(.rondePageTitle).tracking(-0.7)
+            Text(count.formatted()).font(.rondeLabel).foregroundStyle(RondeReviewDesign.graphiteMuted)
+            Spacer(minLength: 0)
+        }
+        .accessibilityElement(children: .combine).accessibilityAddTraits(.isHeader)
+    }
+}
+
+enum RondeShotGrid {
+    static func columns(accessibility: Bool, regular: Bool = false) -> [GridItem] {
+        if accessibility { return [GridItem(.flexible())] }
+        if regular { return [GridItem(.adaptive(minimum: 200), spacing: 12)] }
+        return [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
     }
 }
 
@@ -91,51 +109,61 @@ private struct RondeSessionCover: View {
         ViewThatFits(in: .horizontal) {
             if !typeSize.isAccessibilitySize {
                 HStack(spacing: 0) {
-                    photograph.frame(width: 440, height: 300)
-                    coverDetails.frame(minWidth: 250, maxWidth: .infinity, alignment: .leading)
+                    photograph.frame(width: 440, height: 280)
+                    coverDetails.frame(minWidth: 260, maxWidth: .infinity, alignment: .leading)
                 }
             }
             VStack(spacing: 0) {
-                photograph.aspectRatio(1.5, contentMode: .fit)
+                photograph.aspectRatio(1.55, contentMode: .fit)
                 coverDetails
             }
         }
         .background(RondeReviewDesign.surface)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .overlay { RoundedRectangle(cornerRadius: 16).strokeBorder(RondeReviewDesign.border, lineWidth: 1) }
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay { RoundedRectangle(cornerRadius: 12).strokeBorder(RondeReviewDesign.border, lineWidth: 1) }
         .accessibilityElement(children: .combine)
     }
 
     private var photograph: some View {
         ShotPoster(sourceURL: source?.sourceURL, time: source?.displayRange.start ?? 0)
             .overlay(alignment: .topLeading) {
-                Label("\(group.recordings.count) \(group.recordings.count == 1 ? "recording" : "recordings")", systemImage: "video")
-                    .font(.caption.weight(.semibold)).padding(10)
-                    .background(RondeReviewDesign.canvas.opacity(0.95), in: RoundedRectangle(cornerRadius: 8))
-                    .padding(14)
+                Text("LATEST SESSION")
+                    .font(.rondeMicro).tracking(1)
+                    .padding(.horizontal, 9).padding(.vertical, 6)
+                    .background(RondeReviewDesign.canvas, in: RoundedRectangle(cornerRadius: 5))
+                    .padding(12)
             }
     }
 
     private var coverDetails: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(date.formatted(.dateTime.day())).font(.largeTitle.weight(.medium)).tracking(-1)
-                Text(date.formatted(.dateTime.month(.abbreviated).year())).font(.caption.weight(.semibold)).textCase(.uppercase)
-                    .foregroundStyle(RondeReviewDesign.graphiteMuted)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(group.title).font(.rondeCardTitle).tracking(-0.5)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if let place = source?.placeName, !place.isEmpty {
+                        Text(place).font(.rondeCaption).foregroundStyle(RondeReviewDesign.graphiteMuted)
+                    }
+                }
+                Spacer(minLength: 0)
+                if !typeSize.isAccessibilitySize {
+                    VStack(spacing: 0) {
+                        Text(date.formatted(.dateTime.day())).font(.rondePageTitle)
+                        Text(date.formatted(.dateTime.month(.abbreviated))).font(.rondeMicro).textCase(.uppercase)
+                    }
+                    .foregroundStyle(RondeReviewDesign.graphiteMuted).accessibilityHidden(true)
+                }
             }
-            Text(group.title).font(.title2.weight(.semibold)).tracking(-0.5).fixedSize(horizontal: false, vertical: true)
-            if let place = source?.placeName { Text(place).font(.subheadline).foregroundStyle(RondeReviewDesign.graphiteMuted) }
-            let keeperCount = group.shots.filter(\.isFavourite).count
-            Text("\(group.shots.count) \(group.shots.count == 1 ? "shot" : "shots") · \(keeperCount) \(keeperCount == 1 ? "keeper" : "keepers")")
-                .font(.subheadline).foregroundStyle(RondeReviewDesign.graphiteMuted)
-            HStack {
-                Text("Find the good ones").fontWeight(.semibold)
-                Spacer()
-                Image(systemName: "arrow.right")
+            Divider().overlay(RondeReviewDesign.border)
+            HStack(spacing: 8) {
+                Text(rondeSessionCount(group))
+                    .font(.rondeCaption).foregroundStyle(RondeReviewDesign.graphiteMuted)
+                Spacer(minLength: 0)
+                Image(systemName: "arrow.right").font(.body.weight(.semibold))
+                    .foregroundStyle(RondeReviewDesign.fairway).accessibilityHidden(true)
             }
-            .font(.subheadline).padding(.top, 3).frame(minHeight: 44)
         }
-        .padding(22).frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16).frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -143,13 +171,13 @@ private struct RondeSessionRow: View {
     let group: ReviewSessionGroup
     private var source: ReviewSession? { group.recordings.first ?? group.shots.first }
     var body: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 12) {
             ShotPoster(sourceURL: source?.sourceURL, time: source?.displayRange.start ?? 0)
-                .frame(width: 90, height: 72).clipShape(RoundedRectangle(cornerRadius: 10))
-            VStack(alignment: .leading, spacing: 5) {
-                Text(group.title).font(.headline).lineLimit(2)
-                Text("\(group.recordings.count) \(group.recordings.count == 1 ? "recording" : "recordings") · \(group.shots.count) \(group.shots.count == 1 ? "shot" : "shots")")
-                    .font(.caption).foregroundStyle(RondeReviewDesign.graphiteMuted)
+                .frame(width: 76, height: 66).clipShape(RoundedRectangle(cornerRadius: 8))
+            VStack(alignment: .leading, spacing: 4) {
+                Text(group.title).font(.rondeLabel).lineLimit(2)
+                Text(rondeSessionCount(group))
+                    .font(.rondeCaption).foregroundStyle(RondeReviewDesign.graphiteMuted)
             }
             Spacer(minLength: 0)
             Image(systemName: "chevron.right").font(.caption.weight(.semibold)).accessibilityHidden(true)
@@ -163,47 +191,53 @@ struct RondeSessionDetailView: View {
     let groupID: UUID
     let onImport: (ReviewSessionGroup) -> Void
     @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.horizontalSizeClass) private var sizeClass
     private var group: ReviewSessionGroup? { store.sessionGroups.first { $0.id == groupID } }
 
     var body: some View {
         Group {
             if let group {
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 26) {
+                    VStack(alignment: .leading, spacing: 22) {
                         if let error = store.libraryError { LibrarySaveNotice(store: store, message: error) }
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(group.title).font(.largeTitle.weight(.semibold)).tracking(-1)
-                            Text("Start with the recording. Keep what feels good.")
-                                .font(.subheadline).foregroundStyle(RondeReviewDesign.graphiteMuted)
-                        }
-                        VStack(alignment: .leading, spacing: 14) {
-                            Text("Recordings").font(.title3.weight(.semibold))
-                            LazyVGrid(columns: typeSize.isAccessibilitySize ? [GridItem(.flexible())] : [GridItem(.adaptive(minimum: 270), spacing: 18)], spacing: 20) {
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Text("Recordings").font(.rondeSectionTitle)
+                                Spacer()
+                                Text("\(group.recordings.count)").font(.rondeLabel).foregroundStyle(RondeReviewDesign.graphiteMuted)
+                            }
+                            LazyVGrid(columns: typeSize.isAccessibilitySize ? [GridItem(.flexible())] : [GridItem(.adaptive(minimum: 300), spacing: 12)], spacing: 8) {
                                 ForEach(group.recordings) { recording in
                                     NavigationLink(value: recording.isRecording ? RondeNavigationRoute.recording(recording.id) : .shot(recording.id)) {
-                                        VStack(alignment: .leading, spacing: 10) {
+                                        HStack(spacing: 12) {
                                             ShotPoster(sourceURL: recording.sourceURL, time: 0)
-                                                .aspectRatio(1.5, contentMode: .fit).clipShape(RoundedRectangle(cornerRadius: 12))
-                                            Text(recording.sourceName ?? recording.title).font(.headline).lineLimit(2)
-                                            HStack {
-                                                Text(rondeMediaTime(recording.duration)).monospacedDigit()
-                                                Text("· \(recording.bookmarks.count) bookmarks")
-                                                Spacer(minLength: 0)
-                                                Image(systemName: "arrow.up.right")
-                                            }.font(.caption).foregroundStyle(RondeReviewDesign.graphiteMuted)
+                                                .frame(width: 84, height: 64).clipShape(RoundedRectangle(cornerRadius: 8))
+                                            VStack(alignment: .leading, spacing: 4) {
+                                                Text(recording.sourceName ?? recording.title).font(.rondeLabel).lineLimit(2)
+                                                Text("\(rondeMediaTime(recording.duration)) · \(recording.bookmarks.count) bookmarks")
+                                                    .font(.rondeCaption).monospacedDigit().foregroundStyle(RondeReviewDesign.graphiteMuted)
+                                            }
+                                            Spacer(minLength: 0)
+                                            Image(systemName: "arrow.up.right").font(.caption.weight(.semibold))
                                         }
+                                        .padding(10).background(RondeReviewDesign.surface, in: RoundedRectangle(cornerRadius: 10))
+                                        .overlay { RoundedRectangle(cornerRadius: 10).strokeBorder(RondeReviewDesign.border, lineWidth: 1) }
                                     }
                                     .buttonStyle(.plain).accessibilityIdentifier("recording-card-\(recording.id)")
                                 }
                             }
                         }
-                        VStack(alignment: .leading, spacing: 14) {
-                            Text("Shots from this session").font(.title3.weight(.semibold))
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Text("Shots").font(.rondeSectionTitle)
+                                Spacer()
+                                Text("\(group.shots.count)").font(.rondeLabel).foregroundStyle(RondeReviewDesign.graphiteMuted)
+                            }
                             if group.shots.isEmpty {
-                                Label("Bookmark a few moments in a recording to create your first shots.", systemImage: "bookmark")
-                                    .font(.body).foregroundStyle(RondeReviewDesign.graphiteMuted).reviewCard()
+                                Label("Bookmark a moment in a recording to create a shot.", systemImage: "bookmark")
+                                    .font(.rondeBody).foregroundStyle(RondeReviewDesign.graphiteMuted).padding(.vertical, 20)
                             } else {
-                                LazyVGrid(columns: typeSize.isAccessibilitySize ? [GridItem(.flexible())] : [GridItem(.adaptive(minimum: 240), spacing: 18)], spacing: 24) {
+                                LazyVGrid(columns: RondeShotGrid.columns(accessibility: typeSize.isAccessibilitySize, regular: sizeClass == .regular), spacing: 18) {
                                     ForEach(group.shots) { shot in
                                         NavigationLink(value: RondeNavigationRoute.shot(shot.id)) { ShotLibraryCard(session: shot) }
                                             .buttonStyle(.plain)
@@ -212,11 +246,14 @@ struct RondeSessionDetailView: View {
                             }
                         }
                     }
-                    .padding(20).frame(maxWidth: 1200, alignment: .leading).frame(maxWidth: .infinity)
+                    .padding(16).frame(maxWidth: 1100, alignment: .leading).frame(maxWidth: .infinity)
                 }
                 .reviewCanvasBackground()
-                .navigationTitle("Session").navigationBarTitleDisplayMode(.inline)
+                .navigationTitle(group.title).navigationBarTitleDisplayMode(.inline)
                 .toolbar {
+                    ToolbarItem(placement: .principal) {
+                        Text(group.title).font(.rondeLabel).lineLimit(1)
+                    }
                     ToolbarItem(placement: .primaryAction) {
                         Button { onImport(group) } label: { Label("Add recording", systemImage: "plus") }
                             .disabled(!store.canModifyLibrary).accessibilityIdentifier("session-add-recording")
@@ -228,6 +265,10 @@ struct RondeSessionDetailView: View {
         }
         .foregroundStyle(RondeReviewDesign.graphite)
     }
+}
+
+private func rondeSessionCount(_ group: ReviewSessionGroup) -> String {
+    "\(group.recordings.count) \(group.recordings.count == 1 ? "video" : "videos") · \(group.shots.count) \(group.shots.count == 1 ? "shot" : "shots")"
 }
 
 func rondeMediaTime(_ seconds: TimeInterval) -> String {

@@ -6,13 +6,37 @@ import UIKit
 
 @main
 final class TrackerDiagnosticApp: UIResponder, UIApplicationDelegate {
-    var window: UIWindow?
-
     func application(
         _: UIApplication,
         didFinishLaunchingWithOptions _: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
-        let window = UIWindow(frame: UIScreen.main.bounds)
+        true
+    }
+
+    func application(
+        _: UIApplication,
+        configurationForConnecting connectingSceneSession: UISceneSession,
+        options _: UIScene.ConnectionOptions
+    ) -> UISceneConfiguration {
+        let configuration = UISceneConfiguration(
+            name: "Default Configuration",
+            sessionRole: connectingSceneSession.role
+        )
+        configuration.delegateClass = TrackerDiagnosticSceneDelegate.self
+        return configuration
+    }
+}
+
+private final class TrackerDiagnosticSceneDelegate: UIResponder, UIWindowSceneDelegate {
+    var window: UIWindow?
+
+    func scene(
+        _ scene: UIScene,
+        willConnectTo _: UISceneSession,
+        options _: UIScene.ConnectionOptions
+    ) {
+        guard let windowScene = scene as? UIWindowScene else { return }
+        let window = UIWindow(windowScene: windowScene)
         let label = UILabel()
         label.numberOfLines = 0
         label.textAlignment = .center
@@ -27,7 +51,6 @@ final class TrackerDiagnosticApp: UIResponder, UIApplicationDelegate {
             await MainActor.run { label.text = message }
             _ = self
         }
-        return true
     }
 }
 

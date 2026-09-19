@@ -125,10 +125,10 @@ For the explicitly authorised physical test only, `.local-tracer-tests` links to
 
 ```sh
 xcodegen generate --spec project-tracer-device-test.yml
-xcodebuild -project Ronde.xcodeproj -scheme 'Ronde iOS' \
+xcodebuild -project Ronde.xcodeproj -scheme 'Ronde iOS' -configuration Release \
   -destination "id=$RONDE_TEST_DEVICE_ID" \
   -only-testing:'Ronde iOS AppTests/EdgeTAMDeviceIntegrationTests' \
-  -resultBundlePath "$RONDE_EDGETAM_RESULT_BUNDLE" test
+  -resultBundlePath "$RONDE_EDGETAM_RESULT_BUNDLE" ENABLE_TESTABILITY=YES test
 xcodegen generate --spec project.yml
 ```
 

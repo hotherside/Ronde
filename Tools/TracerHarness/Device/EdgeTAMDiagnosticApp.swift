@@ -6,30 +6,29 @@ import UIKit
 
 @main
 final class EdgeTAMDiagnosticApp: UIResponder, UIApplicationDelegate {
-    var window: UIWindow?
     private var runTask: Task<String, Never>?
 
     func application(
         _: UIApplication,
         didFinishLaunchingWithOptions _: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
-        let label = UILabel()
-        label.numberOfLines = 0
-        label.textAlignment = .center
-        label.font = .preferredFont(forTextStyle: .body)
-        label.text = "EdgeTAM Diagnostic\nPreparing local evidence…"
-        let cancelButton = UIButton(type: .system)
-        cancelButton.setTitle("Cancel", for: .normal)
-        let window = UIWindow(frame: UIScreen.main.bounds)
-        let status = EdgeTAMStatusViewController(label: label, cancelButton: cancelButton) { [weak self] in
-            self?.runTask?.cancel()
-            cancelButton.isEnabled = false
-            label.text = "EdgeTAM Diagnostic\nCancelling…"
-        }
-        window.rootViewController = status
-        window.makeKeyAndVisible()
-        self.window = window
+        true
+    }
 
+    func application(
+        _: UIApplication,
+        configurationForConnecting connectingSceneSession: UISceneSession,
+        options _: UIScene.ConnectionOptions
+    ) -> UISceneConfiguration {
+        let configuration = UISceneConfiguration(
+            name: "Default Configuration",
+            sessionRole: connectingSceneSession.role
+        )
+        configuration.delegateClass = EdgeTAMDiagnosticSceneDelegate.self
+        return configuration
+    }
+
+    fileprivate func start(label: UILabel) {
         let runner = EdgeTAMDiagnosticRunner()
         let task = Task.detached(priority: .userInitiated) {
             await runner.run()
@@ -42,11 +41,44 @@ final class EdgeTAMDiagnosticApp: UIResponder, UIApplicationDelegate {
                 self?.runTask = nil
             }
         }
-        return true
+    }
+
+    fileprivate func cancel(label: UILabel, button: UIButton) {
+        runTask?.cancel()
+        button.isEnabled = false
+        label.text = "EdgeTAM Diagnostic\nCancelling…"
     }
 
     func applicationWillTerminate(_: UIApplication) {
         runTask?.cancel()
+    }
+}
+
+private final class EdgeTAMDiagnosticSceneDelegate: UIResponder, UIWindowSceneDelegate {
+    var window: UIWindow?
+
+    func scene(
+        _ scene: UIScene,
+        willConnectTo _: UISceneSession,
+        options _: UIScene.ConnectionOptions
+    ) {
+        guard let windowScene = scene as? UIWindowScene else { return }
+        let label = UILabel()
+        label.numberOfLines = 0
+        label.textAlignment = .center
+        label.font = .preferredFont(forTextStyle: .body)
+        label.text = "EdgeTAM Diagnostic\nPreparing local evidence…"
+        let cancelButton = UIButton(type: .system)
+        cancelButton.setTitle("Cancel", for: .normal)
+        let window = UIWindow(windowScene: windowScene)
+        let appDelegate = UIApplication.shared.delegate as? EdgeTAMDiagnosticApp
+        let status = EdgeTAMStatusViewController(label: label, cancelButton: cancelButton) {
+            appDelegate?.cancel(label: label, button: cancelButton)
+        }
+        window.rootViewController = status
+        window.makeKeyAndVisible()
+        self.window = window
+        appDelegate?.start(label: label)
     }
 }
 
