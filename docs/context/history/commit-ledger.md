@@ -2,9 +2,9 @@
 
 > Generated from Git. Git remains authoritative. Context-only refresh commits are excluded.
 
-- Source commit: `510fd3602977576a98aa2335b05135637ac1b549`
+- Source commit: `49163669ddea6c38d5958de5069b9d048f48e50a`
 - Source commit date: 2026-09-19
-- Tracked commit count: 86
+- Tracked commit count: 88
 
 | Date | Commit | Subject |
 | --- | --- | --- |
@@ -78,3 +78,5 @@
 | 2026-09-19 | `dfe2e48` | docs: record native redesign delivery and validation |
 | 2026-09-19 | `bc05817` | Merge pull request #12 from hotherside/codex/clubhouse-native-studio |
 | 2026-09-19 | `510fd36` | Refine native Clubhouse and Cutroom design fidelity |
+| 2026-09-19 | `bbf4577` | docs: record native fidelity correction delivery |
+| 2026-09-19 | `4916366` | Merge pull request #13 from hotherside/codex/concept-fidelity |
