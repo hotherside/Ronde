@@ -1,0 +1,7 @@
+# Validated in an isolated Python 3.12 environment on macOS arm64.
+torch==2.14.0
+numpy==2.5.3
+pillow==12.3.0
+einshape==1.0
+dm-tree==0.1.10
+av==18.1.0

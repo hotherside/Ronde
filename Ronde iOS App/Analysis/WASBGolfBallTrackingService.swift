@@ -10,6 +10,9 @@ struct WASBGolfBallTrackingConfiguration: Sendable, Equatable {
     var maximumPostImpactDuration: TimeInterval
     var minimumPeakConfidence: Double
     var maximumCandidatesPerFrame: Int
+    /// Diagnostic-only count of spatially distinct heatmap peaks retained from one model tile.
+    /// Production uses one, preserving the previous strongest-peak decoder behaviour.
+    var maximumPeaksPerTile: Int
     /// Temporal spacing for accepted decoded frames. Sources slower than this are never
     /// interpolated: their real presentation timestamps remain authoritative.
     var analysisCadence: TimeInterval
@@ -24,6 +27,7 @@ struct WASBGolfBallTrackingConfiguration: Sendable, Equatable {
         maximumPostImpactDuration: TimeInterval,
         minimumPeakConfidence: Double,
         maximumCandidatesPerFrame: Int,
+        maximumPeaksPerTile: Int = 1,
         diagnosticTileOrigins: [NormalizedPoint]? = nil,
         analysisCadence: TimeInterval = 1.0 / 30.0,
         reacquisitionInterval: TimeInterval = 0.28
@@ -31,6 +35,7 @@ struct WASBGolfBallTrackingConfiguration: Sendable, Equatable {
         self.maximumPostImpactDuration = min(4.0, max(0.2, maximumPostImpactDuration))
         self.minimumPeakConfidence = min(max(minimumPeakConfidence, 0), 1)
         self.maximumCandidatesPerFrame = max(1, maximumCandidatesPerFrame)
+        self.maximumPeaksPerTile = min(3, max(1, maximumPeaksPerTile))
         self.diagnosticTileOrigins = diagnosticTileOrigins
         self.analysisCadence = max(1.0 / 120.0, analysisCadence)
         self.reacquisitionInterval = max(analysisCadence, reacquisitionInterval)
@@ -442,6 +447,66 @@ struct WASBGolfBallTrackingMetrics: Sendable, Equatable {
     }
 }
 
+/// The search mode used for one three-source-frame model window. This is diagnostic evidence only
+/// and does not alter tracker selection, display eligibility or persisted shot data.
+enum WASBGolfBallTrackingSearchKind: String, Sendable, Equatable {
+    case acquisition
+    case tracking
+    case reacquisition
+}
+
+/// The association gate's state after a diagnostic model window was evaluated.
+enum WASBGolfBallTrackingGateState: String, Sendable, Equatable {
+    case acquiring
+    case committed
+    case tracking
+    case reacquiring
+}
+
+/// A candidate exposed for an explicitly enabled local diagnostic sink. Coordinates are normalised
+/// to the analysed frame with a top-left origin and `presentationTime` is an absolute source PTS.
+struct WASBGolfBallTrackingDiagnosticCandidate: Sendable, Equatable {
+    let presentationTime: TimeInterval
+    let normalizedX: Double
+    let normalizedY: Double
+    let confidence: Double
+
+    init(_ candidate: GolfBallDetectionCandidate) {
+        presentationTime = candidate.presentationTime
+        normalizedX = candidate.point.x
+        normalizedY = candidate.point.y
+        confidence = candidate.confidence
+    }
+}
+
+/// Optional bounds of a local search window in normalised top-left source-frame coordinates.
+struct WASBGolfBallTrackingDiagnosticRegion: Sendable, Equatable {
+    let normalizedX: Double
+    let normalizedY: Double
+    let normalizedWidth: Double
+    let normalizedHeight: Double
+
+    init(_ region: CGRect) {
+        normalizedX = Double(region.minX)
+        normalizedY = Double(region.minY)
+        normalizedWidth = Double(region.width)
+        normalizedHeight = Double(region.height)
+    }
+}
+
+/// Per-window diagnostics for a signed local probe. The service constructs this only when a caller
+/// supplies `diagnostics`; normal application analysis has no diagnostic array retention.
+struct WASBGolfBallTrackingDiagnosticFrame: Sendable, Equatable {
+    let presentationTime: TimeInterval
+    let analysisWidth: Int
+    let analysisHeight: Int
+    let searchKind: WASBGolfBallTrackingSearchKind
+    let searchRegion: WASBGolfBallTrackingDiagnosticRegion?
+    let gateState: WASBGolfBallTrackingGateState
+    let candidates: [WASBGolfBallTrackingDiagnosticCandidate]
+    let selectedCandidate: WASBGolfBallTrackingDiagnosticCandidate?
+}
+
 enum WASBGolfBallTrackingError: LocalizedError, Sendable, Equatable {
     case unreadableAsset
     case noVideoTrack
@@ -496,7 +561,8 @@ actor WASBGolfBallTrackingService {
         impactTime: TimeInterval,
         configuration: WASBGolfBallTrackingConfiguration = .uploadedVideo,
         progress: (@Sendable (Double) -> Void)? = nil,
-        instrumentation: (@Sendable (WASBGolfBallTrackingMetrics) -> Void)? = nil
+        instrumentation: (@Sendable (WASBGolfBallTrackingMetrics) -> Void)? = nil,
+        diagnostics: (@Sendable (WASBGolfBallTrackingDiagnosticFrame) -> Void)? = nil
     ) async throws -> BallFlightEstimate {
         let asset = AVURLAsset(url: url)
         guard try await asset.load(.isReadable) else {
@@ -640,7 +706,19 @@ actor WASBGolfBallTrackingService {
                     inputBufferAllocationCount += batch.inputBufferAllocationCount
                     tilesEvaluated += batch.tileCount
                     candidateCount += batch.detections.count
-                    searchState.record(batch.detections, from: searchPlan, at: sampleTime)
+                    let decision = searchState.record(batch.detections, from: searchPlan, at: sampleTime)
+                    if let diagnostics {
+                        diagnostics(WASBGolfBallTrackingDiagnosticFrame(
+                            presentationTime: sampleTime,
+                            analysisWidth: frame.width,
+                            analysisHeight: frame.height,
+                            searchKind: searchPlan.kind.diagnosticKind,
+                            searchRegion: searchPlan.normalizedRegion.map(WASBGolfBallTrackingDiagnosticRegion.init),
+                            gateState: decision.gateState,
+                            candidates: batch.detections.map(WASBGolfBallTrackingDiagnosticCandidate.init),
+                            selectedCandidate: decision.selectedCandidate.map(WASBGolfBallTrackingDiagnosticCandidate.init)
+                        ))
+                    }
                 }
                 if searchState.shouldTerminate(at: sampleTime) {
                     break
@@ -746,23 +824,49 @@ actor WASBGolfBallTrackingService {
             // MLFeatureValue, MLDictionaryFeatureProvider and MLFeatureProvider are ObjC-backed.
             // Core ML may autorelease a substantial temporary graph for each prediction, so keep
             // only the scalar peak beyond this scope and drain it before moving to the next tile.
-            let peak: PixelPeak? = try autoreleasepool {
-                let features = try MLDictionaryFeatureProvider(dictionary: [
-                    "input_frames": MLFeatureValue(multiArray: input)
-                ])
-                let prediction = try model.prediction(from: features)
-                guard let heatmap = prediction.featureValue(for: "heatmap")?.multiArrayValue,
-                      let heatmapPeak = Self.peak(in: heatmap),
-                      heatmapPeak.confidence >= configuration.minimumPeakConfidence else {
-                    return nil
+            if configuration.maximumPeaksPerTile == 1 {
+                // Preserve the production path, including strongest-peak tie order and avoiding
+                // any per-tile diagnostic arrays when multi-peak capture is not explicitly set.
+                let peak: PixelPeak? = try autoreleasepool {
+                    let features = try MLDictionaryFeatureProvider(dictionary: [
+                        "input_frames": MLFeatureValue(multiArray: input)
+                    ])
+                    let prediction = try model.prediction(from: features)
+                    guard let heatmap = prediction.featureValue(for: "heatmap")?.multiArrayValue,
+                          let heatmapPeak = Self.peak(in: heatmap),
+                          heatmapPeak.confidence >= configuration.minimumPeakConfidence else {
+                        return nil
+                    }
+                    return PixelPeak(
+                        x: origin.x + heatmapPeak.x,
+                        y: origin.y + heatmapPeak.y,
+                        confidence: heatmapPeak.confidence
+                    )
                 }
-                return PixelPeak(
-                    x: origin.x + heatmapPeak.x,
-                    y: origin.y + heatmapPeak.y,
-                    confidence: heatmapPeak.confidence
-                )
+                if let peak { peaks.append(peak) }
+            } else {
+                let tilePeaks: [PixelPeak] = try autoreleasepool {
+                    let features = try MLDictionaryFeatureProvider(dictionary: [
+                        "input_frames": MLFeatureValue(multiArray: input)
+                    ])
+                    let prediction = try model.prediction(from: features)
+                    guard let heatmap = prediction.featureValue(for: "heatmap")?.multiArrayValue else {
+                        return []
+                    }
+                    return Self.peaks(
+                        in: heatmap,
+                        minimumConfidence: configuration.minimumPeakConfidence,
+                        maximumCount: configuration.maximumPeaksPerTile
+                    ).map {
+                        PixelPeak(
+                            x: origin.x + $0.x,
+                            y: origin.y + $0.y,
+                            confidence: $0.confidence
+                        )
+                    }
+                }
+                peaks.append(contentsOf: tilePeaks)
             }
-            if let peak { peaks.append(peak) }
 
             // Report roughly four times per tiled window, avoiding a flood of main-actor work
             // on 4K full-frame scans.
@@ -851,6 +955,69 @@ actor WASBGolfBallTrackingService {
             }
         }
         return (bestX, bestY, Double(bestValue))
+    }
+
+    /// Returns local heatmap maxima in deterministic confidence order. The one-peak branch uses
+    /// the former global scan unchanged, so the default decoder preserves its strongest-peak tie
+    /// ordering. Multi-peak diagnostics retain only distinct local maxima before the existing
+    /// frame-level 16-pixel suppression and global candidate limit are applied.
+    private static func peaks(
+        in heatmap: MLMultiArray,
+        minimumConfidence: Double,
+        maximumCount: Int
+    ) -> [(x: Int, y: Int, confidence: Double)] {
+        guard let strongest = peak(in: heatmap), strongest.confidence >= minimumConfidence else {
+            return []
+        }
+        guard maximumCount > 1,
+              heatmap.dataType == .float32,
+              heatmap.shape.count == 4 else {
+            return [strongest]
+        }
+
+        let pointer = heatmap.dataPointer.bindMemory(to: Float32.self, capacity: heatmap.count)
+        let rowStride = heatmap.strides[2].intValue
+        let columnStride = heatmap.strides[3].intValue
+        func value(x: Int, y: Int) -> Double {
+            Double(pointer[(y * rowStride) + (x * columnStride)])
+        }
+        var localMaxima: [(x: Int, y: Int, confidence: Double)] = [strongest]
+        for y in 0..<modelHeight {
+            for x in 0..<modelWidth {
+                let confidence = value(x: x, y: y)
+                guard confidence >= minimumConfidence else { continue }
+                var isLocalMaximum = true
+                for neighbourY in max(0, y - 1)...min(modelHeight - 1, y + 1) {
+                    for neighbourX in max(0, x - 1)...min(modelWidth - 1, x + 1) {
+                        guard neighbourX != x || neighbourY != y else { continue }
+                        let neighbour = value(x: neighbourX, y: neighbourY)
+                        if neighbour > confidence
+                            || (neighbour == confidence && (neighbourY < y || (neighbourY == y && neighbourX < x))) {
+                            isLocalMaximum = false
+                            break
+                        }
+                    }
+                    if !isLocalMaximum { break }
+                }
+                if isLocalMaximum {
+                    localMaxima.append((x: x, y: y, confidence: confidence))
+                }
+            }
+        }
+
+        var retained: [(x: Int, y: Int, confidence: Double)] = []
+        for candidate in localMaxima.sorted(by: {
+            $0.confidence != $1.confidence
+                ? $0.confidence > $1.confidence
+                : ($0.y != $1.y ? $0.y < $1.y : $0.x < $1.x)
+        }) {
+            guard retained.allSatisfy({
+                hypot(Double(candidate.x - $0.x), Double(candidate.y - $0.y)) > 16
+            }) else { continue }
+            retained.append(candidate)
+            if retained.count == maximumCount { break }
+        }
+        return retained
     }
 
     private static func tileOrigins(width: Int, height: Int, region: CGRect?) -> [(x: Int, y: Int)] {
@@ -982,6 +1149,14 @@ actor WASBGolfBallTrackingService {
         case acquisition
         case tracking
         case reacquisition
+
+        var diagnosticKind: WASBGolfBallTrackingSearchKind {
+            switch self {
+            case .acquisition: .acquisition
+            case .tracking: .tracking
+            case .reacquisition: .reacquisition
+            }
+        }
     }
 
     private struct SearchPlan {
@@ -992,6 +1167,11 @@ actor WASBGolfBallTrackingService {
     }
 
     private struct SearchState {
+        fileprivate struct FrameDecision {
+            let gateState: WASBGolfBallTrackingGateState
+            let selectedCandidate: GolfBallDetectionCandidate?
+        }
+
         private let analysisStartTime: TimeInterval
         private let reacquisitionInterval: TimeInterval
         private var continuation = TrackingContinuationGate()
@@ -1053,16 +1233,23 @@ actor WASBGolfBallTrackingService {
             _ detections: [GolfBallDetectionCandidate],
             from plan: SearchPlan,
             at time: TimeInterval
-        ) {
+        ) -> FrameDecision {
             if !acquisition.hasCommittedTrack {
                 if let track = acquisition.record(detections, at: time) {
                     continuation.seed(with: track.detections)
                     lastFullSearchTime = time
+                    return FrameDecision(gateState: .committed, selectedCandidate: track.detections.last)
                 }
-                return
+                return FrameDecision(gateState: .acquiring, selectedCandidate: nil)
             }
 
-            _ = continuation.acceptBest(from: detections, at: time)
+            let selectedCandidate = continuation.acceptBest(from: detections, at: time)
+            let gateState: WASBGolfBallTrackingGateState = switch plan.kind {
+            case .acquisition: .acquiring
+            case .tracking: .tracking
+            case .reacquisition: .reacquiring
+            }
+            return FrameDecision(gateState: gateState, selectedCandidate: selectedCandidate)
         }
 
         func shouldTerminate(at time: TimeInterval) -> Bool {

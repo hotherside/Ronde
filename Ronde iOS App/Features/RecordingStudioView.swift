@@ -18,6 +18,7 @@ struct RecordingStudioView: View {
     @State private var thumbnails: [ShotVideoThumbnail] = []
     @State private var removedBookmark: RecordingBookmark?
     @State private var showsDeleteConfirmation = false
+    @State private var didRouteDirectShot = false
     @Environment(\.dismiss) private var dismiss
 
     private var recording: ReviewSession? { store.sessions.first { $0.id == recordingID } }
@@ -69,7 +70,7 @@ struct RecordingStudioView: View {
                     }
                 }
                 .reviewCanvasBackground()
-                .navigationTitle("Recording Studio").navigationBarTitleDisplayMode(.inline)
+                .navigationTitle("Choose shots").navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .primaryAction) {
                         Menu {
@@ -96,6 +97,12 @@ struct RecordingStudioView: View {
         .task(id: recording?.sourceURL) {
             guard let recording, let url = recording.sourceURL else { return }
             playback.attach(url: url, duration: recording.duration)
+            if recording.isDirectShotImport, !didRouteDirectShot {
+                didRouteDirectShot = true
+                await Task.yield()
+                onOpenShot(recording.id)
+                return
+            }
             thumbnails = await ShotVideoSourceInspector().thumbnails(url: url, duration: recording.duration, count: 10)
         }
         .onDisappear { playback.detach() }
@@ -106,8 +113,8 @@ struct RecordingStudioView: View {
         VStack(alignment: .leading, spacing: 7) {
             Text(recording.groupTitle ?? recording.title).font(.caption.weight(.semibold)).textCase(.uppercase).tracking(1)
                 .foregroundStyle(RondeReviewDesign.graphiteMuted)
-            Text("Find your shots.").font(.largeTitle.weight(.semibold)).tracking(-1)
-            Text("Watch. Bookmark. Keep the good ones.").font(.subheadline).foregroundStyle(RondeReviewDesign.graphiteMuted)
+            Text("Choose shots.").font(.largeTitle.weight(.semibold)).tracking(-1)
+            Text("Set the clip window, bookmark each moment, then create shots for Shot Studio.").font(.subheadline).foregroundStyle(RondeReviewDesign.graphiteMuted)
         }
     }
 
@@ -252,8 +259,9 @@ struct RecordingStudioView: View {
                     }
                 }
             } else {
+                bookmarkWindowControl(recording)
                 if recording.bookmarks.isEmpty {
-                    emptyState("That one. Keep it.", detail: "Tap Bookmark at a moment you like. Start with 5 seconds either side, then adjust the cut.", image: "bookmark")
+                    emptyState("That one. Keep it.", detail: "Choose the default window above, then tap Bookmark at each moment you like.", image: "bookmark")
                 } else {
                     ForEach(recording.bookmarks.sorted { $0.sourceTime < $1.sourceTime }) { bookmark in
                         bookmarkRow(bookmark, in: recording)
@@ -270,10 +278,51 @@ struct RecordingStudioView: View {
     }
 
     private func collectionPicker(_ recording: ReviewSession) -> some View {
-        Picker("Recording collection", selection: $showsShots) {
+        Picker("Choose shots", selection: $showsShots) {
             Text("Bookmarks · \(recording.bookmarks.count)").tag(false)
             Text("Shots · \(shots.count)").tag(true)
         }.accessibilityIdentifier("recording-collection")
+    }
+
+    private func bookmarkWindowControl(_ recording: ReviewSession) -> some View {
+        let window = recording.bookmarkWindow
+        return VStack(alignment: .leading, spacing: 12) {
+            Text("DEFAULT CLIP WINDOW")
+                .font(.reviewerSection)
+                .tracking(1.2)
+                .foregroundStyle(RondeReviewDesign.graphiteFaint)
+            Text("New bookmarks use this window. Existing bookmarks keep their own settings.")
+                .font(.subheadline)
+                .foregroundStyle(RondeReviewDesign.graphiteMuted)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 8) {
+                ForEach([5.0, 10.0], id: \.self) { seconds in
+                    let selected = window.beforeDuration == seconds && window.afterDuration == seconds
+                    Button {
+                        _ = store.updateBookmarkWindow(before: seconds, after: seconds, in: recording)
+                    } label: {
+                        Text("±\(Int(seconds))s")
+                            .frame(minWidth: 58, minHeight: 36)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(selected ? RondeReviewDesign.fairway : RondeReviewDesign.graphiteMuted)
+                    .accessibilityLabel("Set default clip window to \(Int(seconds)) seconds each side")
+                }
+                Spacer(minLength: 0)
+            }
+            bufferControl("Before", value: window.beforeDuration, id: "default-before") { value in
+                _ = store.updateBookmarkWindow(before: value, after: window.afterDuration, in: recording)
+            }
+            bufferControl("After", value: window.afterDuration, id: "default-after") { value in
+                _ = store.updateBookmarkWindow(before: window.beforeDuration, after: value, in: recording)
+            }
+            Text("New bookmarks: \(Int(window.beforeDuration))s before + \(Int(window.afterDuration))s after")
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(RondeReviewDesign.graphiteMuted)
+        }
+        .padding(14)
+        .background(RondeReviewDesign.surfaceInset, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .accessibilityElement(children: .contain)
     }
 
     private func bookmarkRow(_ bookmark: RecordingBookmark, in recording: ReviewSession) -> some View {

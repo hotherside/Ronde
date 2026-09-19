@@ -29,6 +29,32 @@ targets:
           enabled: 1
     sources:
       - path: Ronde iOS App
+      - path: Tools/TracerHarness/Native
+        includes:
+          - EdgeTAM*.swift
+      # Model artefacts are prepared outside Git, then linked here. These
+      # explicit resources are required for a build with usable ball tracking.
+      - path: .local-models/edgetam_image_encoder.mlmodelc
+        type: folder
+        buildPhase: resources
+      - path: .local-models/edgetam_variable_memory_attention.mlmodelc
+        type: folder
+        buildPhase: resources
+      - path: .local-models/edgetam_sam_heads_fixed_prompt.mlmodelc
+        type: folder
+        buildPhase: resources
+      - path: .local-models/edgetam_sam_heads_no_point.mlmodelc
+        type: folder
+        buildPhase: resources
+      - path: .local-models/edgetam_memory_encoder_perceiver_sigmoid_tracking.mlmodelc
+        type: folder
+        buildPhase: resources
+      - path: .local-models/edgetam-constants.json
+        buildPhase: resources
+      - path: .local-models/edgetam-model-identity.json
+        buildPhase: resources
+      - path: .local-models/edgetam-license.txt
+        buildPhase: resources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.ronde

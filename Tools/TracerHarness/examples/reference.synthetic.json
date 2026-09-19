@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "1.0",
+  "clipId": "synthetic-visible-gap",
+  "sourceHash": "sha256:synthetic-visible-gap",
+  "width": 1000,
+  "height": 1000,
+  "coordinateOrigin": "top-left",
+  "coordinateSpace": "normalized",
+  "frames": [
+    {"timestamp": 0.0, "visibility": "not_launched", "reviewStatus": "human-verified"},
+    {"timestamp": 0.1, "x": 0.20, "y": 0.20, "visibility": "visible", "reviewStatus": "agent-reviewed", "uncertaintyPx": 3},
+    {"timestamp": 0.2, "x": 0.30, "y": 0.26, "visibility": "visible", "reviewStatus": "agent-reviewed", "uncertaintyPx": 3},
+    {"timestamp": 0.3, "visibility": "occluded", "reviewStatus": "agent-reviewed"},
+    {"timestamp": 0.4, "x": 0.42, "y": 0.33, "visibility": "visible", "reviewStatus": "proposal"},
+    {"timestamp": 0.5, "visibility": "uncertain", "reviewStatus": "proposal"},
+    {"timestamp": 0.6, "x": 0.55, "y": 0.40, "visibility": "visible", "reviewStatus": "unreviewed"}
+  ]
+}

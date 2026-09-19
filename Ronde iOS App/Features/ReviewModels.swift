@@ -32,7 +32,8 @@ enum ReviewMode: String, CaseIterable, Identifiable, Hashable, Codable, Sendable
 enum ReviewImportKind: String, Hashable, Codable, Sendable {
     case oneShot
     case rangeSession
-    /// A manually reviewed 10–20 minute source. Recording imports never start perception work.
+    /// A manually reviewed source at or above the direct-shot threshold. Recording imports never
+    /// start perception work.
     case recording
 }
 
@@ -46,9 +47,16 @@ enum ShotVideoImportPolicy {
 
 enum RecordingImportPolicy {
     static let maximumDuration: TimeInterval = 20 * 60
+    /// Imported recordings shorter than this remain a direct Shot Studio source. Exactly twenty
+    /// seconds stays in the manual recording flow so the boundary is deterministic.
+    static let directShotThreshold: TimeInterval = 20
 
     static func accepts(duration: TimeInterval) -> Bool {
         duration.isFinite && duration > 0 && duration <= maximumDuration
+    }
+
+    static func becomesDirectShot(duration: TimeInterval) -> Bool {
+        duration.isFinite && duration > 0 && duration < directShotThreshold
     }
 }
 
@@ -85,6 +93,30 @@ struct RecordingBookmark: Identifiable, Codable, Hashable, Sendable {
         let start = max(0, impact - beforeDuration)
         let end = min(safeDuration, impact + afterDuration)
         return ReviewTimeRange(start: start, duration: max(0, end - start))
+    }
+}
+
+/// The persisted default window used when a person adds a new bookmark to a recording.
+/// Individual bookmarks keep their own before/after values, so changing this setting never
+/// rewrites an existing cut. Optional storage on ReviewSession keeps older archives valid.
+struct RecordingBookmarkWindow: Codable, Hashable, Sendable {
+    static let standard = RecordingBookmarkWindow(
+        beforeDuration: RecordingBookmark.defaultBeforeDuration,
+        afterDuration: RecordingBookmark.defaultAfterDuration
+    )
+    static let maximumDuration: TimeInterval = 60
+
+    var beforeDuration: TimeInterval
+    var afterDuration: TimeInterval
+
+    init(beforeDuration: TimeInterval = RecordingBookmark.defaultBeforeDuration,
+         afterDuration: TimeInterval = RecordingBookmark.defaultAfterDuration) {
+        self.beforeDuration = Self.clamp(beforeDuration)
+        self.afterDuration = Self.clamp(afterDuration)
+    }
+
+    private static func clamp(_ value: TimeInterval) -> TimeInterval {
+        value.isFinite ? min(max(0, value), maximumDuration) : RecordingBookmark.defaultBeforeDuration
     }
 }
 
@@ -174,6 +206,9 @@ struct AssistedTracerPath: Codable, Hashable, Sendable {
     var launch: ReviewPoint
     var apex: ReviewPoint
     var landing: ReviewPoint
+    /// A person-drawn annotation in normalised source coordinates. Nil keeps
+    /// archives from before freehand correction on the three-handle curve.
+    var drawnPoints: [ReviewPoint]?
 
     static let `default` = AssistedTracerPath(
         launch: ReviewPoint(CGPoint(x: 0.69, y: 0.61)),
@@ -181,16 +216,56 @@ struct AssistedTracerPath: Codable, Hashable, Sendable {
         landing: ReviewPoint(CGPoint(x: 0.76, y: 0.48))
     )
 
-    init(launch: ReviewPoint, apex: ReviewPoint, landing: ReviewPoint) {
+    init(
+        launch: ReviewPoint,
+        apex: ReviewPoint,
+        landing: ReviewPoint,
+        drawnPoints: [ReviewPoint]? = nil
+    ) {
         self.launch = launch
         self.apex = apex
         self.landing = landing
+        self.drawnPoints = Self.sanitised(drawnPoints)
     }
 
     init(estimate: BallFlightEstimate) {
         launch = ReviewPoint(CGPoint(x: estimate.launch.x, y: estimate.launch.y))
         apex = ReviewPoint(CGPoint(x: estimate.apex.x, y: estimate.apex.y))
         landing = ReviewPoint(CGPoint(x: estimate.landing.x, y: estimate.landing.y))
+        drawnPoints = nil
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case launch, apex, landing, drawnPoints
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        launch = try container.decode(ReviewPoint.self, forKey: .launch)
+        apex = try container.decode(ReviewPoint.self, forKey: .apex)
+        landing = try container.decode(ReviewPoint.self, forKey: .landing)
+        drawnPoints = Self.sanitised(
+            try container.decodeIfPresent([ReviewPoint].self, forKey: .drawnPoints)
+        )
+    }
+
+    private static func sanitised(_ points: [ReviewPoint]?) -> [ReviewPoint]? {
+        guard let points else { return nil }
+        var result: [ReviewPoint] = []
+        result.reserveCapacity(min(points.count, 512))
+        for point in points where point.x.isFinite && point.y.isFinite {
+            let bounded = ReviewPoint(CGPoint(
+                x: min(1, max(0, point.x)),
+                y: min(1, max(0, point.y))
+            ))
+            if let previous = result.last,
+               hypot(bounded.x - previous.x, bounded.y - previous.y) < 0.001 {
+                continue
+            }
+            result.append(bounded)
+            if result.count == 512 { break }
+        }
+        return result.count >= 2 ? result : nil
     }
 }
 
@@ -213,6 +288,9 @@ struct ReviewCandidate: Identifiable, Codable, Sendable {
     var evidenceAnchoredPath: EvidenceAnchoredFlightPath?
     /// Person-authored rescue geometry. This remains separate from automatic evidence.
     var assistedTracer: AssistedTracerPath?
+    /// A point-assisted model result. Optional for archives saved before this feature;
+    /// it never replaces automatic evidence or the separately authored manual path.
+    var seededTrace: SeededModelTrace? = nil
     var tracerSource: BallFlightEstimateSource
     var tracerConfidence: Double
     var observedTracerPointCount: Int
@@ -248,7 +326,8 @@ struct ReviewCandidate: Identifiable, Codable, Sendable {
         tracerSource: BallFlightEstimateSource = .unavailable,
         tracerConfidence: Double = 0,
         observedTracerPointCount: Int = 0,
-        usesFullSourceRange: Bool = false
+        usesFullSourceRange: Bool = false,
+        seededTrace: SeededModelTrace? = nil
     ) {
         self.id = id
         self.ordinal = ordinal
@@ -266,6 +345,7 @@ struct ReviewCandidate: Identifiable, Codable, Sendable {
         self.tracerConfidence = min(max(tracerConfidence, 0), 1)
         self.observedTracerPointCount = max(0, observedTracerPointCount)
         self.usesFullSourceRange = usesFullSourceRange
+        self.seededTrace = seededTrace
     }
 
     var hasAutomaticTracer: Bool { evidenceAnchoredPath != nil }
@@ -308,10 +388,17 @@ struct ReviewSession: Identifiable, Codable, Sendable {
     // Optional backing storage is intentional: synthesised Codable must tolerate pre-bookmark
     // archives that have no corresponding key. `bookmarks` is the safe public collection.
     var storedBookmarks: [RecordingBookmark]? = nil
+    /// Optional backing storage keeps pre-window archives on the historical ±5 second default.
+    var storedBookmarkWindow: RecordingBookmarkWindow? = nil
 
     var bookmarks: [RecordingBookmark] {
         get { storedBookmarks ?? [] }
         set { storedBookmarks = newValue }
+    }
+
+    var bookmarkWindow: RecordingBookmarkWindow {
+        get { storedBookmarkWindow ?? .standard }
+        set { storedBookmarkWindow = newValue }
     }
 
     var keptCount: Int { candidates.filter { $0.decision == .kept }.count }
@@ -321,6 +408,12 @@ struct ReviewSession: Identifiable, Codable, Sendable {
     /// not a reliable proxy for how many shots a recording contains.
     var isSingleShotImport: Bool {
         importKind == .oneShot
+    }
+
+    /// A recording picker import under twenty seconds is a ready source for Shot Studio. Derived
+    /// bookmark shots and historical one-shot imports keep their existing navigation behaviour.
+    var isDirectShotImport: Bool {
+        isSingleShotImport && !isDerivedShot && RecordingImportPolicy.becomesDirectShot(duration: duration)
     }
 
     var isRecording: Bool { importKind == .recording }
@@ -548,6 +641,20 @@ protocol ReviewMediaImporting: Sendable {
 
 extension LocalMediaStore: ReviewMediaImporting {}
 
+enum ShotBallTrackingError: LocalizedError {
+    case libraryUnavailable, videoChanged, noTrack, saveFailed, analysisInProgress
+
+    var errorDescription: String? {
+        switch self {
+        case .libraryUnavailable: "Open your local library before tracing a shot."
+        case .videoChanged: "This shot changed while tracking. Open it again and retry."
+        case .noTrack: "A usable ball track was not found. Try a clearer frame and point."
+        case .saveFailed: "The track could not be saved. Your previous trace has been kept."
+        case .analysisInProgress: "Wait for the current analysis to finish, or stop it before tracing."
+        }
+    }
+}
+
 @MainActor
 final class ReviewerStore: ObservableObject {
     @Published var sessions: [ReviewSession]
@@ -573,6 +680,10 @@ final class ReviewerStore: ObservableObject {
     private var longSessionAnalysisService: LongSessionAnalysisService
     private(set) var fixedSingleGolferSessionEvidence: FixedCameraSingleGolferSessionEvidence?
     private let ballTrackingService = WASBGolfBallTrackingService()
+    private let pointTrackingService = EdgeTAMTrackingService()
+    private var pointTrackingOperations: [UUID: (id: UUID, task: Task<EdgeTAMTrackingResult, Error>)] = [:]
+    private let automaticSeedService = ShotAutomaticSeedService()
+    private var automaticSeedOperations: [UUID: (id: UUID, task: Task<ShotAutomaticSeed, Error>)] = [:]
     private let flightPathExtrapolator = EvidenceAnchoredFlightPathExtrapolator()
     private let tracedVideoExporter = TracedVideoExporter()
 
@@ -663,6 +774,10 @@ final class ReviewerStore: ObservableObject {
         libraryGeneration = UUID()
         for task in operations.values { task.cancel() }
         operations.removeAll()
+        for operation in pointTrackingOperations.values { operation.task.cancel() }
+        pointTrackingOperations.removeAll()
+        for operation in automaticSeedOperations.values { operation.task.cancel() }
+        automaticSeedOperations.removeAll()
         analysisOperations.removeAll()
         isBusy = false
     }
@@ -832,24 +947,46 @@ final class ReviewerStore: ObservableObject {
     @discardableResult
     func addBookmark(
         at sourceTime: TimeInterval,
-        before: TimeInterval = RecordingBookmark.defaultBeforeDuration,
-        after: TimeInterval = RecordingBookmark.defaultAfterDuration,
+        before: TimeInterval? = nil,
+        after: TimeInterval? = nil,
         to recording: ReviewSession
     ) -> RecordingBookmark? {
-        guard sourceTime.isFinite, before.isFinite, after.isFinite,
+        guard sourceTime.isFinite,
               let current = sessions.first(where: { $0.id == recording.id }), current.isRecording else { return nil }
+        let window = current.bookmarkWindow
+        let beforeDuration = before ?? window.beforeDuration
+        let afterDuration = after ?? window.afterDuration
+        guard beforeDuration.isFinite, afterDuration.isFinite else { return nil }
         let clampedTime = min(max(0, sourceTime), max(0, current.duration))
         if let existing = current.bookmarks.first(where: {
             abs($0.sourceTime - clampedTime) <= RecordingBookmark.duplicateTolerance
         }) {
             return existing
         }
-        let bookmark = RecordingBookmark(sourceTime: clampedTime, beforeDuration: before, afterDuration: after)
+        let bookmark = RecordingBookmark(sourceTime: clampedTime, beforeDuration: beforeDuration, afterDuration: afterDuration)
         guard mutateAtomically({ rows in
             guard let index = rows.firstIndex(where: { $0.id == recording.id }) else { return }
             rows[index].bookmarks.append(bookmark)
         }) else { return nil }
         return bookmark
+    }
+
+    @discardableResult
+    func updateBookmarkWindow(
+        before: TimeInterval,
+        after: TimeInterval,
+        in recording: ReviewSession
+    ) -> Bool {
+        guard before.isFinite, after.isFinite,
+              let current = sessions.first(where: { $0.id == recording.id }), current.isRecording else { return false }
+        let window = RecordingBookmarkWindow(beforeDuration: before, afterDuration: after)
+        let groupID = current.groupID
+        return mutateAtomically { rows in
+            for index in rows.indices where rows[index].isRecording {
+                let belongsToGroup = groupID.map { rows[index].groupID == $0 } ?? (rows[index].id == current.id)
+                if belongsToGroup { rows[index].bookmarkWindow = window }
+            }
+        }
     }
 
     @discardableResult
@@ -974,6 +1111,135 @@ final class ReviewerStore: ObservableObject {
         updateSession(session) { $0.videoEdit = edit }
     }
 
+    /// One action locates a defensible ball observation, then follows it with the local tracker.
+    /// Failure leaves the saved result untouched so the person can select the ball or draw a path.
+    func traceShot(
+        in sessionID: UUID,
+        sourceRange: ReviewTimeRange,
+        progress: @escaping @Sendable (Double) -> Void
+    ) async throws {
+        guard let owner = captureImportOwnership(),
+              let original = sessions.first(where: { $0.id == sessionID }),
+              let sourceURL = original.sourceURL else { throw ShotBallTrackingError.libraryUnavailable }
+        guard original.status != .analysing, analysisOperations[sessionID] == nil,
+              pointTrackingOperations[sessionID] == nil, automaticSeedOperations[sessionID] == nil else {
+            throw ShotBallTrackingError.analysisInProgress
+        }
+        guard sourceRange.start >= 0, sourceRange.end <= original.duration + 0.001,
+              sourceRange.duration > 0, sourceRange.duration <= 20 else {
+            throw EdgeTAMTrackingError.invalidInterval
+        }
+        let operationID = UUID()
+        let service = automaticSeedService
+        let task = Task {
+            try await service.locate(url: sourceURL, sourceRange: sourceRange) { value in
+                progress(min(max(0, value), 1) * 0.25)
+            }
+        }
+        automaticSeedOperations[sessionID] = (operationID, task)
+        defer {
+            if automaticSeedOperations[sessionID]?.id == operationID { automaticSeedOperations[sessionID] = nil }
+        }
+        let seed = try await withTaskCancellationHandler {
+            try await task.value
+        } onCancel: { task.cancel() }
+        try Task.checkCancellation()
+        guard ownsLibrary(owner), automaticSeedOperations[sessionID]?.id == operationID,
+              let current = sessions.first(where: { $0.id == sessionID }),
+              current.sourceURL == sourceURL,
+              current.defaultCandidate?.id == original.defaultCandidate?.id else {
+            throw ShotBallTrackingError.videoChanged
+        }
+        automaticSeedOperations[sessionID] = nil
+        try await trackBall(
+            in: sessionID, sourceRange: seed.trackingRange, seedTime: seed.presentationTime,
+            point: seed.point, seedOrigin: .detectedBall, detectedImpactTime: seed.impactTime
+        ) { value in progress(0.25 + value * 0.75) }
+    }
+
+    /// Track a selected ball point without overwriting the automatic or manual result.
+    /// Work is bound to the source and account that requested it; cancellation never saves a
+    /// partial mutation, and a failed archive write restores the previous in-memory result.
+    func trackBall(
+        in sessionID: UUID,
+        sourceRange: ReviewTimeRange,
+        seedTime: TimeInterval,
+        point: NormalizedPoint,
+        seedOrigin: SeededModelTrace.SeedOrigin = .selectedByPerson,
+        detectedImpactTime: TimeInterval? = nil,
+        progress: @escaping @Sendable (Double) -> Void
+    ) async throws {
+        guard let owner = captureImportOwnership(),
+              let original = sessions.first(where: { $0.id == sessionID }),
+              let sourceURL = original.sourceURL else { throw ShotBallTrackingError.libraryUnavailable }
+        guard original.status != .analysing, analysisOperations[sessionID] == nil,
+              pointTrackingOperations[sessionID] == nil, automaticSeedOperations[sessionID] == nil else {
+            throw ShotBallTrackingError.analysisInProgress
+        }
+        guard sourceRange.start >= 0, sourceRange.end <= original.duration + 0.001,
+              sourceRange.duration > 0, sourceRange.duration <= 20 else {
+            throw EdgeTAMTrackingError.invalidInterval
+        }
+        let originalCandidateID = original.defaultCandidate?.id
+        let operationID = UUID()
+        let service = pointTrackingService
+        let task = Task {
+            try await service.track(
+                url: sourceURL, interval: sourceRange.start...sourceRange.end,
+                seedPTS: seedTime, normalisedPoint: .init(x: point.x, y: point.y)
+            ) { state in
+                switch state.stage {
+                case .validatingResources: progress(0.01)
+                case .readingFrames: progress(0.03)
+                case .loadingModels: progress(0.07)
+                case .tracking:
+                    let fraction = Double(state.completedCanonicalFrames) / Double(max(1, state.totalFrames ?? 1))
+                    progress(0.10 + min(1, fraction) * 0.85)
+                case .finished: progress(0.96)
+                }
+            }
+        }
+        pointTrackingOperations[sessionID] = (operationID, task)
+        defer {
+            if pointTrackingOperations[sessionID]?.id == operationID { pointTrackingOperations[sessionID] = nil }
+        }
+        let result = try await withTaskCancellationHandler {
+            try await task.value
+        } onCancel: {
+            task.cancel()
+        }
+        try Task.checkCancellation()
+        guard ownsLibrary(owner), pointTrackingOperations[sessionID]?.id == operationID,
+              let current = sessions.first(where: { $0.id == sessionID }),
+              current.sourceURL == sourceURL, current.status != .analysing,
+              current.defaultCandidate?.id == originalCandidateID else {
+            throw ShotBallTrackingError.videoChanged
+        }
+        guard let trace = SeededModelTrace(trackingResult: result, seedOrigin: seedOrigin), trace.observedPointCount >= 3,
+              trace.observedSegments.contains(where: { $0.count >= 2 }) else {
+            throw ShotBallTrackingError.noTrack
+        }
+        guard mutateAtomically({ rows in
+            guard let index = rows.firstIndex(where: { $0.id == sessionID }) else { return }
+            if let originalCandidateID,
+               let candidateIndex = rows[index].candidates.firstIndex(where: { $0.id == originalCandidateID }) {
+                rows[index].candidates[candidateIndex].seededTrace = trace
+                if let detectedImpactTime { rows[index].candidates[candidateIndex].impactTime = detectedImpactTime }
+            } else {
+                rows[index].candidates.append(ReviewCandidate(
+                    ordinal: rows[index].candidates.count + 1, impactTime: detectedImpactTime ?? seedTime,
+                    sourceDuration: rows[index].duration, classification: .uncertain,
+                    confidence: .low, evidence: [seedOrigin == .detectedBall ? "Model-detected ball seed" : "Point-assisted ball track; impact unverified"],
+                    usesFullSourceRange: true, seededTrace: trace
+                ))
+            }
+            var edit = rows[index].videoEdit ?? ShotVideoEdit(trimStart: sourceRange.start, trimEnd: sourceRange.end)
+            edit.overlay = .seeded
+            rows[index].videoEdit = edit
+        }) else { throw ShotBallTrackingError.saveFailed }
+        progress(1)
+    }
+
     @discardableResult
     func delete(_ session: ReviewSession) async -> Bool {
         guard let owner = captureImportOwnership(),
@@ -993,6 +1259,8 @@ final class ReviewerStore: ObservableObject {
             return false
         }
         cancelAnalysis(for: current)
+        pointTrackingOperations.removeValue(forKey: current.id)?.task.cancel()
+        automaticSeedOperations.removeValue(forKey: current.id)?.task.cancel()
         analysisOperations[current.id] = nil
         if selectedSessionID == session.id {
             selectedSessionID = sessions.first?.id
@@ -1104,7 +1372,8 @@ final class ReviewerStore: ObservableObject {
         guard !session.isRecording, !session.isDerivedShot else {
             return .failed("Automatic analysis is unavailable for manually bookmarked recordings and source-linked shots.")
         }
-        guard analysisOperations[session.id] == nil else {
+        guard analysisOperations[session.id] == nil, pointTrackingOperations[session.id] == nil,
+              automaticSeedOperations[session.id] == nil else {
             return .failed("This video is already being analysed.")
         }
         let operationID = UUID()
@@ -1167,11 +1436,13 @@ final class ReviewerStore: ObservableObject {
                     ? "Choose a recording that is 20 minutes or shorter."
                     : "Choose one shot video that is 1 minute or shorter.")
             }
+            let importsAsDirectShot = importKind == .recording && RecordingImportPolicy.becomesDirectShot(duration: duration)
+            let effectiveImportKind: ReviewImportKind = importsAsDirectShot ? .oneShot : importKind
             var session = makeSession(
                 title: sourceName, sourceName: reference.originalFilename, sourceURL: localURL,
-                duration: duration, importKind: importKind,
-                status: importKind == .recording ? .reviewing : .analysing,
-                progress: importKind == .recording ? 1 : 0,
+                duration: duration, importKind: effectiveImportKind,
+                status: effectiveImportKind == .recording || importsAsDirectShot ? .reviewing : .analysing,
+                progress: effectiveImportKind == .recording || importsAsDirectShot ? 1 : 0,
                 errorMessage: nil
             )
             session.sourceRelativePath = reference.relativePath
@@ -1179,6 +1450,10 @@ final class ReviewerStore: ObservableObject {
             if importKind == .recording {
                 session.groupID = groupID ?? session.id
                 session.groupTitle = Self.cleanOptional(groupTitle ?? sourceName, limit: 160) ?? session.title
+                if let groupID = session.groupID,
+                   let existingRecording = sessions.first(where: { $0.isRecording && $0.groupID == groupID }) {
+                    session.bookmarkWindow = existingRecording.bookmarkWindow
+                }
             } else if let groupID {
                 session.groupID = groupID
                 session.groupTitle = Self.cleanOptional(groupTitle ?? sourceName, limit: 160)
@@ -1198,7 +1473,7 @@ final class ReviewerStore: ObservableObject {
             }
             stagedURL = nil // The durable archive now owns the copied source.
             onPrepared?(session)
-            if importKind == .recording { return .imported(session) }
+            if effectiveImportKind == .recording || importsAsDirectShot { return .imported(session) }
             return await performAnalysis(sessionID: session.id, ownership: ownership, operationID: operationID)
         } catch {
             if let stagedURL { try? await mediaStore.delete(stagedURL) }
@@ -1246,17 +1521,9 @@ final class ReviewerStore: ObservableObject {
                 )
             }
             try Task.checkCancellation()
-            guard ownsLibrary(ownership), let current = sessions.first(where: { $0.id == sessionID }) else { return .cancelled }
-            // Retrying automatic analysis must not discard a person's separately saved trace.
-            if current.isSingleShotImport, let manual = current.defaultCandidate?.assistedTracer {
-                if candidates.isEmpty, let previous = current.defaultCandidate {
-                    candidates = [previous]
-                } else if !candidates.isEmpty {
-                    candidates[0].assistedTracer = manual
-                    candidates[0].tracerAvailable = true
-                    if !candidates[0].evidence.contains("User-assisted tracer") { candidates[0].evidence.append("User-assisted tracer") }
-                }
-            }
+            guard ownsLibrary(ownership), let current = sessions.first(where: { $0.id == sessionID }),
+                  current.sourceURL == sourceURL else { return .cancelled }
+            candidates = Self.preservingSeparateTraces(in: candidates, from: current)
             updateSession(current) {
                 $0.candidates = candidates
                 $0.progress = 1
@@ -1282,6 +1549,27 @@ final class ReviewerStore: ObservableObject {
             return sessions.first(where: { $0.id == sessionID }).map(ReviewImportResult.imported)
                 ?? .failed("This review is no longer available.")
         }
+    }
+
+    /// A single-shot retry describes the same source as its existing candidate. Keep the
+    /// independently saved manual and point-assisted records while replacing automatic
+    /// evidence. This deliberately makes no association claim for multi-shot sources.
+    static func preservingSeparateTraces(
+        in candidates: [ReviewCandidate], from session: ReviewSession
+    ) -> [ReviewCandidate] {
+        guard session.isSingleShotImport, let previous = session.defaultCandidate,
+              previous.assistedTracer != nil || previous.seededTrace != nil else { return candidates }
+        guard !candidates.isEmpty else { return [previous] }
+        var result = candidates
+        if let manual = previous.assistedTracer {
+            result[0].assistedTracer = manual
+            result[0].tracerAvailable = true
+            if !result[0].evidence.contains("User-assisted tracer") {
+                result[0].evidence.append("User-assisted tracer")
+            }
+        }
+        if let seeded = previous.seededTrace { result[0].seededTrace = seeded }
+        return result
     }
 
     private func updateAnalysisProgress(

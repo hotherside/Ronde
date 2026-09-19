@@ -243,27 +243,32 @@ private final class ShotVideoEncodingPipeline: @unchecked Sendable {
     }
 
     private func draw(trace: ShotVideoTrace, at time: TimeInterval, into buffer: CVPixelBuffer) {
-        let visible = trace.visiblePoints(at: time)
-        guard visible.count > 1 else { return }
+        let visibleSegments = trace.visibleSegments(at: time).filter { $0.count > 1 }
+        guard !visibleSegments.isEmpty else { return }
         CVPixelBufferLockBaseAddress(buffer, [])
         defer { CVPixelBufferUnlockBaseAddress(buffer, []) }
         guard let base = CVPixelBufferGetBaseAddress(buffer),
               let cg = CGContext(data: base, width: Int(canvas.width), height: Int(canvas.height), bitsPerComponent: 8, bytesPerRow: CVPixelBufferGetBytesPerRow(buffer), space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGBitmapInfo.byteOrder32Little.rawValue | CGImageAlphaInfo.premultipliedFirst.rawValue) else { return }
         cg.translateBy(x: 0, y: canvas.height)
         cg.scaleBy(x: 1, y: -1)
-        let path = CGMutablePath()
-        for (index, point) in visible.enumerated() {
-            let position = ShotVideoLayout.point(point, in: sourceRect)
-            if index == 0 { path.move(to: position) } else { path.addLine(to: position) }
+        let paths = visibleSegments.map { visible -> CGPath in
+            let path = CGMutablePath()
+            for (index, point) in visible.enumerated() {
+                let position = ShotVideoLayout.point(point, in: sourceRect)
+                if index == 0 { path.move(to: position) } else { path.addLine(to: position) }
+            }
+            return path
         }
         cg.saveGState()
         cg.clip(to: sourceRect)
         cg.setLineCap(.round); cg.setLineJoin(.round)
         let lineWidth = max(3, min(sourceRect.width, sourceRect.height) * 0.004)
-        cg.addPath(path); cg.setStrokeColor(CGColor(gray: 0, alpha: 0.5)); cg.setLineWidth(lineWidth + 2); cg.strokePath()
-        cg.addPath(path); cg.setStrokeColor(CGColor(red: 0.53, green: 0.27, blue: 0.91, alpha: 1)); cg.setLineWidth(lineWidth); cg.strokePath()
+        for path in paths {
+            cg.addPath(path); cg.setStrokeColor(CGColor(gray: 0, alpha: 0.5)); cg.setLineWidth(lineWidth + 2); cg.strokePath()
+            cg.addPath(path); cg.setStrokeColor(CGColor(red: 0.53, green: 0.27, blue: 0.91, alpha: 1)); cg.setLineWidth(lineWidth); cg.strokePath()
+        }
         cg.restoreGState()
-        // Provenance is burned into the derivative, including a manual-only label.
+        // Provenance is burned into the derivative, including point-assisted model output.
         let font = CTFontCreateWithName("HelveticaNeue-Medium" as CFString, max(18, min(canvas.width, canvas.height) * 0.022), nil)
         let text = NSAttributedString(string: trace.label, attributes: [.init(kCTFontAttributeName as String): font, .init(kCTForegroundColorAttributeName as String): CGColor(gray: 1, alpha: 1)])
         let line = CTLineCreateWithAttributedString(text)

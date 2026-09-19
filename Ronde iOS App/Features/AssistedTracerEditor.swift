@@ -10,6 +10,7 @@ struct AssistedTracerPoints: Equatable {
     var launch: CGPoint
     var apex: CGPoint
     var landing: CGPoint
+    var drawnPoints: [CGPoint]?
 
     static let `default` = AssistedTracerPoints(
         launch: CGPoint(x: 0.69, y: 0.61),
@@ -17,31 +18,41 @@ struct AssistedTracerPoints: Equatable {
         landing: CGPoint(x: 0.76, y: 0.48)
     )
 
-    init(launch: CGPoint, apex: CGPoint, landing: CGPoint) {
+    init(launch: CGPoint, apex: CGPoint, landing: CGPoint, drawnPoints: [CGPoint]? = nil) {
         self.launch = launch
         self.apex = apex
         self.landing = landing
+        self.drawnPoints = drawnPoints
     }
 
     init(path: AssistedTracerPath) {
         launch = path.launch.cgPoint
         apex = path.apex.cgPoint
         landing = path.landing.cgPoint
+        drawnPoints = path.drawnPoints?.map(\.cgPoint)
     }
 
     var path: AssistedTracerPath {
         AssistedTracerPath(
             launch: ReviewPoint(launch),
             apex: ReviewPoint(apex),
-            landing: ReviewPoint(landing)
+            landing: ReviewPoint(landing),
+            drawnPoints: drawnPoints?.map { ReviewPoint($0) }
         )
     }
 }
 
+enum AssistedTracerEditingMode: String, CaseIterable, Identifiable {
+    case handles = "Adjust points"
+    case draw = "Draw the path"
+
+    var id: String { rawValue }
+}
+
 enum AssistedTracerHandle: String, CaseIterable, Identifiable {
-    case impact = "Impact"
-    case apex = "Apex"
-    case landing = "Landing"
+    case impact = "Start"
+    case apex = "High point"
+    case landing = "End"
 
     var id: String { rawValue }
 
@@ -109,9 +120,12 @@ struct AssistedTracerEditor: View {
     var showsEvidenceChrome = true
     var onSelectHandle: (AssistedTracerHandle) -> Void = { _ in }
     var onBeginHandleAdjustment: () -> Void = {}
+    var editingMode: AssistedTracerEditingMode = .handles
+    var onBeginDrawing: () -> Void = {}
 
     @Environment(\.accessibilityReduceMotion) private var reducesMotion
     @State private var activeDragHandle: AssistedTracerHandle?
+    @State private var isDrawing = false
 
     private var revealTimeline: TracerRevealTimeline {
         TracerRevealTimeline(impactTime: impactTime, flightDuration: flightDuration)
@@ -237,7 +251,7 @@ struct AssistedTracerEditor: View {
                     .accessibilityLabel("Modelled uncalibrated carry estimate, \(estimatedCarry.displayText)")
                 }
 
-                if isEditing {
+                if isEditing && editingMode == .handles {
                     handle(.impact, point: $points.launch, in: geometry.size)
                     handle(.apex, point: $points.apex, in: geometry.size)
                     handle(.landing, point: $points.landing, in: geometry.size)
@@ -276,10 +290,24 @@ struct AssistedTracerEditor: View {
                 }
             }
             .allowsHitTesting(isEditing)
+            .contentShape(Rectangle())
+            .gesture(
+                drawingGesture(in: geometry.size),
+                including: isEditing && editingMode == .draw ? .all : .none
+            )
+            .accessibilityIdentifier("manual-trace-canvas")
             .accessibilityElement(children: .contain)
-            .accessibilityLabel(isEditing ? "Tracer editor. Drag the launch, apex and landing handles to place the arc." : sourceAccessibilityLabel)
+            .accessibilityLabel(editorAccessibilityLabel)
             .accessibilityValue(tracerAccessibilityValue)
         }
+    }
+
+    private var editorAccessibilityLabel: String {
+        guard isEditing else { return sourceAccessibilityLabel }
+        if editingMode == .draw {
+            return "Manual trace editor. Draw a path over the video."
+        }
+        return "Manual trace editor. Drag the start, high point and end handles."
     }
 
     private var sourceLabel: String {
@@ -364,10 +392,13 @@ struct AssistedTracerEditor: View {
 
             if isEditing || isManual || (observedPoints.count < 3 && inferredPoints.isEmpty) {
                 guard manualProgress > 0 else { return }
-                var manualArc = Path()
-                manualArc.move(to: launch)
-                manualArc.addQuadCurve(to: landing, control: control)
-                let revealedArc = manualArc.trimmedPath(from: 0, to: manualProgress)
+                let manualPath = drawnManualPath(in: canvasSize) ?? {
+                    var arc = Path()
+                    arc.move(to: launch)
+                    arc.addQuadCurve(to: landing, control: control)
+                    return arc
+                }()
+                let revealedArc = manualPath.trimmedPath(from: 0, to: manualProgress)
                 strokeObserved(revealedArc, in: &context)
             } else if let fullFlightTimeline {
                 let fullPath = makePath(
@@ -418,16 +449,66 @@ struct AssistedTracerEditor: View {
             }
 
             if isEditing || isManual || observedPoints.count < 3 {
-                let flightHead = quadraticPoint(from: launch, control: control, to: landing, progress: manualProgress)
+                let flightHead = drawnFlightHead(in: canvasSize, progress: manualProgress)
+                    ?? quadraticPoint(from: launch, control: control, to: landing, progress: manualProgress)
                 marker(at: flightHead, colour: .white, in: &context, size: manualProgress < 1 ? 10 : 6)
             }
 
-            if isEditing {
+            if isEditing && editingMode == .handles {
                 marker(at: launch, colour: RondeReviewDesign.fairwayBright, in: &context)
                 marker(at: landing, colour: RondeReviewDesign.tracerPurple, in: &context)
             }
         }
         .allowsHitTesting(false)
+    }
+
+    private func drawnManualPath(in size: CGSize) -> Path? {
+        guard let drawn = points.drawnPoints, drawn.count >= 2 else { return nil }
+        var path = Path()
+        path.move(to: canvasPoint(drawn[0], in: size))
+        for point in drawn.dropFirst() {
+            path.addLine(to: canvasPoint(point, in: size))
+        }
+        return path
+    }
+
+    private func drawnFlightHead(in size: CGSize, progress: CGFloat) -> CGPoint? {
+        guard let drawn = points.drawnPoints, drawn.count >= 2 else { return nil }
+        let scaled = min(1, max(0, progress)) * CGFloat(drawn.count - 1)
+        let lower = min(drawn.count - 2, Int(scaled.rounded(.down)))
+        let fraction = scaled - CGFloat(lower)
+        let start = canvasPoint(drawn[lower], in: size)
+        let end = canvasPoint(drawn[lower + 1], in: size)
+        return CGPoint(
+            x: start.x + ((end.x - start.x) * fraction),
+            y: start.y + ((end.y - start.y) * fraction)
+        )
+    }
+
+    private func drawingGesture(in size: CGSize) -> some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { value in
+                let point = normalisedDrawPoint(value.location, in: size)
+                if !isDrawing {
+                    isDrawing = true
+                    onBeginDrawing()
+                    points.drawnPoints = [point]
+                    return
+                }
+                guard var drawn = points.drawnPoints, drawn.count < 512 else { return }
+                if let previous = drawn.last,
+                   hypot(point.x - previous.x, point.y - previous.y) < 0.003 {
+                    return
+                }
+                drawn.append(point)
+                points.drawnPoints = drawn
+            }
+            .onEnded { _ in
+                isDrawing = false
+                if (points.drawnPoints?.count ?? 0) < 2 {
+                    points.drawnPoints = nil
+                }
+            }
     }
 
     private func makePath(from points: [NormalizedPoint], in size: CGSize) -> Path {
@@ -577,6 +658,13 @@ struct AssistedTracerEditor: View {
         CGPoint(
             x: min(0.96, max(0.04, point.x / max(1, size.width))),
             y: min(0.90, max(0.08, point.y / max(1, size.height)))
+        )
+    }
+
+    private func normalisedDrawPoint(_ point: CGPoint, in size: CGSize) -> CGPoint {
+        CGPoint(
+            x: min(1, max(0, point.x / max(1, size.width))),
+            y: min(1, max(0, point.y / max(1, size.height)))
         )
     }
 

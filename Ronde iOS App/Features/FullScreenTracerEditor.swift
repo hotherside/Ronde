@@ -12,6 +12,7 @@ struct FullScreenTracerEditor: View {
     private let startingPoints: AssistedTracerPoints
 
     @State private var draft: AssistedTracerPoints
+    @State private var editingMode: AssistedTracerEditingMode
     @State private var selectedHandle: AssistedTracerHandle = .impact
     @State private var history: [AssistedTracerPoints] = []
     @State private var frameTimes: [TimeInterval] = []
@@ -25,6 +26,7 @@ struct FullScreenTracerEditor: View {
         let points = Self.initialPoints(for: candidate)
         startingPoints = points
         _draft = State(initialValue: points)
+        _editingMode = State(initialValue: points.drawnPoints == nil ? .handles : .draw)
     }
 
     private var session: ReviewSession? {
@@ -95,7 +97,10 @@ struct FullScreenTracerEditor: View {
                         flightDuration: TracerRevealTimeline.defaultFlightDuration,
                         isEditing: true, isManual: true, onFinishEditing: save,
                         selectedHandle: selectedHandle, showsEditingBanner: false,
-                        onSelectHandle: { selectedHandle = $0 }, onBeginHandleAdjustment: rememberDraft
+                        onSelectHandle: { selectedHandle = $0 },
+                        onBeginHandleAdjustment: beginHandleAdjustment,
+                        editingMode: editingMode,
+                        onBeginDrawing: rememberDraft
                     )
                 }
                 .frame(width: fitted.width, height: fitted.height)
@@ -106,11 +111,17 @@ struct FullScreenTracerEditor: View {
 
     private var controlDock: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Picker("Trace point", selection: $selectedHandle) {
-                ForEach(AssistedTracerHandle.allCases) { Text($0.rawValue).tag($0) }
+            Picker("Edit mode", selection: $editingMode) {
+                ForEach(AssistedTracerEditingMode.allCases) { Text($0.rawValue).tag($0) }
             }
             .pickerStyle(.segmented)
-            Text(selectedHandle.instruction)
+            if editingMode == .handles {
+                Picker("Trace point", selection: $selectedHandle) {
+                    ForEach(AssistedTracerHandle.allCases) { Text($0.rawValue).tag($0) }
+                }
+                .pickerStyle(.segmented)
+            }
+            Text(editingMode == .draw ? "Draw the visible flight path directly over the video." : selectedHandle.instruction)
                 .font(.body).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 16) {
@@ -129,13 +140,15 @@ struct FullScreenTracerEditor: View {
                 .disabled(frameTimes.isEmpty || playback.currentTime >= (frameTimes.last ?? editableSourceRange.end))
             }
             if isLoadingFrameIndex { ProgressView("Preparing source frames…").font(.subheadline) }
-            DisclosureGroup("Fine adjustment") {
-                VStack(alignment: .leading, spacing: 12) {
-                    Slider(value: pointCoordinate(horizontal: true), in: 0...1) { Text("Horizontal position") }
-                        .accessibilityLabel("\(selectedHandle.rawValue) horizontal position")
-                    Slider(value: pointCoordinate(horizontal: false), in: 0...1) { Text("Vertical position") }
-                        .accessibilityLabel("\(selectedHandle.rawValue) vertical position")
-                }.padding(.top, 12)
+            if editingMode == .handles {
+                DisclosureGroup("Fine adjustment") {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Slider(value: pointCoordinate(horizontal: true), in: 0...1) { Text("Horizontal position") }
+                            .accessibilityLabel("\(selectedHandle.rawValue) horizontal position")
+                        Slider(value: pointCoordinate(horizontal: false), in: 0...1) { Text("Vertical position") }
+                            .accessibilityLabel("\(selectedHandle.rawValue) vertical position")
+                    }.padding(.top, 12)
+                }
             }
             HStack {
                 Button {
@@ -168,7 +181,7 @@ struct FullScreenTracerEditor: View {
             }
             return horizontal ? point.x : point.y
         } set: { value in
-            rememberDraft()
+            beginHandleAdjustment()
             switch selectedHandle {
             case .impact: if horizontal { draft.launch.x = value } else { draft.launch.y = value }
             case .apex: if horizontal { draft.apex.x = value } else { draft.apex.y = value }
@@ -222,6 +235,11 @@ struct FullScreenTracerEditor: View {
         }
     }
 
+    private func beginHandleAdjustment() {
+        rememberDraft()
+        draft.drawnPoints = nil
+    }
+
     private func save() {
         guard let session, let candidate else {
             dismiss()
@@ -235,26 +253,38 @@ struct FullScreenTracerEditor: View {
         if let manual = candidate.assistedTracer {
             return AssistedTracerPoints(path: manual)
         }
+        if let seeded = candidate.seededTrace,
+           let segment = seeded.observedSegments.max(by: { $0.count < $1.count }),
+           segment.count >= 2 {
+            let drawn = segment.map { CGPoint(x: $0.point.x, y: $0.point.y) }
+            return pointsFollowing(drawn)
+        }
         if let automatic = candidate.evidenceAnchoredPath,
-           let impact = automatic.observedPoints.first,
-           let landing = automatic.observedPoints.last {
-            let apex = automatic.observedPoints.min(by: { $0.y < $1.y }) ?? impact
-            return AssistedTracerPoints(
-                launch: CGPoint(x: impact.x, y: impact.y),
-                apex: CGPoint(x: apex.x, y: apex.y),
-                landing: CGPoint(x: landing.x, y: landing.y)
-            )
+           automatic.observedPoints.count >= 2 {
+            return pointsFollowing(automatic.observedPoints.map { CGPoint(x: $0.x, y: $0.y) })
         }
         return .default
+    }
+
+    private static func pointsFollowing(_ drawn: [CGPoint]) -> AssistedTracerPoints {
+        let start = drawn[0]
+        let end = drawn[drawn.count - 1]
+        let highPoint = drawn.min(by: { $0.y < $1.y }) ?? start
+        return AssistedTracerPoints(
+            launch: start,
+            apex: highPoint,
+            landing: end,
+            drawnPoints: drawn
+        )
     }
 }
 
 private extension AssistedTracerHandle {
     var instruction: String {
         switch self {
-        case .impact: return "Drag the handle onto the ball at contact."
-        case .apex: return "Place the highest point of the visible flight."
-        case .landing: return "Place the intended end of the visual path."
+        case .impact: return "Place the start of the visible path."
+        case .apex: return "Place the high point of the visible path."
+        case .landing: return "Place the end of the visible path."
         }
     }
 }

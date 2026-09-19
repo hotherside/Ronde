@@ -23,11 +23,12 @@ actor ImpactCandidateAnalysisService {
 
     func analyse(
         url: URL,
+        sourceRange: ReviewTimeRange? = nil,
         progress: (@Sendable (Double) -> Void)? = nil
     ) async throws -> [SwingCandidate] {
         let audioCandidates: [SwingCandidate]
         do {
-            audioCandidates = try await audioService.analyse(url: url) { audioProgress in
+            audioCandidates = try await audioService.analyse(url: url, sourceRange: sourceRange) { audioProgress in
                 progress?(audioProgress * 0.5)
             }
         } catch is CancellationError {
@@ -39,7 +40,7 @@ actor ImpactCandidateAnalysisService {
         let bodyCandidates: [SwingCandidate]
         if ImpactCandidateAnalysisPolicy.shouldAnalyseBodyMotion(after: audioCandidates) {
             do {
-                bodyCandidates = try await bodyMotionService.analyse(url: url) { bodyProgress in
+                bodyCandidates = try await bodyMotionService.analyse(url: url, sourceRange: sourceRange) { bodyProgress in
                     progress?(0.5 + (bodyProgress * 0.5))
                 }
             } catch is CancellationError {
