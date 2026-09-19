@@ -1,18 +1,20 @@
 import SwiftUI
 
-/// A calm, light workspace for studying shot video.
+/// Clubhouse identity with an opaque content plane and native glass controls.
 enum RondeReviewDesign {
-    static let canvas = Color(red: 0.975, green: 0.975, blue: 0.980)
+    static let canvas = Color(red: 247 / 255, green: 248 / 255, blue: 242 / 255)
     static let surface = Color.white
     static let surfaceRaised = Color.white
-    static let graphite = Color(red: 0.10, green: 0.10, blue: 0.12)
-    static let graphiteMuted = Color(red: 0.36, green: 0.36, blue: 0.40)
-    static let graphiteFaint = Color(red: 0.43, green: 0.43, blue: 0.47)
-    static let border = Color.black.opacity(0.08)
-    static let borderStrong = Color.black.opacity(0.16)
-    static let fairway = graphite
-    static let fairwayBright = Color(red: 0.41, green: 0.35, blue: 0.85)
-    static let fairwayWash = Color(red: 0.94, green: 0.93, blue: 0.99)
+    static let surfaceInset = Color(red: 238 / 255, green: 241 / 255, blue: 231 / 255)
+    static let graphite = Color(red: 23 / 255, green: 59 / 255, blue: 48 / 255)
+    static let graphiteMuted = Color(red: 91 / 255, green: 105 / 255, blue: 94 / 255)
+    static let graphiteFaint = Color(red: 103 / 255, green: 117 / 255, blue: 106 / 255)
+    static let border = Color(red: 223 / 255, green: 228 / 255, blue: 217 / 255)
+    static let borderStrong = Color(red: 161 / 255, green: 174 / 255, blue: 157 / 255)
+    static let fairway = Color(red: 36 / 255, green: 83 / 255, blue: 64 / 255)
+    static let fairwayBright = Color(red: 54 / 255, green: 112 / 255, blue: 77 / 255)
+    static let fairwayWash = Color(red: 232 / 255, green: 241 / 255, blue: 184 / 255)
+    static let mediaStage = Color(red: 24 / 255, green: 35 / 255, blue: 35 / 255)
     static let amber = Color(red: 0.510, green: 0.390, blue: 0.165)
     static let amberWash = Color(red: 0.949, green: 0.907, blue: 0.795)
     static let tracerPurple = Color(red: 0.570, green: 0.280, blue: 0.980)
@@ -20,12 +22,18 @@ enum RondeReviewDesign {
     static let tracerPurpleWash = Color(red: 0.930, green: 0.895, blue: 1.000)
     static let red = Color(red: 0.705, green: 0.175, blue: 0.160)
     static let redWash = Color(red: 0.990, green: 0.900, blue: 0.895)
-    static let blue = Color(red: 0.36, green: 0.30, blue: 0.76)
-    static let blueWash = Color(red: 0.94, green: 0.93, blue: 0.99)
+    // Retained names for existing analysis views; app actions share one accent.
+    static let blue = fairway
+    static let blueWash = surfaceInset
 
-    static let smallRadius: CGFloat = 7
-    static let cardRadius: CGFloat = 11
-    static let largeRadius: CGFloat = 15
+    static let smallRadius: CGFloat = 8
+    static let controlRadius: CGFloat = 12
+    static let cardRadius: CGFloat = 16
+    static let largeRadius: CGFloat = 20
+    static let minimumTouchTarget: CGFloat = 44
+    static let compactPageInset: CGFloat = 16
+    static let regularPageInset: CGFloat = 28
+    static let inspectorWidth: CGFloat = 320
 
     static func statusColor(for status: ReviewStatus) -> Color {
         switch status {
@@ -65,13 +73,97 @@ extension View {
     @ViewBuilder
     func rondeConditionalGlass(isEnabled: Bool, cornerRadius: CGFloat) -> some View {
         if isEnabled {
-            if #available(iOS 26.0, *) {
-                self.glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
-            } else {
-                self.background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-            }
+            rondeControlSurface(cornerRadius: cornerRadius)
         } else {
             self
+        }
+    }
+
+    /// Apply after layout to a floating control island, never a media/content card.
+    /// Leave `interactive` false for a group containing independent controls.
+    func rondeControlSurface(
+        interactive: Bool = false,
+        tint: Color? = nil,
+        cornerRadius: CGFloat = RondeReviewDesign.controlRadius
+    ) -> some View {
+        modifier(RondeControlSurface(interactive: interactive, tint: tint, cornerRadius: cornerRadius))
+    }
+
+    func rondePrimaryAction(tint: Color = RondeReviewDesign.fairway) -> some View {
+        modifier(RondeActionStyle(prominent: true, tint: tint))
+    }
+
+    func rondeSecondaryAction(tint: Color = RondeReviewDesign.fairway) -> some View {
+        modifier(RondeActionStyle(prominent: false, tint: tint))
+    }
+
+    /// Format tiles and other choices remain opaque, with a strong selection edge.
+    func rondeSelectionSurface(isSelected: Bool, cornerRadius: CGFloat = RondeReviewDesign.controlRadius) -> some View {
+        background(isSelected ? RondeReviewDesign.fairwayWash : RondeReviewDesign.surface,
+                   in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .strokeBorder(isSelected ? RondeReviewDesign.fairway : RondeReviewDesign.border,
+                                  lineWidth: isSelected ? 2 : 1)
+            }
+    }
+}
+
+/// Groups sibling glass controls; content views still own their stack/layout.
+struct RondeGlassGroup<Content: View>: View {
+    var spacing: CGFloat = 12
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        if #available(iOS 26.0, *) {
+            GlassEffectContainer(spacing: spacing) { content() }
+        } else {
+            content()
+        }
+    }
+}
+
+private struct RondeControlSurface: ViewModifier {
+    let interactive: Bool
+    let tint: Color?
+    let cornerRadius: CGFloat
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+    func body(content: Content) -> some View {
+        if reduceTransparency {
+            content
+                .background(RondeReviewDesign.surface, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .strokeBorder(RondeReviewDesign.borderStrong, lineWidth: 1)
+                }
+        } else if #available(iOS 26.0, *) {
+            content.glassEffect(.regular.tint(tint).interactive(interactive), in: .rect(cornerRadius: cornerRadius))
+        } else {
+            content.background(.regularMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        }
+    }
+}
+
+private struct RondeActionStyle: ViewModifier {
+    let prominent: Bool
+    let tint: Color
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *), !reduceTransparency {
+            if prominent {
+                // A parent content colour otherwise overrides the system's contrast
+                // choice, making forest labels disappear on the forest glass tint.
+                content.foregroundStyle(Color.white).buttonStyle(.glassProminent).tint(tint)
+            } else {
+                content.buttonStyle(.glass).tint(tint)
+            }
+        } else if prominent {
+            content.buttonStyle(ReviewPrimaryButtonStyle(tint: tint))
+        } else {
+            content.buttonStyle(ReviewSecondaryButtonStyle(tint: tint))
         }
     }
 }
@@ -106,6 +198,7 @@ struct ReviewTag: View {
 struct ReviewPrimaryButtonStyle: ButtonStyle {
     var tint: Color = RondeReviewDesign.fairway
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.isEnabled) private var isEnabled
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -113,8 +206,9 @@ struct ReviewPrimaryButtonStyle: ButtonStyle {
             .foregroundStyle(Color.white)
             .padding(.horizontal, 16)
             .frame(minHeight: 46)
-            .background(tint.opacity(configuration.isPressed ? 0.82 : 1), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .scaleEffect(configuration.isPressed ? 0.98 : 1)
+            .background(tint.opacity(configuration.isPressed ? 0.82 : 1), in: RoundedRectangle(cornerRadius: RondeReviewDesign.controlRadius, style: .continuous))
+            .opacity(isEnabled ? 1 : 0.45)
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.98 : 1)
             .animation(reduceMotion ? nil : .easeOut(duration: 0.14), value: configuration.isPressed)
     }
 }
@@ -122,19 +216,20 @@ struct ReviewPrimaryButtonStyle: ButtonStyle {
 struct ReviewSecondaryButtonStyle: ButtonStyle {
     var tint: Color = RondeReviewDesign.graphite
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.isEnabled) private var isEnabled
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.body.weight(.semibold))
             .foregroundStyle(tint)
             .padding(.horizontal, 14)
-            .frame(minHeight: 44)
+            .frame(minHeight: RondeReviewDesign.minimumTouchTarget)
             .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                RoundedRectangle(cornerRadius: RondeReviewDesign.controlRadius, style: .continuous)
                     .fill(RondeReviewDesign.surface)
-                    .overlay { RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(RondeReviewDesign.borderStrong, lineWidth: 0.8) }
+                    .overlay { RoundedRectangle(cornerRadius: RondeReviewDesign.controlRadius, style: .continuous).stroke(RondeReviewDesign.borderStrong, lineWidth: 0.8) }
             )
-            .opacity(configuration.isPressed ? 0.68 : 1)
+            .opacity(isEnabled ? (configuration.isPressed ? 0.68 : 1) : 0.45)
             .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: configuration.isPressed)
     }
 }

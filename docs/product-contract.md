@@ -10,26 +10,34 @@ Ronde is a local-first universal iPhone/iPad media library for a golfer's shot v
 
 The essential loop is:
 
-1. Import or capture a golf-shot video.
-2. Store the original in the golfer's private local library.
-3. Search, favourite and add useful shot context.
-4. Review the shot with source-frame controls and an honest tracer state.
-5. Trim and format a non-destructive derivative.
-6. Export or share the edited shot without changing the original.
+1. Import or capture a golf-shot video or a longer manual recording.
+2. Store the original in the golfer's private local Sessions library.
+3. Review a Recording, bookmark useful source times and create source-linked Shots.
+4. Search, favourite Keepers and add useful shot context.
+5. Review a Shot with source-frame controls and an honest tracer state.
+6. Trim and format a non-destructive derivative, then export or share it without changing the original source.
 
-## Experience rules
+## Implemented native direction
+
+On 19 September 2026, the owner selected **Clubhouse as the design foundation**, with Cutroom's focused editing vocabulary and native Liquid Glass controls. The local native slice now lets a golfer work through Sessions → Recordings → Bookmarks → source-linked Shots, with favourites identifying Keepers. A recording can be imported or captured up to 20 minutes, reviewed against its original source, and turned into a batch of smaller Shots without copying or mutating that source. [ADR 0013](context/decisions/0013-clubhouse-and-bookmarked-recording-studio.md) records the historical design selection; [ADR 0014](context/decisions/0014-native-recording-studio-and-source-linked-shots.md) records the implemented contract.
+
+Each bookmark defaults to five seconds before and after its source time. The window is clamped to the source and adjustable in five-second increments from 0 to 60 seconds on either side. Repeating batch creation skips an already extracted bookmark and preserves the existing Shot's edits. Automatic moment suggestions remain deferred; manual selection works without them and without a successful ball track. Recording Studio plays the full source and samples a small thumbnail strip. Frame inspection in a derived Shot and its manual trace editor is limited to the bookmarked clip plus five seconds on either side, retaining absolute source times. Simulator evidence is recorded in Current State; signed-device validation remains separate.
+
+## Current native experience rules
 
 - Ronde is an iPhone/iPad product. It has no watchOS app, round counter, Action Button workflow or HealthKit workout.
-- The app opens into one Shot library with search and favourites. Settings are a sheet; dashboard metrics are not a primary surface.
+- The app opens into one Session library with search and favourites. Sessions expose their Recordings and source-linked Shots; Keepers are favourites. Settings are a sheet; dashboard metrics are not a primary surface.
 - Use a neutral, light workspace with large media, clear typography and a small number of grouped actions.
-- Import is a labelled toolbar or empty-state action. A successful import opens its studio as soon as the video is safely stored; analysis continues in that shot's state.
-- The current MVP accepts one shot video up to 60 seconds. Keep the source intact and save reversible trim, format and overlay settings separately.
-- The Shot Studio combines an aspect-fitted player, pause/resume, source-frame stepping, scrubbing, a thumbnail trim timeline and sharing. Export remains available when no automatic trace is found.
+- Import is a labelled toolbar or empty-state action. A successful import opens its Recording Studio or Shot Studio as soon as the video is safely stored; analysis is not required for a manual recording or source-linked Shot.
+- Recording imports accept one source up to 20 minutes from Photos, Files or the native camera. The legacy one-shot analysis path retains its 60-second policy. The original source remains intact and source-linked Shots share that local source while saving reversible trim, format and overlay settings separately.
+- Recording Studio combines full-source playback, source-time scrubbing, generated thumbnails, manual bookmarks, clamped five-second window adjustments and batch Shot creation. Shot Studio combines an aspect-fitted player, pause/resume, source-frame stepping, scrubbing, Trim/Trace/Format tabs and sharing. Export remains available when no automatic trace is found.
 - Social export offers original aspect, 9:16, 1:1 and 16:9 canvases. Fit the entire source without stretching or hiding the ball through an implicit crop. Preview and export share the same transform. Encode a local H.264 MP4 with available source audio; timing is rebased to the selected source range.
 - Each account's local library supports search, favourites, optional course/range, club and notes. Failed saves remain visible and retryable. An unreadable archive must never silently become a writable empty library.
+- The recording, bookmark and source-link fields are additive to the existing account-scoped archive. Legacy archives remain readable and continue to represent their existing Shot rows without requiring a migration envelope.
 - Manual trace editing uses a local draft over the fitted source. Cancel discards changes; Save persists a separately labelled annotation. The user can remove it and return to the original automatic evidence.
 - Impact analysis is an internal timing input for ball acquisition and tracer reveal. The golfer is not asked to identify a start point before automatic review can appear.
-- Range Session and Live Review foundations remain dormant future work. They are not promised current workflows. If long-session segmentation returns, a proposed event may become an automatic shot only after target-golfer impact and a stable, time-aligned golf-ball launch agree.
+- Newly created source-linked Shots start untraced and support manual annotation and export. Automatic review of these long-source shots and automatic moment suggestions remain further work.
+- Range Session and hands-free Live Review foundations remain dormant future work. The implemented Recording Studio is manual and does not claim automatic long-session segmentation, shot suggestions or hands-free capture.
 - The app must never fabricate an automatic tracer. A video without enough ball-specific observations remains playable and says `Ball flight not tracked`; audio, body motion, generic Vision motion and fixed fallback geometry cannot create a visible automatic line.
 - Uploaded files are processed using their own presentation timestamps and orientation. No specific recording frame rate is required; lower temporal or spatial quality may reduce tracking confidence and result in no tracer.
 - Native Vision trajectory analysis may be used as a constrained diagnostic baseline, but generic moving-shape points cannot accept a real shot, enable a tracer or earn an `Observed` golf-ball label. An automatic tracer may appear only when the packaged sports-ball model produces a temporally consistent post-impact track.
@@ -44,6 +52,7 @@ The essential loop is:
 - One universal SwiftUI target supports iPhone and iPad.
 - The library archive is scoped to the current Apple account on the device. Supabase Auth and row-level security protect corresponding private metadata rows.
 - AVFoundation owns source playback, capture foundations and local export. Vision and Core ML provide on-device analysis foundations.
+- The implemented Clubhouse/Cutroom surface uses native SwiftUI Liquid Glass controls around warm opaque content. `RecordingImportView` captures import ownership before Photos, Files or camera work; `RecordingStudioView` persists bookmarks and source-linked Shots through the existing account-scoped archive.
 - The free perception lane packages the MIT-licensed WASB-SBDT three-frame sports-ball model, evaluates source-resolution tiles and applies purpose-built single-ball temporal association. Impact-like audio is preferred for timing, with body motion as a fallback when audio is absent or unreadable.
 - In-app capture foundations target a stable rear-camera view at 60 fps, settling and locking focus/exposure where hardware permits. A complete hands-free capture loop is not a current product claim.
 - Reviewer media processing remains confidence-gated. Physical-device performance and model quality are release gates.

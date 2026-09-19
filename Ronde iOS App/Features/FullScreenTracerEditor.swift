@@ -14,6 +14,8 @@ struct FullScreenTracerEditor: View {
     @State private var draft: AssistedTracerPoints
     @State private var selectedHandle: AssistedTracerHandle = .impact
     @State private var history: [AssistedTracerPoints] = []
+    @State private var frameTimes: [TimeInterval] = []
+    @State private var isLoadingFrameIndex = false
     @StateObject private var playback = ClipPlaybackController()
 
     init(store: ReviewerStore, session: ReviewSession, candidate: ReviewCandidate) {
@@ -31,6 +33,17 @@ struct FullScreenTracerEditor: View {
 
     private var candidate: ReviewCandidate? {
         session?.candidates.first { $0.id == candidateID }
+    }
+
+    /// A linked shot retains absolute source time but should only decode the short editable
+    /// window around its bookmarked extraction. Legacy single-video sessions retain full range.
+    private var editableSourceRange: ReviewTimeRange {
+        guard let clip = session?.sourceClipRange?.clipped(to: session?.duration ?? 0) else {
+            return ReviewTimeRange(start: 0, duration: session?.duration ?? 0)
+        }
+        let start = max(0, clip.start - 5)
+        let end = min(session?.duration ?? 0, clip.end + 5)
+        return ReviewTimeRange(start: start, duration: max(0, end - start))
     }
 
     var body: some View {
@@ -58,7 +71,10 @@ struct FullScreenTracerEditor: View {
                 }
             }
         }
-        .onAppear { prepareFrame() }
+        .onAppear {
+            prepareFrame()
+        }
+        .task(id: sourceIndexTaskID) { await prepareFrameIndex() }
         .onDisappear { playback.detach() }
         .accessibilityAction(named: "Save manual trace", save)
     }
@@ -100,14 +116,19 @@ struct FullScreenTracerEditor: View {
             HStack(spacing: 16) {
                 Button { stepFrame(by: -1) } label: {
                     Image(systemName: "backward.frame").frame(minWidth: 44, minHeight: 44)
-                }.accessibilityLabel("Previous source frame")
+                }
+                .accessibilityLabel("Previous source frame")
+                .disabled(frameTimes.isEmpty || playback.currentTime <= editableSourceRange.start)
                 Spacer(minLength: 0)
                 Text(frameTimeLabel).font(.body.monospacedDigit()).fixedSize()
                 Spacer(minLength: 0)
                 Button { stepFrame(by: 1) } label: {
                     Image(systemName: "forward.frame").frame(minWidth: 44, minHeight: 44)
-                }.accessibilityLabel("Next source frame")
+                }
+                .accessibilityLabel("Next source frame")
+                .disabled(frameTimes.isEmpty || playback.currentTime >= (frameTimes.last ?? editableSourceRange.end))
             }
+            if isLoadingFrameIndex { ProgressView("Preparing source frames…").font(.subheadline) }
             DisclosureGroup("Fine adjustment") {
                 VStack(alignment: .leading, spacing: 12) {
                     Slider(value: pointCoordinate(horizontal: true), in: 0...1) { Text("Horizontal position") }
@@ -161,15 +182,36 @@ struct FullScreenTracerEditor: View {
         return String(format: "%05.2f s", time)
     }
 
+    private var sourceIndexTaskID: String {
+        "\(sessionID)-\(editableSourceRange.start)-\(editableSourceRange.duration)"
+    }
+
     private func prepareFrame() {
         guard let session, let candidate, let url = session.sourceURL else { return }
         playback.attach(player: AVPlayer(url: url))
-        playback.seek(to: candidate.impactTime)
+        playback.seek(to: clampedSourceTime(candidate.impactTime))
+    }
+
+    private func prepareFrameIndex() async {
+        guard let session, let url = session.sourceURL, editableSourceRange.duration > 0 else { return }
+        isLoadingFrameIndex = true
+        defer { isLoadingFrameIndex = false }
+        do {
+            frameTimes = try await ShotVideoSourceInspector().presentationTimes(url: url, sourceRange: editableSourceRange)
+        } catch is CancellationError {
+            return
+        } catch {
+            frameTimes = []
+        }
     }
 
     private func stepFrame(by offset: Int) {
-        playback.pause()
-        playback.player?.currentItem?.step(byCount: offset)
+        guard let time = ShotVideoLayout.adjacentFrame(to: playback.currentTime, direction: offset, presentationTimes: frameTimes) else { return }
+        playback.seek(to: clampedSourceTime(time))
+    }
+
+    private func clampedSourceTime(_ time: TimeInterval) -> TimeInterval {
+        min(max(editableSourceRange.start, time), editableSourceRange.end)
     }
 
     private func rememberDraft() {

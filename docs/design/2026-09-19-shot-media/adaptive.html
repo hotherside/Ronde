@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Ronde · A workspace that opens with you</title>
+  <link rel="stylesheet" href="review.css">
+  <link rel="stylesheet" href="adaptive.css">
+  <script src="adaptive.js" defer></script>
+</head>
+<body>
+  <div class="review-shell">
+    <header class="review-header">
+      <a class="wordmark" href="index.html" aria-label="Back to Ronde design review"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 25c0-11 5-18 13-18 5 0 8 7 8 7"/><circle cx="6" cy="25" r="3"/></svg>ronde<span class="wordmark-dot">.</span></a>
+      <span class="review-date">ADAPTIVE LAYOUT STUDY <span>19.09.26</span></span>
+      <a class="back-link" href="index.html?panel=structure">← Back to the three directions</a>
+    </header>
+    <main>
+      <div class="adaptive-intro"><div><p class="eyebrow">ONE EXPERIENCE, OPEN TO MORE.</p><h1>A workspace that<br>opens with you.</h1></div><p>Change the pose. Keep the shot.<br>These are design interpretations of Apple’s guidance,<br>not native system behaviour or hardware dimensions.</p></div>
+      <div class="pose-toolbar" role="group" aria-label="Choose an illustrative Duo pose">
+        <button type="button" data-pose="outer" aria-pressed="false"><span class="pose-icon pose-icon-outer" aria-hidden="true"></span><span>Outer display<small>Compact / vertical controls</small></span></button>
+        <button type="button" data-pose="landscape" aria-pressed="true"><span class="pose-icon pose-icon-landscape" aria-hidden="true"></span><span>Inner landscape<small>Expanded / vertical controls</small></span></button>
+        <button type="button" data-pose="portrait" aria-pressed="false"><span class="pose-icon pose-icon-portrait" aria-hidden="true"></span><span>Inner portrait<small>Expanded / horizontal controls</small></span></button>
+        <button type="button" data-pose="tabletop" aria-pressed="false"><span class="pose-icon pose-icon-tabletop" aria-hidden="true"></span><span>Tabletop<small>Partly folded / stable controls</small></span></button>
+      </div>
+      <div class="adaptive-workspace">
+        <section class="study-canvas" aria-label="Interactive layout diagram">
+          <p class="study-overline"><span id="pose-label">INNER DISPLAY / LANDSCAPE</span><span>ILLUSTRATIVE</span></p>
+          <div class="study-device" id="study-device" data-pose="landscape">
+            <div class="study-screen">
+              <aside class="study-collection" aria-label="Session context">
+                <div class="study-brand">ronde.</div><span class="study-session-label">SATURDAY SESSION</span><h2>A little range time.</h2><p>3 recordings · 8 confirmed shots</p>
+                <div class="study-list"><div class="study-list-item selected"><img src="assets/range.png" alt=""><span><strong>Shot 04</strong><small>7 iron · 00:08</small></span><span aria-hidden="true">✓</span></div><div class="study-list-item"><img src="assets/course.png" alt=""><span><strong>Shot 05</strong><small>Driver · 00:11</small></span></div><div class="study-list-item"><img src="assets/range.png" alt=""><span><strong>Shot 06</strong><small>7 iron · 00:09</small></span></div></div>
+                <span class="context-note">Same session.<br>Same selected shot.</span>
+              </aside>
+              <div class="study-detail">
+                <header class="study-shot-heading"><div><span>SHOT 04 / 7 IRON</span><h2>That’s the one.</h2></div><span class="study-keeper" id="study-keeper">☆ Keeper</span></header>
+                <div class="study-media-region"><div class="study-media"><img src="assets/range.png" alt="Fictional golfer finishing an iron shot at a driving range"><span class="still-label">STATIC SAMPLE FRAME</span><svg class="study-trace" id="study-trace" viewBox="0 0 900 600" preserveAspectRatio="none" aria-hidden="true"><path d="M468 500 Q612 57 798 258"/></svg><span class="trace-caption" id="trace-caption">Illustrative manual trace</span></div><span class="media-region-label" aria-hidden="true">01 / MEDIA REGION</span></div>
+                <div class="study-edit-region"><span class="controls-region-label" aria-hidden="true">02 / STABLE TOUCH REGION</span><div class="study-timeline-head"><span>TRIM &amp; FINISH</span><span id="study-time">00:04 / 00:08</span></div><div class="study-filmstrip" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><span></span></div><label class="timeline-label" for="study-scrubber">Preview position</label><input id="study-scrubber" type="range" min="0" max="8" step="1" value="4" aria-valuetext="4 seconds of 8 seconds"><div class="study-edit-foot"><span>Source preserved</span><span>Original aspect · 8 seconds</span></div><p class="study-feedback" id="study-feedback" aria-live="polite">Try a control, then change the pose. Your choices stay.</p></div>
+              </div>
+              <div class="study-tools" aria-label="Illustrative studio actions">
+                <span class="tool-position" aria-hidden="true">↶</span>
+                <button id="study-favourite" type="button" aria-label="Remove from keepers" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3l-5.6 2.9 1.1-6.2L3 9.6l6.2-.9Z"/></svg><span>Keep</span></button>
+                <button id="study-trace-toggle" type="button" aria-label="Show illustrative manual trace" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20C6 3 15 1 20 11"/><circle cx="4" cy="20" r="1.5"/></svg><span>Trace</span></button>
+                <button id="study-format" type="button" aria-label="Change illustrative export format"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg><span id="format-label">Fit</span></button>
+                <span class="tool-spacer"></span><button id="study-export" class="study-export" type="button" aria-label="Preview export action"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3m-4 4 4-4 4 4M5 12v8h14v-8"/></svg><span>Export</span></button>
+              </div>
+              <div class="fold-guide" aria-hidden="true"><span>FOLD REGION</span></div>
+            </div>
+          </div>
+          <p class="study-disclaimer">Static sample media · controls demonstrate retained state · no video processing or export</p>
+        </section>
+        <aside class="pose-explanation" aria-live="polite">
+          <span class="pose-index" id="pose-index">02</span><h2 id="pose-title">Room for the shot<br>and its context.</h2><p id="pose-description">The session stays beside the selected shot. Studio actions move to the outer edge, preserving vertical space for media.</p>
+          <div class="evidence-rule"><span>APPLE’S PATTERN</span><p id="apple-pattern">Outer display and inner landscape use vertical system bars. In a split view, the detail column participates; the collection keeps its own controls.</p></div>
+          <div class="interpretation"><span>RONDE’S INTERPRETATION</span><p id="ronde-interpretation">Keep the library beside the preview, with edit actions near the media they affect. Selection and draft choices survive the transition.</p></div>
+          <a id="pose-source" href="https://developer.apple.com/videos/play/tech-talks/111462/" target="_blank" rel="noopener">Read the Apple guidance ↗</a>
+        </aside>
+      </div>
+      <div class="adaptive-principles"><article><span>01</span><h2>Space decides the layout.</h2><p>Use the available scene, size classes and safe areas. A narrowed iPad window needs the same care as a compact phone.</p></article><article><span>02</span><h2>The fold is conditional.</h2><p>Keep important content and controls clear when partly folded. When the screen is flat, let the available space work.</p></article><article><span>03</span><h2>Opening is not starting over.</h2><p>Keep the same shot, favourite, draft and place in the source. Every action remains available in every pose.</p></article></div>
+      <p class="native-boundary">This study does not establish native Duo support. Apple currently provides Xcode 27.1 beta for implementation and testing. System bars, fold regions, sheets, text sizes, camera transitions and physical-device behaviour remain separate validation steps. <a href="https://developer.apple.com/iphone-duo/" target="_blank" rel="noopener">Apple’s Duo resources ↗</a></p>
+    </main>
+    <footer class="review-footer"><span>RONDE / ADAPTIVE LAYOUT EXPLORATION</span><a href="index.html">Back to the directions ↗</a></footer>
+  </div>
+</body>
+</html>

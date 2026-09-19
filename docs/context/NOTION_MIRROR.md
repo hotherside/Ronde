@@ -21,4 +21,4 @@ Ronde is a child of the main Notion Home page and is linked from its Startup sec
 
 ## Last reconciliation
 
-19 September 2026: the repository contract now makes Ronde an iPhone/iPad-only shot media library and tracer. The external Notion page has not been verified or updated in this session; mirror reconciliation is pending. The repository remains authoritative.
+19 September 2026: updated the mapped Ronde page and read it back successfully. The mirror records the implemented Clubhouse identity, Cutroom editing controls and native Liquid Glass; Sessions, recordings up to 20 minutes, manual bookmarks and source-linked Shots/Keepers; and Simulator evidence separately from signed-device, detector accuracy and release gates. Source delivery is linked to implementation `6fdb6a6` and [PR #12](https://github.com/hotherside/Ronde/pull/12), with Git/PR state authoritative for incorporation into the shared baseline. Historical 7 September evidence remains labelled and Watch scope remains superseded. The repository remains authoritative for exact verification.

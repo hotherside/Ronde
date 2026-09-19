@@ -3,13 +3,13 @@ import AVFoundation
 import Combine
 import SwiftUI
 
-// Retains debug preview links while the product has one library, not three tabs.
+// Retains existing Debug preview links alongside the native Sessions/Shot navigation.
 enum RondeAppTab: Hashable { case home, library, profile }
 
 struct RondeRootView: View {
     @ObservedObject var store: ReviewerStore
     @ObservedObject var accountStore: RondeAccountStore
-    var initialTab: RondeAppTab = .library
+    var initialTab: RondeAppTab = .home
 
     var body: some View {
         Group {
@@ -54,7 +54,7 @@ struct RondeSignInView: View {
                     HStack(spacing: 4) {
                         ForEach(0..<24) { index in
                             RoundedRectangle(cornerRadius: 3)
-                                .fill(index == 14 ? RondeReviewDesign.tracerPurple : Color.primary.opacity(0.08))
+                                .fill(index == 14 ? RondeReviewDesign.fairway : RondeReviewDesign.fairway.opacity(0.08))
                                 .frame(height: index == 14 ? 88 : 40 + CGFloat((index * 13) % 40))
                         }
                     }
@@ -130,133 +130,182 @@ struct RondeSignInView: View {
 }
 
 
+enum RondeNavigationRoute: Hashable {
+    case session(UUID)
+    case recording(UUID)
+    case shot(UUID)
+}
+
+private enum RondeLibraryDestination: String, CaseIterable, Identifiable {
+    case sessions, shots, keepers
+    var id: Self { self }
+    var title: String { rawValue.capitalized }
+    var symbol: String {
+        switch self {
+        case .sessions: "rectangle.stack"
+        case .shots: "square.grid.2x2"
+        case .keepers: "star"
+        }
+    }
+}
+
+private struct RondeImportTarget: Identifiable {
+    let id = UUID()
+    var groupID: UUID? = nil
+    var title: String? = nil
+}
+
 struct RondeAppShell: View {
     @ObservedObject var store: ReviewerStore
     @ObservedObject var accountStore: RondeAccountStore
-    @State private var path: [UUID] = []
+    @State private var destination: RondeLibraryDestination = .sessions
+    @State private var sessionsPath: [RondeNavigationRoute] = []
+    @State private var shotsPath: [RondeNavigationRoute] = []
+    @State private var keepersPath: [RondeNavigationRoute] = []
     @State private var search = ""
-    @State private var favouritesOnly = false
-    @State private var showsImport = false
+    @State private var importTarget: RondeImportTarget?
     @State private var showsSettings = false
     @Environment(\.dynamicTypeSize) private var typeSize
-    @Environment(\.horizontalSizeClass) private var sizeClass
 
-    init(store: ReviewerStore, accountStore: RondeAccountStore, initialSelection: RondeAppTab = .library) {
+    init(store: ReviewerStore, accountStore: RondeAccountStore, initialSelection: RondeAppTab = .home) {
         self.store = store
         self.accountStore = accountStore
+        _destination = State(initialValue: initialSelection == .library ? .shots : .sessions)
         _showsSettings = State(initialValue: initialSelection == .profile)
     }
 
-    private var visibleSessions: [ReviewSession] {
-        store.sessions.filter { session in
-            (!favouritesOnly || session.isFavourite) &&
-            (search.isEmpty || [session.title, session.placeName ?? "", session.clubName ?? "", session.note]
-                .joined(separator: " ").localizedCaseInsensitiveContains(search))
-        }.sorted { $0.createdAt > $1.createdAt }
-    }
-
     var body: some View {
-        NavigationStack(path: $path) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    if let error = store.libraryError {
-                        LibrarySaveNotice(store: store, message: error)
-                    }
-                    if !store.sessions.isEmpty {
-                        Picker("Library filter", selection: $favouritesOnly) {
-                            Text("All shots").tag(false)
-                            Text("Favourites").tag(true)
-                        }
-                        .pickerStyle(.segmented)
-                        .frame(maxWidth: 340)
-                        .accessibilityIdentifier("library-filter")
-                    }
-                    if visibleSessions.isEmpty {
-                        emptyLibrary
-                    } else {
-                        LazyVGrid(columns: sizeClass == .regular ? [GridItem(.adaptive(minimum: typeSize.isAccessibilitySize ? 360 : 280), spacing: 24)] : [GridItem(.flexible())], alignment: .leading, spacing: 28) {
-                            ForEach(visibleSessions) { session in
-                                NavigationLink(value: session.id) {
-                                    ShotLibraryCard(session: session)
-                                }
-                                .buttonStyle(.plain)
-                                .contextMenu {
-                                    Button(session.isFavourite ? "Remove favourite" : "Favourite", systemImage: session.isFavourite ? "star.slash" : "star") {
-                                        store.toggleFavourite(session)
-                                    }
-                                    .disabled(!store.canModifyLibrary)
-                                }
-                            }
-                        }
-                    }
-                }
-                .padding(sizeClass == .regular ? 32 : 20)
-                .frame(maxWidth: 1500, alignment: .leading)
-                .frame(maxWidth: .infinity)
-            }
-            .reviewCanvasBackground()
-            .navigationTitle("Shot library")
-            .searchable(text: $search, prompt: "Find a shot")
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button { showsSettings = true } label: {
-                        Image(systemName: "sidebar.left")
-                            .frame(minWidth: 44, minHeight: 44)
-                    }
-                    .accessibilityLabel("Library settings")
-                    .accessibilityIdentifier("library-settings")
-                }
-                ToolbarItem(placement: .primaryAction) {
-                    Button { showsImport = true } label: {
-                        Label("Add video", systemImage: "plus")
-                            .fontWeight(.semibold)
-                    }
-                    .disabled(!store.canModifyLibrary)
-                    .accessibilityIdentifier("add-video")
-                }
-            }
-            .navigationDestination(for: UUID.self) { id in
-                RondeMediaDetailRoute(store: store, accountStore: accountStore, sessionID: id)
-            }
-            .sheet(isPresented: $showsImport) {
-                RangeSessionEntryView(store: store, intent: .oneShot) { session in
-                    store.select(session)
-                    path.append(session.id)
+        adaptiveTabs
+            .tint(RondeReviewDesign.fairway)
+            .sheet(item: $importTarget) { target in
+                RecordingImportView(store: store, groupID: target.groupID, groupTitle: target.title) { recording in
+                    store.select(recording)
+                    destination = .sessions
+                    sessionsPath = [.session(recording.groupID ?? recording.id), .recording(recording.id)]
                 }
             }
             .sheet(isPresented: $showsSettings) {
                 RondeSettingsView(store: store, accountStore: accountStore)
             }
-        }
-        .tint(RondeReviewDesign.graphite)
-        .task(id: accountStore.account?.id) {
-            guard let account = accountStore.account else { store.deactivateLibrary(); return }
-            store.activateLibrary(for: account.id)
-            await accountStore.synchronise(store.sessions)
-        }
-        .onReceive(store.$sessions.dropFirst().debounce(for: .seconds(1.2), scheduler: RunLoop.main)) { sessions in
-            guard store.libraryError == nil else { return }
-            Task { await accountStore.synchronise(sessions) }
+            .task(id: accountStore.account?.id) {
+                guard let account = accountStore.account else { store.deactivateLibrary(); return }
+                store.activateLibrary(for: account.id)
+                await accountStore.synchronise(store.sessions)
+            }
+            .onChange(of: accountStore.account?.id) { _, _ in
+                sessionsPath = []; shotsPath = []; keepersPath = []
+            }
+            .onReceive(store.$sessions.dropFirst().debounce(for: .seconds(1.2), scheduler: RunLoop.main)) { sessions in
+                guard store.libraryError == nil else { return }
+                Task { await accountStore.synchronise(sessions) }
+            }
+    }
+
+    @ViewBuilder private var adaptiveTabs: some View {
+        if #available(iOS 18.0, *) {
+            tabs.tabViewStyle(.sidebarAdaptable)
+        } else {
+            tabs
         }
     }
 
-    private var emptyLibrary: some View {
-        ContentUnavailableView {
-            Label(search.isEmpty && !favouritesOnly ? "Make room for a great shot." : "No shots found", systemImage: "play.rectangle.on.rectangle")
-        } description: {
-            Text(search.isEmpty && !favouritesOnly ? "Add a video to review, trim and share." : "Try another search or save a favourite.")
-        } actions: {
-            if search.isEmpty && !favouritesOnly {
-                Button("Add your first video") { showsImport = true }
-                    .buttonStyle(ReviewPrimaryButtonStyle(tint: RondeReviewDesign.graphite))
-                    .disabled(!store.canModifyLibrary)
+    private var tabs: some View {
+        TabView(selection: $destination) {
+            libraryNavigation(.sessions, path: $sessionsPath)
+                .tabItem { Label("Sessions", systemImage: "rectangle.stack") }.tag(RondeLibraryDestination.sessions)
+            libraryNavigation(.shots, path: $shotsPath)
+                .tabItem { Label("Shots", systemImage: "square.grid.2x2") }.tag(RondeLibraryDestination.shots)
+            libraryNavigation(.keepers, path: $keepersPath)
+                .tabItem { Label("Keepers", systemImage: "star") }.tag(RondeLibraryDestination.keepers)
+        }
+    }
+
+    private func libraryNavigation(_ section: RondeLibraryDestination, path: Binding<[RondeNavigationRoute]>) -> some View {
+        NavigationStack(path: path) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 28) {
+                    if let error = store.libraryError { LibrarySaveNotice(store: store, message: error) }
+                    if section == .sessions {
+                        RondeSessionsCollection(store: store, search: search, onImport: { importTarget = RondeImportTarget() })
+                    } else {
+                        shotsCollection(keepersOnly: section == .keepers)
+                    }
+                }
+                .padding(.horizontal, 20).padding(.top, 12).padding(.bottom, 28)
+                .frame(maxWidth: 1240, alignment: .leading).frame(maxWidth: .infinity)
+            }
+            .reviewCanvasBackground()
+            .navigationTitle(section.title)
+            .searchable(text: $search, prompt: section == .sessions ? "Find a session" : "Find a shot or club")
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button { showsSettings = true } label: { Image(systemName: "person.crop.circle") }
+                        .accessibilityLabel("Library settings").accessibilityIdentifier("library-settings")
+                }
+                ToolbarItem(placement: .primaryAction) {
+                    Button { importTarget = RondeImportTarget() } label: { Label("Add recording", systemImage: "plus") }
+                        .disabled(!store.canModifyLibrary).accessibilityIdentifier("add-video")
+                }
+            }
+            .navigationDestination(for: RondeNavigationRoute.self) { route in
+                switch route {
+                case .session(let id):
+                    RondeSessionDetailView(store: store, groupID: id) { group in
+                        importTarget = RondeImportTarget(groupID: group.id, title: group.title)
+                    }
+                case .recording(let id):
+                    RecordingStudioView(store: store, accountStore: accountStore, recordingID: id) { shotID in
+                        path.wrappedValue.append(.shot(shotID))
+                    }
+                case .shot(let id):
+                    RondeMediaDetailRoute(store: store, accountStore: accountStore, sessionID: id)
+                }
             }
         }
-        .padding(.vertical, 40)
+    }
+
+    private func shotsCollection(keepersOnly: Bool) -> some View {
+        let shots = store.sessions.filter {
+            !$0.isRecording && (!keepersOnly || $0.isFavourite) &&
+            (search.isEmpty || [$0.title, $0.placeName ?? "", $0.clubName ?? "", $0.note].joined(separator: " ").localizedCaseInsensitiveContains(search))
+        }.sorted { $0.createdAt > $1.createdAt }
+        return VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(keepersOnly ? "The good ones." : "Every shot, a little closer.")
+                    .font(.largeTitle.weight(.semibold)).tracking(-1)
+                Text(keepersOnly ? "Your favourites, ready for another look." : "Trim it. Trace it. Make it yours.")
+                    .font(.subheadline).foregroundStyle(RondeReviewDesign.graphiteMuted)
+            }
+            if shots.isEmpty {
+                ContentUnavailableView {
+                    Label(keepersOnly ? "Your next keeper is out there." : "Your shots start here.", systemImage: keepersOnly ? "star" : "film.stack")
+                } description: {
+                    Text(keepersOnly ? "Favourite a shot to keep it close." : "Add a recording, bookmark the good moments and create your shots.")
+                } actions: {
+                    if !keepersOnly {
+                        Button("Add a recording") { importTarget = RondeImportTarget() }
+                            .rondePrimaryAction().disabled(!store.canModifyLibrary)
+                    }
+                }
+                .padding(.vertical, 28)
+            } else {
+                LazyVGrid(columns: typeSize.isAccessibilitySize ? [GridItem(.flexible())] : [GridItem(.adaptive(minimum: 240), spacing: 20)], alignment: .leading, spacing: 26) {
+                    ForEach(shots) { shot in
+                        NavigationLink(value: RondeNavigationRoute.shot(shot.id)) { ShotLibraryCard(session: shot) }
+                            .buttonStyle(.plain)
+                            .contextMenu {
+                                Button(shot.isFavourite ? "Remove keeper" : "Keep this shot", systemImage: shot.isFavourite ? "star.slash" : "star") { store.toggleFavourite(shot) }
+                                    .disabled(!store.canModifyLibrary)
+                            }
+                    }
+                }
+            }
+        }
+        .foregroundStyle(RondeReviewDesign.graphite)
     }
 }
 
-private struct ShotLibraryCard: View {
+struct ShotLibraryCard: View {
     let session: ReviewSession
 
     private var subtitle: String {
@@ -266,10 +315,10 @@ private struct ShotLibraryCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            ShotPoster(sourceURL: session.sourceURL, time: session.defaultCandidate?.impactTime ?? 0)
+            ShotPoster(sourceURL: session.sourceURL, time: session.defaultCandidate?.impactTime ?? session.displayRange.start)
                 .aspectRatio(16 / 10, contentMode: .fit)
                 .overlay(alignment: .bottomTrailing) {
-                    Text(Self.duration(session.duration))
+                    Text(Self.duration(session.displayRange.duration))
                         .font(.subheadline.monospacedDigit().weight(.medium))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 10).padding(.vertical, 6)
@@ -300,7 +349,7 @@ private struct ShotLibraryCard: View {
     }
 }
 
-private struct ShotPoster: View {
+struct ShotPoster: View {
     let sourceURL: URL?
     let time: Double
     @State private var thumbnail: CGImage?
@@ -443,7 +492,7 @@ private struct RondeMediaDetailsEditor: View {
                     Button("Delete shot", role: .destructive) { showsDeleteConfirmation = true }
                         .disabled(!store.canModifyLibrary)
                 } footer: {
-                    Text("Your original video in Photos or Files is kept.")
+                    Text(session?.isDerivedShot == true ? "The source recording and other shots are kept." : "Any original you kept outside Ronde remains unchanged.")
                 }
             }
             .navigationTitle("Shot details")

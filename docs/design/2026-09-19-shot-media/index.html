@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Ronde · Three ways forward</title>
+  <link rel="stylesheet" href="review.css">
+  <script src="review.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#review-content">Skip to the concepts</a>
+  <div class="review-shell">
+    <header class="review-header">
+      <a class="wordmark" href="index.html" aria-label="Ronde design review">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 25c0-11 5-18 13-18 5 0 8 3 8 7"/><circle cx="6" cy="25" r="3"/></svg>
+        ronde<span class="wordmark-dot">.</span>
+      </a>
+      <span class="review-date">DESIGN EXPLORATION <span>19.09.26</span></span>
+      <nav class="review-tabs" aria-label="Review sections">
+        <button type="button" data-panel="concepts" aria-pressed="true">The directions</button>
+        <button type="button" data-panel="structure" aria-pressed="false">Structure &amp; devices</button>
+      </nav>
+    </header>
+
+    <main id="review-content">
+      <section id="concepts-panel" aria-labelledby="review-title">
+        <div class="review-intro">
+          <div><p class="eyebrow">YOUR GAME. WORTH KEEPING.</p><h1 id="review-title">A new way to keep your game.</h1></div>
+          <p>Clubhouse, now taking shape.<br>From full recordings to your favourite shots.</p>
+        </div>
+
+        <div class="direction-tabs" role="tablist" aria-label="Design direction">
+          <button class="direction direction-clubhouse" id="tab-clubhouse" type="button" role="tab" data-direction="clubhouse" aria-selected="true" aria-controls="concept-panel" tabindex="0">
+            <span class="direction-top"><span class="direction-number">01</span><span class="direction-tag">SELECTED FOUNDATION</span><span class="direction-check" aria-hidden="true">↗</span></span>
+            <span class="direction-name">Clubhouse</span>
+            <span class="direction-bottom"><span>A collection worth coming back to.</span><span class="direction-mark clubhouse-mark" aria-hidden="true"><i></i><i></i></span></span>
+          </button>
+          <button class="direction direction-cutroom" id="tab-cutroom" type="button" role="tab" data-direction="cutroom" aria-selected="false" aria-controls="concept-panel" tabindex="-1">
+            <span class="direction-top"><span class="direction-number">02</span><span class="direction-tag">FASTEST WORKSPACE</span><span class="direction-check" aria-hidden="true">↗</span></span>
+            <span class="direction-name">Cutroom</span>
+            <span class="direction-bottom"><span>More footage. Less finding.</span><span class="direction-mark cutroom-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span></span>
+          </button>
+          <button class="direction direction-fieldwork" id="tab-fieldwork" type="button" role="tab" data-direction="fieldwork" aria-selected="false" aria-controls="concept-panel" tabindex="-1">
+            <span class="direction-top"><span class="direction-number">03</span><span class="direction-tag">QUICKEST PHONE REVIEW</span><span class="direction-check" aria-hidden="true">↗</span></span>
+            <span class="direction-name">Fieldwork</span>
+            <span class="direction-bottom"><span>One swing. One quick decision.</span><span class="direction-mark fieldwork-mark" aria-hidden="true"><i></i><i></i><i></i></span></span>
+          </button>
+        </div>
+
+        <section class="concept-panel" id="concept-panel" role="tabpanel" aria-labelledby="tab-clubhouse">
+          <div class="preview-toolbar">
+            <div class="device-controls" role="group" aria-label="Preview width">
+              <button type="button" data-device="phone" aria-pressed="false"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="6" y="2" width="8" height="16" rx="2"/><path d="M9 15h2"/></svg>iPhone</button>
+              <button type="button" data-device="duo" aria-pressed="false"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="4" width="16" height="12" rx="2"/><path d="M10 4v12"/></svg>Duo</button>
+              <button type="button" data-device="ipad" aria-pressed="true"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="4" width="16" height="12" rx="2"/><circle cx="15.5" cy="10" r=".5"/></svg>iPad</button>
+            </div>
+            <div class="screen-controls" role="group" aria-label="Jump to a concept screen">
+              <span>EXPLORE</span>
+              <button type="button" data-view="sessions" aria-pressed="true">Sessions</button>
+              <button type="button" data-view="shots" aria-pressed="false">Shots</button>
+              <button type="button" data-view="studio" aria-pressed="false">Studio</button>
+            </div>
+            <a class="standalone-link" id="standalone-link" href="clubhouse.html" target="_blank" rel="noopener">Open on its own <span aria-hidden="true">↗</span></a>
+          </div>
+          <div class="preview-canvas" id="preview-canvas">
+            <div class="preview-meta"><span id="viewport-label">iPad · 1120px illustrative viewport</span><span id="scale-label">100%</span></div>
+            <div class="frame-fit" id="frame-fit">
+              <div class="frame-shell" id="frame-shell">
+                <iframe id="concept-frame" src="clubhouse.html" title="Clubhouse interactive Ronde concept" width="1120" height="790"></iframe>
+              </div>
+            </div>
+            <p class="prototype-note"><span aria-hidden="true"></span>Interactive concept · fictional sample media · detection and export simulated</p>
+          </div>
+          <div class="concept-caption" aria-live="polite">
+            <div><span class="caption-label" id="caption-label">01 / CLUBHOUSE</span><h2 id="caption-title">Make the library feel like yours.</h2></div>
+            <p id="caption-description">Warm, editorial session covers and a quiet green studio. It gives your best shots a place to live, then makes each one easy to finish.</p>
+            <div class="tradeoff"><span>THE TRADE-OFF</span><p id="caption-tradeoff">Stronger sense of collection; a little less dense when reviewing a long recording.</p></div>
+          </div>
+        </section>
+      </section>
+
+      <section id="structure-panel" class="structure-panel" aria-labelledby="structure-title" hidden>
+        <div class="structure-heading"><p class="eyebrow">THE THINKING BENEATH THE SURFACE</p><h1 id="structure-title">Find the moment.<br>Keep the shot.</h1><p>Clubhouse is the selected foundation. These are the recording and shot relationships we are refining.</p></div>
+        <ol class="model-flow" aria-label="Proposed media structure">
+          <li><span class="model-number">01</span><h2>Session</h2><p>One range visit or round.<br>A useful home for related footage.</p><span class="model-example">Saturday at the range</span></li>
+          <li><span class="model-number">02</span><h2>Recordings</h2><p>The original videos.<br>Always intact, kept on device.</p><span class="model-example">3 source videos</span></li>
+          <li><span class="model-number">03</span><h2>Bookmarks</h2><p>Points you mark in the original. Adjust the time before and after.</p><span class="model-example">08:04 → 07:59–08:09</span></li>
+          <li class="model-shot"><span class="model-number">04</span><h2>Shots <span aria-label="favourite">☆</span></h2><p>Clips created from those ranges.<br>Favourite the ones you love.</p><span class="model-example">Keepers = favourite shots</span></li>
+          <li><span class="model-number">05</span><h2>Edits &amp; exports</h2><p>Reversible trim, trace and format. A new file when you export.</p><span class="model-example">One shot, several versions</span></li>
+        </ol>
+        <div class="principle-grid">
+          <article><span class="principle-index">A</span><h2>Mark the moment.<br>Make the shot.</h2><p>Watch a 10–20-minute recording, bookmark the swings you want and create the clips in a batch. The prototype starts with 5 seconds either side. Automatic suggestions can help with the search later.</p></article>
+          <article><span class="principle-index">B</span><h2>A shot can be a keeper<br>without a trace.</h2><p>Finding a possible shot and tracking the ball are separate steps. A confirmed shot stays editable and exportable when the ball is not tracked. Manual traces remain labelled.</p></article>
+          <article><span class="principle-index">C</span><h2>One collection.<br>No duplicate originals.</h2><p>A shot points to a time range in its recording. A bookmark is a timestamp; a keeper is a favourite shot. Creating more clips preserves existing edits and the original recording. Native long-video support remains future work.</p></article>
+        </div>
+        <div class="device-story">
+          <div><p class="eyebrow">SAME SHOT. MORE ROOM.</p><h2>Expand the workspace.<br>Keep your place.</h2><p>iPhone focuses on one step. iPad can keep the collection beside the editor. Duo adds side controls and fold-aware layouts, while preserving the selected shot and editing state.</p><a class="study-link" href="adaptive.html">Explore the Duo pose study <span aria-hidden="true">↗</span></a></div>
+          <div class="mini-devices" aria-hidden="true"><div class="mini-phone"><i></i><span></span><span></span></div><div class="mini-duo"><div><i></i><i></i><i></i></div><div class="mini-media"></div><span class="mini-rail"><i></i><i></i><i></i></span></div></div>
+        </div>
+        <div class="source-notes"><div><h2>What these previews establish</h2><p>Interaction and visual direction only. The 393px, 760px and 1120px widths are illustrative CSS viewports, not Apple hardware dimensions. Native safe areas, system bars, folding, camera use and device performance still need SDK and device validation.</p></div><div><h2>Apple guidance, checked 19 September 2026</h2><a href="https://developer.apple.com/design/human-interface-guidelines/designing-for-iphone-duo" target="_blank" rel="noopener">Designing for iPhone Duo ↗</a><a href="https://developer.apple.com/videos/play/tech-talks/111462/" target="_blank" rel="noopener">Vertical bars and control priority ↗</a><a href="https://developer.apple.com/videos/play/tech-talks/111463/" target="_blank" rel="noopener">Adaptive layouts and reserved regions ↗</a><a href="https://developer.apple.com/design/human-interface-guidelines/split-views" target="_blank" rel="noopener">Split views on iPhone and iPad ↗</a></div></div>
+      </section>
+    </main>
+    <footer class="review-footer"><span>RONDE / SHOT MEDIA EXPLORATION</span><span>Designed for the moments worth keeping.</span></footer>
+  </div>
+</body>
+</html>

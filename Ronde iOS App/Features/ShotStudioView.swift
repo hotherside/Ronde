@@ -18,13 +18,41 @@ struct ShotStudioView: View {
     @State private var isExportPresented = false
     @State private var isManualEditorPresented = false
     @State private var loadError: String?
+    @State private var inspector = StudioInspector.trim
+
+    private enum StudioInspector: String, CaseIterable, Identifiable {
+        case trim, trace, format
+        var id: Self { self }
+        var title: String { rawValue.capitalized }
+        var image: String {
+            switch self {
+            case .trim: "crop"
+            case .trace: "hand.draw"
+            case .format: "rectangle.on.rectangle"
+            }
+        }
+    }
 
     private var session: ReviewSession? { store.sessions.first { $0.id == sessionID } }
     private var candidate: ReviewCandidate? { session?.defaultCandidate }
     private var hasAutomaticTrace: Bool { candidate.flatMap { ShotVideoTrace(candidate: $0, mode: .automatic) } != nil }
     private var trace: ShotVideoTrace? { candidate.flatMap { ShotVideoTrace(candidate: $0, mode: edit.overlay) } }
     private var duration: TimeInterval { session?.duration ?? 0 }
+    /// Child shots retain source-time edits. The UI can offer a small handle either side of the
+    /// bookmarked extraction, but never the rest of a long recording.
+    private var editableSourceRange: ReviewTimeRange {
+        guard let clip = session?.sourceClipRange?.clipped(to: duration) else {
+            return ReviewTimeRange(start: 0, duration: duration)
+        }
+        let start = max(0, clip.start - 5)
+        let end = min(duration, clip.end + 5)
+        return ReviewTimeRange(start: start, duration: max(0, end - start))
+    }
+    private var resetSourceRange: ReviewTimeRange { session?.studioSourceRange ?? ReviewTimeRange(start: 0, duration: duration) }
     private var sourceAspectRatio: Double { session?.sourceAspectRatio ?? 16.0 / 9 }
+    private var inspectorTabsUseVerticalLayout: Bool {
+        dynamicTypeSize.isAccessibilitySize || dynamicTypeSize >= .xxxLarge
+    }
     private var modes: [ShotVideoOverlayMode] {
         [.original] + (hasAutomaticTrace ? [.automatic] : []) + (candidate?.hasManualTracer == true ? [.manual] : [])
     }
@@ -37,14 +65,9 @@ struct ShotStudioView: View {
                         VStack(alignment: .leading, spacing: 22) {
                             if let error = store.libraryError { LibrarySaveNotice(store: store, message: error) }
                             if session.sourceURL != nil {
-                                videoWorkspace(availableSize: geometry.size)
+                                studioWorkspace(availableSize: geometry.size)
                                 if let loadError { errorLabel(loadError) }
                                 if let error = playback.error { errorLabel(error) }
-                                if duration > 0 {
-                                    trimWorkspace
-                                        .disabled(!store.canModifyLibrary)
-                                    reviewActions
-                                }
                             } else {
                                 ContentUnavailableView("Original video unavailable", systemImage: "video.slash", description: Text("Import the original from Photos or Files to make a new review."))
                             }
@@ -53,7 +76,7 @@ struct ShotStudioView: View {
                             } else if let error = session.errorMessage {
                                 errorLabel(error)
                             }
-                            if session.status != .analysing, session.sourceURL != nil, !hasAutomaticTrace {
+                            if session.status != .analysing, session.sourceURL != nil, !hasAutomaticTrace, !session.isDerivedShot, !session.isRecording {
                                 Button {
                                     playback.pause()
                                     Task { _ = await store.retryAnalysis(for: session) }
@@ -73,26 +96,15 @@ struct ShotStudioView: View {
                         .padding(.bottom, 28)
                         .frame(maxWidth: .infinity)
                     }
-                    .background(Color(uiColor: .systemBackground))
+                    .reviewCanvasBackground()
                 }
                 .navigationTitle(session.title)
                 .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button {
-                            playback.pause()
-                            persistEdit()
-                            isExportPresented = true
-                        } label: { Label("Export", systemImage: "square.and.arrow.up") }
-                        .accessibilityIdentifier("studio-share")
-                        .disabled(session.sourceURL == nil || duration <= 0 || playback.player == nil)
-                    }
-                }
             } else {
                 ContentUnavailableView("Review unavailable", systemImage: "film", description: Text("This review is no longer in your local library."))
             }
         }
-        .tint(Color.primary)
+        .tint(RondeReviewDesign.fairway)
         .task(id: sourceTaskID) { await prepareSource() }
         .onDisappear { playback.detach() }
         .onChange(of: duration) { old, new in
@@ -114,16 +126,42 @@ struct ShotStudioView: View {
         }
     }
 
-    private var sourceTaskID: String { "\(sessionID)-\(session?.sourceURL?.absoluteString ?? "missing")-\(duration)" }
+    private var sourceTaskID: String { "\(sessionID)-\(session?.sourceURL?.absoluteString ?? "missing")-\(duration)-\(editableSourceRange.start)-\(editableSourceRange.duration)" }
 
-    private func videoWorkspace(availableSize: CGSize) -> some View {
+    @ViewBuilder private func studioWorkspace(availableSize: CGSize) -> some View {
+        let isWide = availableSize.width >= 900 && !dynamicTypeSize.isAccessibilitySize
+        if isWide {
+            HStack(alignment: .top, spacing: 22) {
+                mainStudioWorkspace(availableSize: availableSize, inspectorVisible: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                studioInspector
+                    .frame(width: RondeReviewDesign.inspectorWidth)
+            }
+        } else {
+            VStack(alignment: .leading, spacing: 18) {
+                mainStudioWorkspace(availableSize: availableSize, inspectorVisible: false)
+                studioInspector
+            }
+        }
+    }
+
+    private func mainStudioWorkspace(availableSize: CGSize, inspectorVisible: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 18) {
+            videoWorkspace(availableSize: availableSize, inspectorVisible: inspectorVisible)
+            if duration > 0 { trimTimelineWorkspace.disabled(!store.canModifyLibrary) }
+        }
+    }
+
+    private func videoWorkspace(availableSize: CGSize, inspectorVisible: Bool) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             let ratio = edit.format.aspectRatio(sourceAspectRatio: sourceAspectRatio)
-            let width = min(1100, max(0, availableSize.width - (availableSize.width > 700 ? 56 : 32)))
+            let reservedInspectorWidth = inspectorVisible ? RondeReviewDesign.inspectorWidth + 22 : 0
+            let width = min(1100, max(0, availableSize.width - reservedInspectorWidth - (availableSize.width > 700 ? 56 : 32)))
             let height = min(width / ratio, max(220, min(660, availableSize.height * (dynamicTypeSize.isAccessibilitySize ? 0.38 : 0.56))))
             ShotStudioCanvas(player: playback.player, image: nil, trace: trace, sourceTime: playback.currentTime, sourceAspectRatio: sourceAspectRatio, canvasAspectRatio: ratio)
                 .frame(height: height)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .clipShape(RoundedRectangle(cornerRadius: RondeReviewDesign.cardRadius, style: .continuous))
+                .overlay { RoundedRectangle(cornerRadius: RondeReviewDesign.cardRadius, style: .continuous).stroke(RondeReviewDesign.border, lineWidth: 1) }
             playbackControls
             if modes.count > 1 {
                 Picker("Video overlay", selection: $edit.overlay) {
@@ -156,10 +194,10 @@ struct ShotStudioView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .font(.subheadline.monospacedDigit()).foregroundStyle(.secondary)
-            Slider(value: Binding(get: { min(max(0, playback.currentTime), max(duration, 0.1)) }, set: { playback.seek(to: $0) }), in: 0...max(duration, 0.1))
+            Slider(value: Binding(get: { min(max(editableSourceRange.start, playback.currentTime), max(editableSourceRange.start + 0.1, editableSourceRange.end)) }, set: { playback.seek(to: $0) }), in: editableSourceRange.start...max(editableSourceRange.start + 0.1, editableSourceRange.end))
                 .accessibilityLabel("Video playback position")
                 .accessibilityIdentifier("studio-position")
-                .accessibilityValue("\(studioTime(playback.currentTime)) of \(studioTime(duration))")
+                .accessibilityValue("\(studioTime(playback.currentTime)) of \(studioTime(editableSourceRange.end))")
                 .disabled(playback.player == nil)
             if dynamicTypeSize.isAccessibilitySize {
                 VStack(spacing: 10) { primaryTransport; secondaryTransport }
@@ -178,15 +216,16 @@ struct ShotStudioView: View {
     }
 
     private var playbackTotalTime: some View {
-        Text("/ \(studioTime(duration))").fixedSize()
-            .accessibilityLabel("Video duration, \(studioTime(duration))")
+        Text("/ \(studioTime(editableSourceRange.end))").fixedSize()
+            .accessibilityLabel("Source position, \(studioTime(editableSourceRange.end))")
     }
 
     private var primaryTransport: some View {
         HStack(spacing: 4) {
             Button { stepFrame(-1) } label: { Image(systemName: "backward.frame").font(.system(size: 22)).frame(width: 44, height: 44) }
+                .rondeSecondaryAction()
                 .accessibilityLabel("Previous source frame")
-                .disabled(frameTimes.isEmpty || playback.currentTime <= 0)
+                .disabled(frameTimes.isEmpty || playback.currentTime <= editableSourceRange.start)
             Button { playback.togglePlayback() } label: {
                 HStack(spacing: 8) {
                     Image(systemName: playback.isPlaying ? "pause.fill" : "play.fill").font(.system(size: 22, weight: .semibold))
@@ -194,14 +233,15 @@ struct ShotStudioView: View {
                 }
                     .frame(minWidth: 68, minHeight: 44)
             }
-            .buttonStyle(.borderedProminent)
+            .rondePrimaryAction()
             .accessibilityLabel(playback.isPlaying ? "Pause" : "Play")
             .accessibilityIdentifier("studio-play")
             .accessibilityHint("Resumes from the current position")
             .disabled(playback.player == nil)
             Button { stepFrame(1) } label: { Image(systemName: "forward.frame").font(.system(size: 22)).frame(width: 44, height: 44) }
+                .rondeSecondaryAction()
                 .accessibilityLabel("Next source frame")
-                .disabled(frameTimes.isEmpty || playback.currentTime >= (frameTimes.last ?? duration))
+                .disabled(frameTimes.isEmpty || playback.currentTime >= (frameTimes.last ?? editableSourceRange.end))
         }
     }
 
@@ -221,6 +261,7 @@ struct ShotStudioView: View {
             }
             .frame(minHeight: 44)
         }
+        .rondeSecondaryAction()
         .disabled(playback.player == nil)
     }
 
@@ -230,32 +271,24 @@ struct ShotStudioView: View {
                 Button(rate == 1 ? "Normal speed" : "\(rate.formatted())× speed") { playback.setSpeed(rate) }
             }
         } label: { Text("\(playback.speed.formatted())×").monospacedDigit().fixedSize().frame(minWidth: 44, minHeight: 44) }
+        .rondeControlSurface(interactive: true)
         .accessibilityLabel("Playback speed, \(playback.speed.formatted()) times")
     }
 
-    private var trimWorkspace: some View {
+    private var trimTimelineWorkspace: some View {
         VStack(alignment: .leading, spacing: 12) {
             ViewThatFits(in: .horizontal) {
                 HStack { trimHeading; Spacer(); resetCutButton }
                 VStack(alignment: .leading, spacing: 8) { trimHeading; resetCutButton }
             }
-            ShotStudioTrimTimeline(edit: $edit, duration: duration, playhead: playback.currentTime, thumbnails: thumbnails, frameTimes: frameTimes, onPreview: { playback.seek(to: $0) }, onCommit: {
+            ShotStudioTrimTimeline(edit: $edit, sourceRange: editableSourceRange, playhead: playback.currentTime, thumbnails: thumbnails, frameTimes: frameTimes, onPreview: { playback.seek(to: $0) }, onCommit: {
                 playback.setRange(edit); persistEdit()
             })
                 .frame(height: 68)
             if loadingFrames { ProgressView("Preparing frame controls…").font(.subheadline) }
-            DisclosureGroup("Fine-tune cut") {
-                VStack(alignment: .leading, spacing: 14) {
-                    trimSlider(isStart: true)
-                    trimSlider(isStart: false)
-                    if let candidate {
-                        Button { playback.seek(to: candidate.impactTime) } label: { Label("Go to impact", systemImage: "scope").frame(minHeight: 44) }
-                    }
-                }
-                .padding(.top, 10)
-            }
-            .font(.body)
         }
+        .padding(12)
+        .background(RondeReviewDesign.surfaceInset, in: RoundedRectangle(cornerRadius: RondeReviewDesign.cardRadius, style: .continuous))
     }
 
     private var trimHeading: some View {
@@ -268,9 +301,9 @@ struct ShotStudioView: View {
     }
 
     private var resetCutButton: some View {
-        Button("Use full video") { edit.trimStart = 0; edit.trimEnd = duration; playback.setRange(edit); persistEdit() }
+        Button(session?.isDerivedShot == true ? "Reset to bookmarked clip" : "Use full video") { edit.trimStart = resetSourceRange.start; edit.trimEnd = resetSourceRange.end; playback.setRange(edit); persistEdit() }
             .font(.subheadline).frame(minHeight: 44)
-            .disabled(edit.trimStart <= 0.001 && abs(edit.trimEnd - duration) < 0.001)
+            .disabled(abs(edit.trimStart - resetSourceRange.start) < 0.001 && abs(edit.trimEnd - resetSourceRange.end) < 0.001)
     }
 
     private func trimSlider(isStart: Bool) -> some View {
@@ -284,9 +317,9 @@ struct ShotStudioView: View {
                 let snapped = ShotVideoLayout.nearestFrame(to: value, presentationTimes: frameTimes)
                 if isStart { edit.trimStart = min(snapped, edit.trimEnd - ShotVideoEdit.minimumDuration(for: duration)) }
                 else { edit.trimEnd = max(snapped, edit.trimStart + ShotVideoEdit.minimumDuration(for: duration)) }
-                edit = edit.normalised(sourceDuration: duration)
+                edit = constrainedEdit(edit)
                 playback.seek(to: isStart ? edit.trimStart : edit.trimEnd)
-            }), in: 0...max(0.1, duration), onEditingChanged: { editing in
+            }), in: editableSourceRange.start...max(editableSourceRange.start + 0.1, editableSourceRange.end), onEditingChanged: { editing in
                 if !editing { playback.setRange(edit); persistEdit() }
             })
             .accessibilityLabel(isStart ? "Cut start" : "Cut end")
@@ -298,6 +331,111 @@ struct ShotStudioView: View {
     @ViewBuilder private func trimTimeLabel(isStart: Bool) -> some View {
         Text(isStart ? "Start" : "End").fixedSize()
         Text(studioTime(isStart ? edit.trimStart : edit.trimEnd)).fixedSize()
+    }
+
+    private var studioInspector: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Make it yours.").font(.title3.weight(.semibold))
+                Text("Your original recording stays untouched.")
+                    .font(.subheadline).foregroundStyle(RondeReviewDesign.graphiteMuted)
+            }
+            inspectorTabs
+            Group {
+                switch inspector {
+                case .trim: trimInspector
+                case .trace: traceInspector
+                case .format: formatInspector
+                }
+            }
+            Divider()
+            reviewActions
+            Button {
+                playback.pause()
+                persistEdit()
+                isExportPresented = true
+            } label: {
+                Label("Export video", systemImage: "square.and.arrow.up")
+                    .frame(maxWidth: .infinity, minHeight: RondeReviewDesign.minimumTouchTarget)
+            }
+            .rondePrimaryAction()
+            .accessibilityIdentifier("studio-share")
+            .disabled(session?.sourceURL == nil || duration <= 0 || playback.player == nil)
+        }
+        .padding(16)
+        .reviewCard(cardPadding: 0)
+    }
+
+    private var inspectorTabs: some View {
+        Group {
+            if inspectorTabsUseVerticalLayout {
+                VStack(spacing: 8) {
+                    ForEach(StudioInspector.allCases) { inspectorTab($0) }
+                }
+            } else {
+                HStack(spacing: 8) {
+                    ForEach(StudioInspector.allCases) { inspectorTab($0) }
+                }
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Studio tools")
+    }
+
+    private func inspectorTab(_ item: StudioInspector) -> some View {
+        Button { inspector = item } label: {
+            Label(item.title, systemImage: item.image)
+                .font(.subheadline.weight(.semibold))
+                .frame(maxWidth: .infinity, minHeight: RondeReviewDesign.minimumTouchTarget)
+        }
+        .foregroundStyle(inspector == item ? RondeReviewDesign.graphite : RondeReviewDesign.graphiteMuted)
+        .rondeSelectionSurface(isSelected: inspector == item, cornerRadius: RondeReviewDesign.smallRadius)
+        .accessibilityAddTraits(inspector == item ? .isSelected : [])
+    }
+
+    private var trimInspector: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Trim").font(.headline)
+            trimSlider(isStart: true)
+            trimSlider(isStart: false)
+            if let candidate {
+                Button { playback.seek(to: candidate.impactTime) } label: {
+                    Label("Go to impact", systemImage: "scope").frame(minHeight: RondeReviewDesign.minimumTouchTarget)
+                }
+                .rondeSecondaryAction()
+            }
+            Text(session?.isDerivedShot == true ? "You can refine this bookmarked clip with a little room before and after it." : "Keep the build-up and leave room for the finish. You can change this cut any time.")
+                .font(.subheadline).foregroundStyle(RondeReviewDesign.graphiteMuted)
+        }
+    }
+
+    private var traceInspector: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Trace").font(.headline)
+            Text(resultDescription)
+                .font(.body.weight(.medium)).foregroundStyle(RondeReviewDesign.graphite)
+            Text(hasAutomaticTrace ? "Automatic lines show tracked source observations only." : "No automatic line is shown for this video. You can add a separately labelled manual annotation.")
+                .font(.subheadline).foregroundStyle(RondeReviewDesign.graphiteMuted)
+        }
+    }
+
+    private var formatInspector: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Format").font(.headline)
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                ForEach(ShotVideoExportFormat.allCases) { format in
+                    Button { edit.format = format; persistEdit() } label: {
+                        ShotStudioFormatTile(format: format, sourceAspectRatio: sourceAspectRatio, isSelected: edit.format == format)
+                    }
+                    .accessibilityIdentifier("studio-format-\(format.rawValue)")
+                    .accessibilityLabel("\(format.title) canvas")
+                    .accessibilityValue(edit.format == format ? "Selected" : "Not selected")
+                    .accessibilityAddTraits(edit.format == format ? .isSelected : [])
+                }
+            }
+            Text("Your whole video stays in frame.")
+                .font(.subheadline).foregroundStyle(RondeReviewDesign.graphiteMuted)
+        }
     }
 
     private var reviewActions: some View {
@@ -322,6 +460,7 @@ struct ShotStudioView: View {
                     }
                 }
             } label: { Label("Manual trace", systemImage: "hand.draw").frame(minHeight: 44) }
+                .rondeSecondaryAction()
                 .accessibilityIdentifier("studio-manual-trace")
                 .disabled(!store.canModifyLibrary || session?.status == .analysing)
         } else if let session {
@@ -331,16 +470,19 @@ struct ShotStudioView: View {
                 store.addManualMarker(in: session)
                 isManualEditorPresented = true
             } label: { Label("Add manual trace", systemImage: "hand.draw").frame(minHeight: 44) }
+            .rondeSecondaryAction()
             .accessibilityIdentifier("studio-manual-trace")
             .disabled(!store.canModifyLibrary || session.status == .analysing)
         }
         if let onEditDetails {
             Button { playback.pause(); onEditDetails() } label: { Label("Details & notes", systemImage: "text.alignleft").frame(minHeight: 44) }
+                .rondeSecondaryAction()
                 .accessibilityIdentifier("studio-details")
                 .disabled(!store.canModifyLibrary)
         }
         if let session {
             Button { store.toggleFavourite(session) } label: { Label(session.isFavourite ? "Favourited" : "Favourite", systemImage: session.isFavourite ? "heart.fill" : "heart").frame(minHeight: 44) }
+                .rondeSecondaryAction()
                 .disabled(!store.canModifyLibrary)
         }
     }
@@ -365,14 +507,35 @@ struct ShotStudioView: View {
 
     private func restoreEdit() {
         guard let session else { return }
-        edit = (session.videoEdit ?? .fullSource(duration: session.duration, hasAutomaticTrace: hasAutomaticTrace, hasManualTrace: candidate?.hasManualTracer == true)).normalised(sourceDuration: session.duration)
+        let defaultEdit = ShotVideoEdit(
+            trimStart: resetSourceRange.start,
+            trimEnd: resetSourceRange.end,
+            format: .original,
+            overlay: candidate?.hasManualTracer == true ? .manual : hasAutomaticTrace ? .automatic : .original
+        )
+        edit = constrainedEdit(session.videoEdit ?? defaultEdit)
         if !modes.contains(edit.overlay) { edit.overlay = .original }
     }
 
     private func persistEdit() {
         guard let session, duration > 0, store.canModifyLibrary else { return }
-        edit = edit.normalised(sourceDuration: duration)
+        edit = constrainedEdit(edit)
         store.setVideoEdit(edit, for: session)
+    }
+
+    private func constrainedEdit(_ proposed: ShotVideoEdit) -> ShotVideoEdit {
+        let source = proposed.normalised(sourceDuration: duration)
+        let bounds = editableSourceRange
+        let minimum = ShotVideoEdit.minimumDuration(for: bounds.duration)
+        guard bounds.duration > 0 else { return source }
+        var result = source
+        result.trimStart = min(max(bounds.start, result.trimStart), max(bounds.start, bounds.end - minimum))
+        result.trimEnd = min(bounds.end, max(result.trimStart + minimum, result.trimEnd))
+        if result.trimEnd - result.trimStart < minimum {
+            result.trimStart = max(bounds.start, bounds.end - minimum)
+            result.trimEnd = bounds.end
+        }
+        return result
     }
 
     private func prepareSource() async {
@@ -381,8 +544,8 @@ struct ShotStudioView: View {
         playback.attach(url: sourceURL, edit: edit)
         loadError = nil; loadingFrames = true
         let inspector = ShotVideoSourceInspector()
-        async let images = inspector.thumbnails(url: sourceURL, duration: duration)
-        do { frameTimes = try await inspector.presentationTimes(url: sourceURL) }
+        async let images = inspector.thumbnails(url: sourceURL, duration: duration, sourceRange: editableSourceRange)
+        do { frameTimes = try await inspector.presentationTimes(url: sourceURL, sourceRange: editableSourceRange) }
         catch is CancellationError { loadingFrames = false; return }
         catch { loadError = "Frame controls could not load. Ordinary playback and cutting are still available." }
         thumbnails = await images
@@ -511,7 +674,7 @@ private struct ShotStudioPlayerSurface: UIViewRepresentable {
 
 private struct ShotStudioTrimTimeline: View {
     @Binding var edit: ShotVideoEdit
-    let duration: TimeInterval
+    let sourceRange: ReviewTimeRange
     let playhead: TimeInterval
     let thumbnails: [ShotVideoThumbnail]
     let frameTimes: [TimeInterval]
@@ -523,9 +686,9 @@ private struct ShotStudioTrimTimeline: View {
     var body: some View {
         GeometryReader { geometry in
             let width = max(1, geometry.size.width - 44)
-            let safeDuration = max(0.1, duration)
-            let start = 22 + width * edit.trimStart / safeDuration
-            let end = 22 + width * edit.trimEnd / safeDuration
+            let safeDuration = max(0.1, sourceRange.duration)
+            let start = 22 + width * (edit.trimStart - sourceRange.start) / safeDuration
+            let end = 22 + width * (edit.trimEnd - sourceRange.start) / safeDuration
             ZStack(alignment: .leading) {
                 HStack(spacing: 0) {
                     if thumbnails.isEmpty { Rectangle().fill(Color(uiColor: .secondarySystemFill)) }
@@ -539,8 +702,8 @@ private struct ShotStudioTrimTimeline: View {
                 .frame(width: width, height: 54).clipShape(RoundedRectangle(cornerRadius: 7)).offset(x: 22)
                 Rectangle().fill(.black.opacity(0.55)).frame(width: max(0, start - 22), height: 54).offset(x: 22)
                 Rectangle().fill(.black.opacity(0.55)).frame(width: max(0, geometry.size.width - 22 - end), height: 54).offset(x: end)
-                RoundedRectangle(cornerRadius: 7).stroke(RondeReviewDesign.tracerPurple, lineWidth: 3).frame(width: max(0, end - start), height: 60).offset(x: start)
-                Rectangle().fill(.white).frame(width: 2, height: 52).offset(x: 22 + width * min(max(0, playhead), duration) / safeDuration)
+                RoundedRectangle(cornerRadius: 7).stroke(RondeReviewDesign.fairway, lineWidth: 3).frame(width: max(0, end - start), height: 60).offset(x: start)
+                Rectangle().fill(.white).frame(width: 2, height: 52).offset(x: 22 + width * (min(max(sourceRange.start, playhead), sourceRange.end) - sourceRange.start) / safeDuration)
                 handle(isStart: true, width: width).position(x: start, y: geometry.size.height / 2)
                 handle(isStart: false, width: width).position(x: end, y: geometry.size.height / 2)
             }
@@ -552,7 +715,7 @@ private struct ShotStudioTrimTimeline: View {
 
     private func handle(isStart: Bool, width: CGFloat) -> some View {
         RoundedRectangle(cornerRadius: 6)
-            .fill(RondeReviewDesign.tracerPurple)
+            .fill(RondeReviewDesign.fairway)
             .frame(width: 16, height: 62)
             .overlay { Capsule().fill(.white).frame(width: 3, height: 22) }
             .frame(width: 44, height: 68)
@@ -560,8 +723,8 @@ private struct ShotStudioTrimTimeline: View {
             .gesture(DragGesture(minimumDistance: 0).onChanged { value in
                 if isStart, dragStart == nil { dragStart = edit.trimStart }
                 if !isStart, dragEnd == nil { dragEnd = edit.trimEnd }
-                let origin = (isStart ? dragStart : dragEnd) ?? 0
-                let time = ShotVideoLayout.nearestFrame(to: origin + value.translation.width / width * duration, presentationTimes: frameTimes)
+                let origin = (isStart ? dragStart : dragEnd) ?? sourceRange.start
+                let time = ShotVideoLayout.nearestFrame(to: origin + value.translation.width / width * sourceRange.duration, presentationTimes: frameTimes)
                 adjust(time, isStart: isStart)
             }.onEnded { _ in dragStart = nil; dragEnd = nil; onCommit() })
             .accessibilityElement()
@@ -577,11 +740,58 @@ private struct ShotStudioTrimTimeline: View {
     }
 
     private func adjust(_ value: TimeInterval, isStart: Bool) {
-        let minimum = ShotVideoEdit.minimumDuration(for: duration)
-        if isStart { edit.trimStart = min(max(0, value), edit.trimEnd - minimum) }
-        else { edit.trimEnd = max(min(duration, value), edit.trimStart + minimum) }
-        edit = edit.normalised(sourceDuration: duration)
+        let minimum = ShotVideoEdit.minimumDuration(for: sourceRange.duration)
+        if isStart { edit.trimStart = min(max(sourceRange.start, value), edit.trimEnd - minimum) }
+        else { edit.trimEnd = max(min(sourceRange.end, value), edit.trimStart + minimum) }
+        edit.trimStart = min(max(sourceRange.start, edit.trimStart), max(sourceRange.start, sourceRange.end - minimum))
+        edit.trimEnd = min(sourceRange.end, max(edit.trimStart + minimum, edit.trimEnd))
         onPreview(isStart ? edit.trimStart : edit.trimEnd)
+    }
+}
+
+/// A compact canvas silhouette makes each export choice recognisable before a person reads it.
+private struct ShotStudioFormatTile: View {
+    let format: ShotVideoExportFormat
+    let sourceAspectRatio: Double
+    let isSelected: Bool
+
+    private var silhouetteSize: CGSize {
+        let rawRatio = format.aspectRatio(sourceAspectRatio: sourceAspectRatio)
+        let ratio = rawRatio.isFinite && rawRatio > 0 ? CGFloat(rawRatio) : 16 / 9
+        if ratio >= 1 {
+            return CGSize(width: 42, height: max(12, 42 / ratio))
+        }
+        return CGSize(width: max(12, 42 * ratio), height: 42)
+    }
+
+    private var label: String {
+        switch format {
+        case .original: "Original"
+        case .portrait: "9:16"
+        case .square: "1:1"
+        case .landscape: "16:9"
+        }
+    }
+
+    var body: some View {
+        VStack(spacing: 7) {
+            ZStack(alignment: .topTrailing) {
+                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                    .strokeBorder(isSelected ? RondeReviewDesign.fairway : RondeReviewDesign.graphiteMuted, lineWidth: 2)
+                    .frame(width: silhouetteSize.width, height: silhouetteSize.height)
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.caption.weight(.bold))
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(RondeReviewDesign.fairway)
+                        .offset(x: 7, y: -7)
+                }
+            }
+            Text(label).font(.caption.weight(.semibold)).lineLimit(1)
+        }
+        .foregroundStyle(RondeReviewDesign.graphite)
+        .frame(maxWidth: .infinity, minHeight: 78)
+        .rondeSelectionSurface(isSelected: isSelected)
     }
 }
 
@@ -606,17 +816,25 @@ private struct ShotStudioExportSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
                     ShotStudioCanvas(player: nil, image: preview?.image, trace: trace, sourceTime: previewSourceTime, sourceAspectRatio: sourceAspectRatio, canvasAspectRatio: edit.format.aspectRatio(sourceAspectRatio: sourceAspectRatio))
-                        .frame(height: 300).clipShape(RoundedRectangle(cornerRadius: 12))
+                        .frame(height: 300).clipShape(RoundedRectangle(cornerRadius: RondeReviewDesign.cardRadius, style: .continuous))
                         .accessibilityIdentifier("studio-export-preview")
                         .accessibilityValue(edit.format.title)
                         .overlay(alignment: .bottomLeading) {
                             if preview == nil { ProgressView("Preparing preview…").font(.subheadline).foregroundStyle(.white).padding() }
                         }
                     VStack(alignment: .leading, spacing: 14) {
-                        Picker("Canvas", selection: $edit.format) {
-                            ForEach(ShotVideoExportFormat.allCases) { format in Text(format.title).tag(format) }
+                        Text("Output canvas").font(.headline)
+                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                            ForEach(ShotVideoExportFormat.allCases) { format in
+                                Button { edit.format = format } label: {
+                                    ShotStudioFormatTile(format: format, sourceAspectRatio: sourceAspectRatio, isSelected: edit.format == format)
+                                }
+                                .accessibilityIdentifier("studio-export-format-\(format.rawValue)")
+                                .accessibilityLabel("\(format.title) canvas")
+                                .accessibilityValue(edit.format == format ? "Selected" : "Not selected")
+                                .accessibilityAddTraits(edit.format == format ? .isSelected : [])
+                            }
                         }
-                        .pickerStyle(.menu)
                         .accessibilityIdentifier("studio-export-format")
                         if modes.count > 1 {
                             Picker("Include", selection: $edit.overlay) { ForEach(modes) { mode in Text(mode.title).tag(mode) } }.pickerStyle(.menu)
@@ -636,19 +854,19 @@ private struct ShotStudioExportSheet: View {
                     } else if let output = exporter.outputURL {
                         Label("Your video is ready", systemImage: "checkmark.circle").font(.body)
                             .accessibilityIdentifier("studio-export-ready")
-                        Button { sharedFile = ShotStudioSharedFile(url: output) } label: { Label("Share video", systemImage: "square.and.arrow.up").frame(maxWidth: .infinity, minHeight: 44) }.buttonStyle(.borderedProminent)
+                        Button { sharedFile = ShotStudioSharedFile(url: output) } label: { Label("Share video", systemImage: "square.and.arrow.up").frame(maxWidth: .infinity, minHeight: 44) }.rondePrimaryAction()
                             .accessibilityIdentifier("studio-export-share")
                     } else {
                         Button {
                             exporter.start(ShotVideoExportRequest(sourceURL: sourceURL, edit: edit, trace: trace))
-                        } label: { Label("Export video", systemImage: "arrow.up.document").frame(maxWidth: .infinity, minHeight: 44) }.buttonStyle(.borderedProminent)
+                        } label: { Label("Export video", systemImage: "arrow.up.document").frame(maxWidth: .infinity, minHeight: 44) }.rondePrimaryAction()
                             .accessibilityIdentifier("studio-export-render")
                     }
                     if let error = exporter.error { Label(error, systemImage: "exclamationmark.circle").font(.subheadline).foregroundStyle(.red) }
                 }
                 .frame(maxWidth: 680).padding(20).frame(maxWidth: .infinity)
             }
-            .background(Color(uiColor: .systemBackground))
+            .reviewCanvasBackground()
             .navigationTitle("Export video").navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() }.disabled(exporter.isExporting) } }
         }

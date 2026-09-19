@@ -52,11 +52,26 @@ struct ReviewTimeRange: Codable, Sendable, Equatable {
     let duration: TimeInterval
 
     init(start: TimeInterval, duration: TimeInterval) {
-        self.start = max(0, start)
-        self.duration = max(0, duration)
+        self.start = start.isFinite ? max(0, start) : 0
+        self.duration = duration.isFinite ? max(0, duration) : 0
     }
 
     var end: TimeInterval { start + duration }
+
+    /// Normalises a persisted or user-edited range to a finite source. This is deliberately part
+    /// of the shared domain type so studios, thumbnail generation and library presentation use
+    /// identical bounds even when an old archive contains malformed timing metadata.
+    func clipped(to sourceDuration: TimeInterval) -> ReviewTimeRange {
+        guard sourceDuration.isFinite, sourceDuration > 0,
+              start.isFinite, duration.isFinite else {
+            return ReviewTimeRange(start: 0, duration: 0)
+        }
+        let safeSourceDuration = max(0, sourceDuration)
+        let safeStart = min(max(0, start), safeSourceDuration)
+        let safeDuration = max(0, duration)
+        let safeEnd = min(safeSourceDuration, safeStart + safeDuration)
+        return ReviewTimeRange(start: safeStart, duration: max(0, safeEnd - safeStart))
+    }
 }
 
 struct ImpactClipWindow: Codable, Sendable, Equatable {
