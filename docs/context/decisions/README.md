@@ -18,3 +18,7 @@ Each record states status, date, context, decision, alternatives and consequence
 - [0012: Make Ronde an iPhone/iPad-only shot media product](0012-ios-ipad-only-product.md)
 - [0013: Clubhouse and a bookmarked recording Studio](0013-clubhouse-and-bookmarked-recording-studio.md)
 - [0014: Native Recording Studio and source-linked Shots](0014-native-recording-studio-and-source-linked-shots.md)
+- [0015: Source-timed tracer evidence before model adoption](0015-source-timed-tracer-benchmark.md)
+- [0016: Correct native concept fidelity](0016-native-concept-fidelity-correction.md)
+- [0017: Optional point-assisted ball tracking inside Ronde](0017-opt-in-on-device-ball-tracking.md)
+- [0018: Choose clips first, then trace the ball](0018-clip-first-tracing-and-correction.md)

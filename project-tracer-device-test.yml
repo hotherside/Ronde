@@ -1,0 +1,11 @@
+# Opt-in private acceptance test resources. Never use this spec for distribution.
+include: project.yml
+targets:
+  Ronde iOS AppTests:
+    sources:
+      - path: .local-tracer-tests/edgetam-device-test-config.json
+        buildPhase: resources
+      - path: .local-tracer-tests/daylight.mov
+        buildPhase: resources
+      - path: .local-tracer-tests/night.mov
+        buildPhase: resources

@@ -5,7 +5,8 @@ import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
 
-/// Entry point for adding a longer source recording to a Clubhouse session.
+/// Entry point for adding source video to a Clubhouse session. Short clips go straight to Shot
+/// Studio; longer recordings use the Choose shots flow.
 ///
 /// The view deliberately owns only the picker and import lifecycle. Recording analysis,
 /// account ownership checks and durable local storage remain in `ReviewerStore`.
@@ -78,6 +79,10 @@ struct RecordingImportView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
+                    Text("Short clips open straight in Shot Studio. Longer recordings let you choose several shots here.")
+                        .font(.rondeCaption)
+                        .foregroundStyle(RondeReviewDesign.graphiteMuted)
+                        .fixedSize(horizontal: false, vertical: true)
                     sessionDetails
                     sourceActions
 

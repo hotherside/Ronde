@@ -2,9 +2,9 @@
 
 > Generated from Git. Git remains authoritative. Context-only refresh commits are excluded.
 
-- Source commit: `49163669ddea6c38d5958de5069b9d048f48e50a`
+- Source commit: `f2b62ece537dad28efa45845701cef505b8cb57b`
 - Source commit date: 2026-09-19
-- Tracked commit count: 88
+- Tracked commit count: 91
 
 | Date | Commit | Subject |
 | --- | --- | --- |
@@ -80,3 +80,5 @@
 | 2026-09-19 | `510fd36` | Refine native Clubhouse and Cutroom design fidelity |
 | 2026-09-19 | `bbf4577` | docs: record native fidelity correction delivery |
 | 2026-09-19 | `4916366` | Merge pull request #13 from hotherside/codex/concept-fidelity |
+| 2026-09-19 | `1f95922` | feat: add local ball tracing with clip-first correction flow |
+| 2026-09-19 | `f2b62ec` | Merge main design updates with verified clip-first tracing flow |

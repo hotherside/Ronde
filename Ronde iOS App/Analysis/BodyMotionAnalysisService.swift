@@ -140,18 +140,29 @@ actor BodyMotionAnalysisService {
     func analyse(
         url: URL,
         configuration: BodyMotionAnalysisConfiguration = .golfTripod,
+        sourceRange: ReviewTimeRange? = nil,
         progress: (@Sendable (Double) -> Void)? = nil
     ) async throws -> [SwingCandidate] {
         let asset = AVURLAsset(url: url)
         guard try await asset.load(.isReadable) else { throw BodyMotionAnalysisError.unreadableAsset }
         let duration = try await asset.load(.duration)
-        let durationSeconds = max(CMTimeGetSeconds(duration), 0.001)
+        let sourceDuration = max(CMTimeGetSeconds(duration), 0)
+        let analysisRange = sourceRange?.clipped(to: sourceDuration)
+            ?? ReviewTimeRange(start: 0, duration: sourceDuration)
+        guard analysisRange.duration > 0 else {
+            progress?(1)
+            return []
+        }
         guard let videoTrack = try await asset.loadTracks(withMediaType: .video).first else {
             throw BodyMotionAnalysisError.noVideoTrack
         }
         let visionOrientation = try await Self.visionOrientation(for: videoTrack)
 
         let reader = try AVAssetReader(asset: asset)
+        reader.timeRange = CMTimeRange(
+            start: CMTime(seconds: analysisRange.start, preferredTimescale: 60_000),
+            duration: CMTime(seconds: analysisRange.duration, preferredTimescale: 60_000)
+        )
         let output = AVAssetReaderTrackOutput(
             track: videoTrack,
             outputSettings: [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
@@ -176,7 +187,7 @@ actor BodyMotionAnalysisService {
             }
             let presentationTime = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
             let seconds = CMTimeGetSeconds(presentationTime)
-            progress?(min(max(seconds / durationSeconds, 0), 1))
+            progress?(min(max((seconds - analysisRange.start) / analysisRange.duration, 0), 1))
             guard seconds - lastAnalysedTime >= configuration.sampleInterval,
                   let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else {
                 continue
@@ -207,7 +218,13 @@ actor BodyMotionAnalysisService {
         }
 
         progress?(1)
-        return selector.select(from: rawPeaks, configuration: configuration).map { peak in
+        return selector.select(from: rawPeaks, configuration: configuration)
+            .filter { peak in
+                peak.time.isFinite
+                    && peak.time >= analysisRange.start
+                    && peak.time <= analysisRange.end
+            }
+            .map { peak in
             SwingCandidate(
                 impactTime: peak.time,
                 classification: .provisional(

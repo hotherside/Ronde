@@ -15,6 +15,11 @@ Pods/
 # Secrets / API keys
 .env
 Secrets.swift
+# Owner-controlled model and opt-in device-test resources stay outside Git.
+.local-models
+.local-tracer-tests
+__pycache__/
+*.py[cod]
 
 # OS files
 .DS_Store

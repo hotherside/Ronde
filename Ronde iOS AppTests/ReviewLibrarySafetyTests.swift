@@ -97,7 +97,7 @@ final class ReviewLibrarySafetyTests: XCTestCase {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         var rows = try XCTUnwrap(JSONSerialization.jsonObject(with: encoder.encode([legacy])) as? [[String: Any]])
-        for key in ["groupID", "groupTitle", "sourceRecordingID", "sourceBookmarkID", "sourceClipRange", "storedBookmarks"] {
+        for key in ["groupID", "groupTitle", "sourceRecordingID", "sourceBookmarkID", "sourceClipRange", "storedBookmarks", "storedBookmarkWindow"] {
             rows[0].removeValue(forKey: key)
         }
         try JSONSerialization.data(withJSONObject: rows).write(to: archiveURL(root: root))
@@ -106,6 +106,7 @@ final class ReviewLibrarySafetyTests: XCTestCase {
         let restoredLegacy = try XCTUnwrap(archive.load().first)
         XCTAssertTrue(restoredLegacy.bookmarks.isEmpty)
         XCTAssertNil(restoredLegacy.sourceClipRange)
+        XCTAssertEqual(restoredLegacy.bookmarkWindow, .standard)
 
         legacy.importKind = .recording
         legacy.groupID = legacy.id
@@ -229,6 +230,109 @@ final class ReviewLibrarySafetyTests: XCTestCase {
         XCTAssertEqual(shot.videoEdit?.sourceRange, ReviewTimeRange(start: 595, duration: 10))
         XCTAssertEqual(try XCTUnwrap(ReviewSessionArchive(accountID: account, rootURL: root).load().first { $0.id == shotID }).sourceClipRange,
                        ReviewTimeRange(start: 595, duration: 10))
+    }
+
+    @MainActor
+    func testRecordingImportUnderTwentySecondsBecomesDirectShotWithoutAnalysis() async throws {
+        let root = try makeRoot()
+        let source = root.appendingPathComponent("short-source.mov")
+        try await writeSparseVideo(to: source, endSessionAt: 19)
+        let store = ReviewerStore(persistenceEnabled: true, libraryRootURL: root)
+        store.activateLibrary(for: UUID())
+
+        let result = await store.importVideo(at: source, sourceName: "Short shot.mov", importKind: .recording)
+        guard case .imported(let imported) = result else {
+            return XCTFail("A short recording should be ready directly in Shot Studio: \(String(describing: result))")
+        }
+        XCTAssertTrue(imported.isSingleShotImport)
+        XCTAssertTrue(imported.isDirectShotImport)
+        XCTAssertFalse(imported.isRecording)
+        XCTAssertEqual(imported.status, .reviewing)
+        XCTAssertEqual(imported.progress, 1)
+        XCTAssertTrue(imported.bookmarks.isEmpty)
+        XCTAssertEqual(store.sessions.first?.id, imported.id)
+    }
+
+    @MainActor
+    func testTwentySecondRecordingStaysInChooseShotsFlow() async throws {
+        let root = try makeRoot()
+        let source = root.appendingPathComponent("boundary-source.mov")
+        try await writeSparseVideo(to: source, endSessionAt: 20)
+        let store = ReviewerStore(persistenceEnabled: true, libraryRootURL: root)
+        store.activateLibrary(for: UUID())
+
+        let result = await store.importVideo(at: source, sourceName: "Boundary recording.mov", importKind: .recording)
+        guard case .imported(let imported) = result else {
+            return XCTFail("A twenty-second recording should import for manual shot selection")
+        }
+        XCTAssertTrue(imported.isRecording)
+        XCTAssertFalse(imported.isDirectShotImport)
+        XCTAssertFalse(imported.isSingleShotImport)
+        XCTAssertEqual(imported.status, .reviewing)
+    }
+
+    @MainActor
+    func testBookmarkWindowIsPersistedAndIndividualOverridesRemainIndependent() throws {
+        let root = try makeRoot()
+        let account = UUID()
+        let groupID = UUID()
+        var recording = ReviewFixtures.quickReviewSession
+        recording.importKind = .recording
+        recording.groupID = groupID
+        recording.groupTitle = recording.title
+        var sibling = ReviewFixtures.rangeSession
+        sibling.importKind = .recording
+        sibling.groupID = groupID
+        sibling.groupTitle = recording.title
+        try ReviewSessionArchive(accountID: account, rootURL: root).save([recording, sibling])
+        let store = ReviewerStore(persistenceEnabled: true, libraryRootURL: root)
+        store.activateLibrary(for: account)
+        let openRecording = try XCTUnwrap(store.sessions.first { $0.id == recording.id })
+
+        XCTAssertTrue(store.updateBookmarkWindow(before: 10, after: 10, in: openRecording))
+        XCTAssertEqual(store.sessions.first { $0.id == sibling.id }?.bookmarkWindow,
+                       RecordingBookmarkWindow(beforeDuration: 10, afterDuration: 10))
+        let defaultBookmark = try XCTUnwrap(store.addBookmark(at: 3, to: openRecording))
+        let overriddenBookmark = try XCTUnwrap(store.addBookmark(at: 5, before: 2, after: 3, to: openRecording))
+        XCTAssertEqual(defaultBookmark.beforeDuration, 10)
+        XCTAssertEqual(defaultBookmark.afterDuration, 10)
+        XCTAssertEqual(overriddenBookmark.beforeDuration, 2)
+        XCTAssertEqual(overriddenBookmark.afterDuration, 3)
+
+        let restored = try XCTUnwrap(ReviewSessionArchive(accountID: account, rootURL: root).load().first)
+        XCTAssertEqual(restored.bookmarkWindow, RecordingBookmarkWindow(beforeDuration: 10, afterDuration: 10))
+        XCTAssertEqual(restored.bookmark(id: defaultBookmark.id)?.beforeDuration, 10)
+        XCTAssertEqual(restored.bookmark(id: overriddenBookmark.id)?.afterDuration, 3)
+    }
+
+    @MainActor
+    func testNewRecordingInheritsItsGroupsBookmarkWindow() async throws {
+        let root = try makeRoot()
+        let account = UUID()
+        let groupID = UUID()
+        var existing = ReviewFixtures.rangeSession
+        existing.importKind = .recording
+        existing.groupID = groupID
+        existing.groupTitle = "Saturday practice"
+        existing.bookmarkWindow = RecordingBookmarkWindow(beforeDuration: 10, afterDuration: 10)
+        try ReviewSessionArchive(accountID: account, rootURL: root).save([existing])
+        let source = root.appendingPathComponent("inherited-window.mov")
+        try await writeSparseVideo(to: source, endSessionAt: 20)
+        let store = ReviewerStore(persistenceEnabled: true, libraryRootURL: root)
+        store.activateLibrary(for: account)
+
+        let result = await store.importVideo(
+            at: source,
+            sourceName: "Second recording.mov",
+            importKind: .recording,
+            groupID: groupID,
+            groupTitle: "Saturday practice"
+        )
+        guard case .imported(let imported) = result else {
+            return XCTFail("A new recording in the group should import successfully")
+        }
+        XCTAssertTrue(imported.isRecording)
+        XCTAssertEqual(imported.bookmarkWindow, RecordingBookmarkWindow(beforeDuration: 10, afterDuration: 10))
     }
 
     @MainActor

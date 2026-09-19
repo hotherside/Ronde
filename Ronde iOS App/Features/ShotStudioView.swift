@@ -17,8 +17,12 @@ struct ShotStudioView: View {
     @State private var loadingFrames = false
     @State private var isExportPresented = false
     @State private var isManualEditorPresented = false
+    @State private var isBallTrackingPresented = false
+    @State private var startsAutomaticTrace = true
+    @State private var drawAfterTrackingDismisses = false
+    @State private var ballTrackingRange = ReviewTimeRange(start: 0, duration: 0)
     @State private var loadError: String?
-    @State private var inspector = StudioInspector.trim
+    @State private var inspector = StudioInspector.trace
 
     private enum StudioInspector: String, CaseIterable, Identifiable {
         case trim, trace, format
@@ -36,6 +40,7 @@ struct ShotStudioView: View {
     private var session: ReviewSession? { store.sessions.first { $0.id == sessionID } }
     private var candidate: ReviewCandidate? { session?.defaultCandidate }
     private var hasAutomaticTrace: Bool { candidate.flatMap { ShotVideoTrace(candidate: $0, mode: .automatic) } != nil }
+    private var hasSeededTrace: Bool { candidate.flatMap { ShotVideoTrace(candidate: $0, mode: .seeded) } != nil }
     private var trace: ShotVideoTrace? { candidate.flatMap { ShotVideoTrace(candidate: $0, mode: edit.overlay) } }
     private var duration: TimeInterval { session?.duration ?? 0 }
     /// Child shots retain source-time edits. The UI can offer a small handle either side of the
@@ -54,7 +59,7 @@ struct ShotStudioView: View {
         dynamicTypeSize.isAccessibilitySize || dynamicTypeSize >= .xxxLarge
     }
     private var modes: [ShotVideoOverlayMode] {
-        [.original] + (hasAutomaticTrace ? [.automatic] : []) + (candidate?.hasManualTracer == true ? [.manual] : [])
+        [.original] + (hasAutomaticTrace ? [.automatic] : []) + (hasSeededTrace ? [.seeded] : []) + (candidate?.hasManualTracer == true ? [.manual] : [])
     }
 
     var body: some View {
@@ -75,13 +80,6 @@ struct ShotStudioView: View {
                                 analysisStatus(session)
                             } else if let error = session.errorMessage {
                                 errorLabel(error)
-                            }
-                            if session.status != .analysing, session.sourceURL != nil, !hasAutomaticTrace, !session.isDerivedShot, !session.isRecording {
-                                Button {
-                                    playback.pause()
-                                    Task { _ = await store.retryAnalysis(for: session) }
-                                } label: { Label("Retry analysis", systemImage: "arrow.clockwise").frame(minHeight: 44) }
-                                .disabled(!store.canModifyLibrary)
                             }
                         }
                         .frame(maxWidth: 1100)
@@ -147,6 +145,37 @@ struct ShotStudioView: View {
                 ShotStudioExportSheet(sourceURL: sourceURL, sourceAspectRatio: sourceAspectRatio, candidate: candidate, edit: $edit, previewTime: playback.currentTime, onEditChanged: persistEdit)
             }
         }
+        .sheet(isPresented: $isBallTrackingPresented, onDismiss: {
+            restoreEdit()
+            if drawAfterTrackingDismisses {
+                drawAfterTrackingDismisses = false
+                openManualTrace()
+            }
+        }) {
+            if let sourceURL = session?.sourceURL {
+                ShotBallTrackingView(
+                    sourceURL: sourceURL, sourceRange: ballTrackingRange,
+                    initialSourceTime: candidate?.seededTrace?.seed.presentationTime ?? playback.currentTime,
+                    automaticOperation: startsAutomaticTrace ? { progress in
+                        try await store.traceShot(in: sessionID, sourceRange: ballTrackingRange, progress: progress)
+                        restoreEdit()
+                        isBallTrackingPresented = false
+                    } : nil,
+                    onDrawTrace: {
+                        drawAfterTrackingDismisses = true
+                        isBallTrackingPresented = false
+                    }
+                ) { sourceTime, point, progress in
+                    try await store.trackBall(
+                        in: sessionID, sourceRange: ballTrackingRange,
+                        seedTime: sourceTime, point: point, progress: progress
+                    )
+                    restoreEdit()
+                    isBallTrackingPresented = false
+                }
+                .presentationDetents([.large])
+            }
+        }
         .fullScreenCover(isPresented: $isManualEditorPresented, onDismiss: {
             if candidate?.hasManualTracer == true { edit.overlay = .manual; persistEdit() }
         }) {
@@ -194,6 +223,7 @@ struct ShotStudioView: View {
                 .clipShape(RoundedRectangle(cornerRadius: RondeReviewDesign.cardRadius, style: .continuous))
                 .overlay { RoundedRectangle(cornerRadius: RondeReviewDesign.cardRadius, style: .continuous).stroke(RondeReviewDesign.border, lineWidth: 1) }
             playbackControls
+
         }
     }
 
@@ -355,6 +385,7 @@ struct ShotStudioView: View {
         }
         .buttonStyle(.plain)
         .foregroundStyle(inspector == item ? RondeReviewDesign.graphite : RondeReviewDesign.graphiteMuted)
+        .accessibilityIdentifier("studio-tool-\(item.rawValue)")
         .rondeSelectionSurface(isSelected: inspector == item, cornerRadius: RondeReviewDesign.smallRadius)
         .accessibilityAddTraits(inspector == item ? .isSelected : [])
     }
@@ -364,8 +395,14 @@ struct ShotStudioView: View {
             trimSlider(isStart: true)
             trimSlider(isStart: false)
             if let candidate {
-                Button { playback.seek(to: candidate.impactTime) } label: {
-                    Label("Impact", systemImage: "scope").frame(minHeight: 44)
+                Button {
+                    playback.seek(to: candidate.evidence.contains("Point-assisted ball track; impact unverified")
+                        ? candidate.seededTrace?.seed.presentationTime ?? candidate.impactTime
+                        : candidate.impactTime)
+                } label: {
+                    Label(candidate.evidence.contains("Point-assisted ball track; impact unverified")
+                        ? "Go to selected ball frame" : "Go to impact", systemImage: "scope")
+                        .frame(minHeight: RondeReviewDesign.minimumTouchTarget)
                 }
                 .buttonStyle(.plain)
                 .rondeControlSurface(interactive: true)
@@ -376,25 +413,17 @@ struct ShotStudioView: View {
     private var traceInspector: some View {
         VStack(alignment: .leading, spacing: 10) {
             if modes.count > 1 {
-                Group {
-                    if dynamicTypeSize.isAccessibilitySize {
-                        overlayPicker.pickerStyle(.menu)
-                    } else {
-                        overlayPicker.pickerStyle(.segmented)
-                    }
-                }
+                Toggle("Show ball trace", isOn: Binding(
+                    get: { edit.overlay != .original },
+                    set: { edit.setTraceVisible($0, availableModes: modes); persistEdit() }
+                ))
                 .font(.rondeLabel)
                 .disabled(!store.canModifyLibrary)
-                .onChange(of: edit.overlay) { _, _ in persistEdit() }
             }
             Text(resultDescription).font(.rondeBody).foregroundStyle(RondeReviewDesign.graphiteMuted)
-            manualTraceAction
-        }
-    }
-
-    private var overlayPicker: some View {
-        Picker("Overlay", selection: $edit.overlay) {
-            ForEach(modes) { mode in Text(mode.title).tag(mode) }
+            Text(trace != nil ? "Check the line follows the ball. Correct it before sharing if needed." : "We’ll find the ball and trace its visible flight. You can correct the result before sharing.")
+                .font(.rondeCaption).foregroundStyle(RondeReviewDesign.graphiteMuted)
+            reviewActions
         }
     }
 
@@ -426,43 +455,72 @@ struct ShotStudioView: View {
         }
     }
 
-    @ViewBuilder private var manualTraceAction: some View {
-        if let candidate {
+    private var reviewActions: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button { openBallTracking(automatically: true) } label: {
+                Label(hasSeededTrace || hasAutomaticTrace ? "Trace shot again" : "Trace shot", systemImage: "scope")
+                    .frame(maxWidth: .infinity, minHeight: 44)
+            }
+            .rondePrimaryAction()
+            .accessibilityIdentifier("studio-track-ball")
+            .accessibilityHint("Find the ball and trace its visible flight on this device")
+            .disabled(!store.canModifyLibrary || session?.status == .analysing || session?.sourceURL == nil || edit.duration <= 0)
             Menu {
-                Button(candidate.hasManualTracer ? "Edit manual trace" : "Add manual trace") {
-                    playback.pause(); isManualEditorPresented = true
-                }
-                if candidate.hasManualTracer, let session {
+                Button("Select the ball") { openBallTracking(automatically: false) }
+                Button(candidate?.hasManualTracer == true ? "Edit drawn path" : "Draw the path", action: openManualTrace)
+                if let candidate, candidate.hasManualTracer, let session {
                     Button("Remove manual trace", role: .destructive) {
                         store.clearManualTracer(for: candidate, in: session)
-                        edit.overlay = hasAutomaticTrace ? .automatic : .original
+                        edit.overlay = hasSeededTrace ? .seeded : hasAutomaticTrace ? .automatic : .original
                         persistEdit()
                     }
                 }
-            } label: { Label("Manual trace", systemImage: "hand.draw").frame(minHeight: 44) }
-                .buttonStyle(.plain)
-                .rondeControlSurface(interactive: true)
-                .accessibilityIdentifier("studio-manual-trace")
-                .disabled(!store.canModifyLibrary || session?.status == .analysing)
-        } else if let session {
-            Button {
-                playback.pause()
-                store.playheadTime = playback.currentTime
-                store.addManualMarker(in: session)
-                isManualEditorPresented = true
-            } label: { Label("Add manual trace", systemImage: "hand.draw").frame(minHeight: 44) }
+            } label: { Label("Correct trace", systemImage: "hand.draw").frame(minHeight: 44) }
             .buttonStyle(.plain)
             .rondeControlSurface(interactive: true)
             .accessibilityIdentifier("studio-manual-trace")
-            .disabled(!store.canModifyLibrary || session.status == .analysing)
+            .disabled(!store.canModifyLibrary || session?.status == .analysing)
         }
     }
 
     private var resultDescription: String {
         if edit.overlay == .manual { return "Manual annotation" }
+        if edit.overlay == .seeded, hasSeededTrace {
+            return candidate?.seededTrace?.policy?.wasBudgetLimited == true
+                ? "Partial ball track · processing limit reached"
+                : "Ball trace · visible flight only"
+        }
+        if edit.overlay == .original, hasSeededTrace { return "Original video" }
         if hasAutomaticTrace { return edit.overlay == .original ? "Original video" : "Tracked portion only" }
         if session?.status == .analysing { return "Checking for a ball track…" }
         return "Ball flight not tracked"
+    }
+
+    private var preferredTraceMode: ShotVideoOverlayMode {
+        candidate?.hasManualTracer == true ? .manual : hasSeededTrace ? .seeded : hasAutomaticTrace ? .automatic : .original
+    }
+
+    private func openManualTrace() {
+        guard let session else { return }
+        playback.pause()
+        if candidate == nil {
+            store.playheadTime = playback.currentTime
+            store.addManualMarker(in: session)
+        }
+        isManualEditorPresented = true
+    }
+
+    private func openBallTracking(automatically: Bool) {
+        playback.pause()
+        guard edit.duration > 0, edit.duration <= 20 else {
+            inspector = .trim
+            loadError = "Trim this shot to 20 seconds or less, then tap Trace shot."
+            return
+        }
+        loadError = nil
+        ballTrackingRange = edit.sourceRange
+        startsAutomaticTrace = automatically
+        isBallTrackingPresented = true
     }
 
     private func analysisStatus(_ session: ReviewSession) -> some View {
@@ -482,7 +540,7 @@ struct ShotStudioView: View {
             trimStart: resetSourceRange.start,
             trimEnd: resetSourceRange.end,
             format: .original,
-            overlay: candidate?.hasManualTracer == true ? .manual : hasAutomaticTrace ? .automatic : .original
+            overlay: preferredTraceMode
         )
         edit = constrainedEdit(session.videoEdit ?? defaultEdit)
         if !modes.contains(edit.overlay) { edit.overlay = .original }
@@ -610,11 +668,13 @@ private struct ShotStudioCanvas: View {
                 .frame(width: fitted.width, height: fitted.height)
                 .position(x: fitted.midX, y: fitted.midY)
                 Canvas { context, _ in
-                    guard let points = trace?.visiblePoints(at: sourceTime), points.count > 1 else { return }
+                    guard let segments = trace?.visibleSegments(at: sourceTime) else { return }
                     var path = Path()
-                    for (index, point) in points.enumerated() {
-                        let position = ShotVideoLayout.point(point, in: fitted)
-                        if index == 0 { path.move(to: position) } else { path.addLine(to: position) }
+                    for points in segments where points.count > 1 {
+                        for (index, point) in points.enumerated() {
+                            let position = ShotVideoLayout.point(point, in: fitted)
+                            if index == 0 { path.move(to: position) } else { path.addLine(to: position) }
+                        }
                     }
                     context.clip(to: Path(fitted))
                     let width = max(1.5, min(fitted.width, fitted.height) * 0.004)
@@ -783,7 +843,7 @@ private struct ShotStudioExportSheet: View {
 
     private var trace: ShotVideoTrace? { candidate.flatMap { ShotVideoTrace(candidate: $0, mode: edit.overlay) } }
     private var previewSourceTime: TimeInterval { min(max(previewTime, edit.trimStart), max(edit.trimStart, edit.trimEnd - 0.001)) }
-    private var modes: [ShotVideoOverlayMode] { [.original] + (candidate.flatMap { ShotVideoTrace(candidate: $0, mode: .automatic) } != nil ? [.automatic] : []) + (candidate?.hasManualTracer == true ? [.manual] : []) }
+    private var modes: [ShotVideoOverlayMode] { [.original] + (candidate.flatMap { ShotVideoTrace(candidate: $0, mode: .automatic) } != nil ? [.automatic] : []) + (candidate.flatMap { ShotVideoTrace(candidate: $0, mode: .seeded) } != nil ? [.seeded] : []) + (candidate?.hasManualTracer == true ? [.manual] : []) }
 
     var body: some View {
         NavigationStack {
@@ -800,7 +860,10 @@ private struct ShotStudioExportSheet: View {
                         Text("Output canvas").font(.rondeSectionTitle)
                         exportFormatTiles
                         if modes.count > 1 {
-                            Picker("Include", selection: $edit.overlay) { ForEach(modes) { mode in Text(mode.title).tag(mode) } }.pickerStyle(.menu)
+                            Toggle("Include ball trace", isOn: Binding(
+                                get: { edit.overlay != .original },
+                                set: { edit.setTraceVisible($0, availableModes: modes) }
+                            ))
                         }
                         Text("Fits your full source. Borders preserve the framing.")
                             .font(.rondeCaption).foregroundStyle(.secondary)

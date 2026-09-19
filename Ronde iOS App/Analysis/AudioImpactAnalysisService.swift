@@ -143,18 +143,29 @@ actor AudioImpactAnalysisService {
     func analyse(
         url: URL,
         configuration: ImpactAudioAnalysisConfiguration = .golfTripod,
+        sourceRange: ReviewTimeRange? = nil,
         progress: (@Sendable (Double) -> Void)? = nil
     ) async throws -> [SwingCandidate] {
         let asset = AVURLAsset(url: url)
         guard try await asset.load(.isReadable) else { throw AudioImpactAnalysisError.unreadableAsset }
         let duration = try await asset.load(.duration)
-        let durationSeconds = max(CMTimeGetSeconds(duration), 0.001)
+        let sourceDuration = max(CMTimeGetSeconds(duration), 0)
+        let analysisRange = sourceRange?.clipped(to: sourceDuration)
+            ?? ReviewTimeRange(start: 0, duration: sourceDuration)
+        guard analysisRange.duration > 0 else {
+            progress?(1)
+            return []
+        }
         guard let audioTrack = try await asset.loadTracks(withMediaType: .audio).last else {
             progress?(1)
             return []
         }
 
         let reader = try AVAssetReader(asset: asset)
+        reader.timeRange = CMTimeRange(
+            start: CMTime(seconds: analysisRange.start, preferredTimescale: 60_000),
+            duration: CMTime(seconds: analysisRange.duration, preferredTimescale: 60_000)
+        )
         // Request a single, interleaved float stream. Some iPhone MOV files contain multiple
         // AAC tracks with different channel layouts (for example quadraphonic plus stereo).
         // Asking for the source channel count can make Core Media's converter fail for the
@@ -184,7 +195,7 @@ actor AudioImpactAnalysisService {
             }
             let sampleTime = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
             let seconds = CMTimeGetSeconds(sampleTime)
-            progress?(min(max(seconds / durationSeconds, 0), 1))
+            progress?(min(max((seconds - analysisRange.start) / analysisRange.duration, 0), 1))
             rawPeaks.append(contentsOf: Self.peaks(in: sampleBuffer, windowSamples: configuration.analysisWindowSamples))
         }
 
@@ -193,7 +204,13 @@ actor AudioImpactAnalysisService {
         }
 
         progress?(1)
-        return selector.select(from: rawPeaks, configuration: configuration).map { peak in
+        return selector.select(from: rawPeaks, configuration: configuration)
+            .filter { peak in
+                peak.time.isFinite
+                    && peak.time >= analysisRange.start
+                    && peak.time <= analysisRange.end
+            }
+            .map { peak in
             SwingCandidate(
                 impactTime: peak.time,
                 classification: .provisional(

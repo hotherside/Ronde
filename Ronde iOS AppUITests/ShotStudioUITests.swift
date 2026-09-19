@@ -93,7 +93,7 @@ final class ShotStudioUITests: XCTestCase {
     func testTrimFormatTilesAndSquareExportReachTheNativeShareSheet() throws {
         let app = try launch(screen: "ios-redesign-media")
         XCTAssertTrue(app.buttons["studio-play"].waitForExistence(timeout: 10))
-        let trimTab = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Trim")).firstMatch
+        let trimTab = app.buttons["studio-tool-trim"]
         reveal(trimTab, in: app)
         trimTab.tap()
         let start = app.sliders["studio-trim-start"]
@@ -108,12 +108,12 @@ final class ShotStudioUITests: XCTestCase {
         XCTAssertGreaterThan(cutEnd, cutStart + 0.5)
         XCTAssertLessThan(cutEnd, 5)
 
-        let traceTab = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Trace")).firstMatch
+        let traceTab = app.buttons["studio-tool-trace"]
         reveal(traceTab, in: app)
         traceTab.tap()
         XCTAssertTrue(traceTab.exists)
 
-        let formatTab = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Format")).firstMatch
+        let formatTab = app.buttons["studio-tool-format"]
         reveal(formatTab, in: app)
         formatTab.tap()
         for title in ["Original canvas", "9:16 vertical canvas", "1:1 square canvas", "16:9 landscape canvas"] {
@@ -147,16 +147,19 @@ final class ShotStudioUITests: XCTestCase {
 
     func testCancellingManualTraceDoesNotCreateAnAnnotation() throws {
         let app = try launch(screen: "ios-redesign-media")
-        let traceTab = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Trace")).firstMatch
+        let traceTab = app.buttons["studio-tool-trace"]
         reveal(traceTab, in: app)
         traceTab.tap()
         let manual = app.buttons["studio-manual-trace"]
         reveal(manual, in: app)
         manual.tap()
-        let add = app.buttons["Add manual trace"]
+        let add = app.buttons["Draw the path"]
         XCTAssertTrue(add.waitForExistence(timeout: 5))
         add.tap()
         XCTAssertTrue(app.navigationBars["Manual trace"].waitForExistence(timeout: 5))
+        let adjustPoints = app.buttons["Adjust points"]
+        reveal(adjustPoints, in: app)
+        adjustPoints.tap()
         let fineAdjustment = app.buttons["Fine adjustment"]
         reveal(fineAdjustment, in: app)
         fineAdjustment.tap()
@@ -169,8 +172,52 @@ final class ShotStudioUITests: XCTestCase {
         reveal(manual, in: app)
         manual.tap()
         XCTAssertTrue(add.waitForExistence(timeout: 5))
-        XCTAssertFalse(app.buttons["Edit manual trace"].exists)
+        XCTAssertFalse(app.buttons["Edit drawn path"].exists)
         XCTAssertFalse(app.buttons["Remove manual trace"].exists)
+    }
+
+    func testBallTrackingPointIsClearedWhenMovingFramesAndCloseReturnsToStudio() throws {
+        let app = try launch(screen: "ios-redesign-media")
+        let openTracking = app.buttons["studio-manual-trace"]
+        reveal(openTracking, in: app)
+        openTracking.tap()
+        app.buttons["Select the ball"].tap()
+        XCTAssertTrue(app.navigationBars["Select the ball"].waitForExistence(timeout: 5))
+        let seedFrame = app.scrollViews["ball-tracking-seed-frame"]
+        XCTAssertTrue(seedFrame.waitForExistence(timeout: 10), "The selected source frame should load before point selection.")
+
+        let runTracking = app.buttons["ball-tracking-run"]
+        XCTAssertTrue(runTracking.waitForExistence(timeout: 5))
+        XCTAssertFalse(runTracking.isEnabled, "Tracking must require a point on the loaded frame.")
+
+        seedFrame.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        waitFor(NSPredicate(format: "enabled == true"), on: runTracking)
+
+        let frameSlider = app.sliders["Frame"]
+        let initialFrame = try XCTUnwrap(frameSlider.value as? String)
+        let nextFrame = app.buttons["ball-tracking-next-frame"]
+        reveal(nextFrame, in: app)
+        nextFrame.tap()
+        waitFor(NSPredicate(format: "value != %@", initialFrame), on: frameSlider)
+        XCTAssertTrue(seedFrame.waitForExistence(timeout: 10), "The next source frame should load.")
+        XCTAssertFalse(runTracking.isEnabled, "Moving to another frame must clear the selected point.")
+
+        app.navigationBars.buttons["Close"].tap()
+        XCTAssertTrue(app.buttons["studio-play"].waitForExistence(timeout: 5), "Closing point selection should return to Shot Studio.")
+    }
+
+    func testTraceShotStartsAutomaticallyAndCanBeClosedWithoutChoosingAPoint() throws {
+        let app = try launch(screen: "ios-redesign-media")
+        let trace = app.buttons["studio-track-ball"]
+        reveal(trace, in: app)
+        XCTAssertTrue(trace.label.contains("Trace shot"))
+        trace.tap()
+        XCTAssertTrue(app.navigationBars["Trace shot"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.navigationBars["Select the ball"].exists)
+        let close = app.navigationBars.buttons["Close"]
+        XCTAssertTrue(close.isEnabled, "Preparation and inference must not trap the person in this screen.")
+        close.tap()
+        XCTAssertTrue(app.buttons["studio-play"].waitForExistence(timeout: 5))
     }
 
     func testRecordingBookmarkCreatesShotAndOpensStudioFormats() throws {
@@ -288,6 +335,10 @@ final class ShotStudioUITests: XCTestCase {
         for _ in 0..<5 where !element.isHittable {
             let scroll = app.scrollViews.allElementsBoundByIndex.first(where: \.isHittable) ?? app.scrollViews.firstMatch
             scroll.swipeUp()
+        }
+        for _ in 0..<5 where !element.isHittable {
+            let scroll = app.scrollViews.allElementsBoundByIndex.first(where: \.isHittable) ?? app.scrollViews.firstMatch
+            scroll.swipeDown()
         }
         XCTAssertTrue(element.isHittable, "Control must be reachable by scrolling.", file: file, line: line)
     }

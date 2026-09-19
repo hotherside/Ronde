@@ -7,11 +7,17 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		03162BF20B2961A2FDE60769 /* EdgeTAMDirectVideoFrames.swift in Sources */ = {isa = PBXBuildFile; fileRef = F90E52C40FABDDAA82D9D58B /* EdgeTAMDirectVideoFrames.swift */; };
+		06616B75B84AF08FEBAC9436 /* EdgeTAMTensor.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00B131FD76EEC8BF41AA5C5 /* EdgeTAMTensor.swift */; };
 		09004EFE322E5BE349D542BA /* LocalMediaStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A05A9A9343E377F071036F4B /* LocalMediaStore.swift */; };
+		0C7D49D322629F706E41DFAE /* EdgeTAMImagePreprocessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 985EFF47B7E01C7C519B80D0 /* EdgeTAMImagePreprocessor.swift */; };
 		0E711CDC5005E075F76E4EC0 /* studio-fixture.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8854875B5A3439C88A499387 /* studio-fixture.mp4 */; };
 		10473B2F0FDF018141B71FBF /* ReviewModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F54A9309A32E0A2785AF337 /* ReviewModels.swift */; };
+		1086BDC8C3A9C282EE3F0771 /* edgetam_variable_memory_attention.mlmodelc in Resources */ = {isa = PBXBuildFile; fileRef = 711B071BEC4B1493C1D8FA6C /* edgetam_variable_memory_attention.mlmodelc */; };
+		129523B1608703288D088021 /* ShotBallTrackingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73C418296016457D57371C35 /* ShotBallTrackingView.swift */; };
 		129D168E8904C7667BF5BDC4 /* EvidenceAnchoredFlightPathExtrapolator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 107558EAD7501CDAA0E455DE /* EvidenceAnchoredFlightPathExtrapolator.swift */; };
 		146DE24502E7612DD15BB20A /* LiveCaptureAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D741B7AF1328356DFA57F62 /* LiveCaptureAdapter.swift */; };
+		1928EB6A9379C99B5DC8AA31 /* EdgeTAMMaskObservation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 736CA14486E0725A6712CF1C /* EdgeTAMMaskObservation.swift */; };
 		1CF683910E70803C437DAD99 /* RondeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BABA97F1C7092AC85462134 /* RondeApp.swift */; };
 		1E151E82AD3835CC7DD914C9 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 8B1EED15832E2802FF61DA14 /* README.md */; };
 		24B2C9F49A149A4FA9CA12B1 /* GolfBallTrajectoryAnalysisTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13F0F57A83513C4DF7D7B5F1 /* GolfBallTrajectoryAnalysisTests.swift */; };
@@ -19,16 +25,23 @@
 		28876B0358178838101FD3AC /* ShotVideoExportSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88AE6409840828F8800109FB /* ShotVideoExportSource.swift */; };
 		288B63617B43508CC8DFA78C /* LiveReviewStabilityMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAF69FBF1F6FA4E8B82F987B /* LiveReviewStabilityMonitor.swift */; };
 		3824C408CEAE71D1F10ED357 /* ShotVideoSourceInspectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A52D90FAA69D0EA384B759A6 /* ShotVideoSourceInspectorTests.swift */; };
+		3A7E33ABD8BF9C41850AAF93 /* edgetam_image_encoder.mlmodelc in Resources */ = {isa = PBXBuildFile; fileRef = 6F7F4A53D0F2EBCF975A8E53 /* edgetam_image_encoder.mlmodelc */; };
+		3E6E53B4E74727C0DAE635F1 /* EdgeTAMTraceAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F9042B4019A5E92D81FD9D1 /* EdgeTAMTraceAdapter.swift */; };
 		4702DB68E080F3316150066D /* VideoMetadataProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1CEFDCD1CDD3C0CF8ADCA04 /* VideoMetadataProbe.swift */; };
 		4984A1D431808C752FFD63DF /* RondeRedesignTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76FFB9E40F8CB9A6FBB9220F /* RondeRedesignTests.swift */; };
 		4A21AEC6F3A12B094DA5C8DB /* ShotVideoEdit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84EFB7858DFE54A83DA99CF9 /* ShotVideoEdit.swift */; };
 		4D47487CAC9EE4352CF62E92 /* ShotVideoExporterIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81619A391742FA0EB638BEF4 /* ShotVideoExporterIntegrationTests.swift */; };
+		503982A290203DC0F73B3013 /* SeededModelTraceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55EB20E3D80543EFE050140E /* SeededModelTraceTests.swift */; };
 		505831E0180CCAF329D47D7D /* WASBGolfBallTrackingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FD9CB2A5152001250E97091 /* WASBGolfBallTrackingService.swift */; };
 		55E87BABE4BDED5188BE07B9 /* RecordingImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E4BCA1185FBBCEE0E7A1EBB /* RecordingImportView.swift */; };
+		56412D324B84C173505D53B2 /* EdgeTAMTrackingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 397ACBE4723513FE8215068C /* EdgeTAMTrackingService.swift */; };
+		5FCF30C72358CE4C66B117D9 /* EdgeTAMSegmentTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BB1AE29DB85C0A4E78CE424 /* EdgeTAMSegmentTracker.swift */; };
 		62984751E1F675A3473F4F32 /* AssistedTracerEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FDB5AFDE4D9F8A0B24F51F0 /* AssistedTracerEditor.swift */; };
 		65BB7333083958BA6566FD77 /* ProvisionalSwingCandidateService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5101A5E458C1DA558F9FFF1 /* ProvisionalSwingCandidateService.swift */; };
 		6D03F7A81EC53723412217A0 /* EvidenceAnchoredFlightPathTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09AE35708CB443163A290263 /* EvidenceAnchoredFlightPathTests.swift */; };
 		72E7201A77366E94C80EB08A /* GolfBallTrackSelectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77D255E8BB9305A6CA1420B6 /* GolfBallTrackSelectorTests.swift */; };
+		7352323F5650B361A9A6DA19 /* ReviewSeededRetryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0968A15CCE7E322E9E03002 /* ReviewSeededRetryTests.swift */; };
+		78B2A917499D66B2B0D8FC8B /* edgetam-license.txt in Resources */ = {isa = PBXBuildFile; fileRef = 62A7A0D44901C428C8FDAF50 /* edgetam-license.txt */; };
 		7DF8C43C97D87106FF501B6C /* VideoFileTransferable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F8E90797C7F11367BBE0C6D /* VideoFileTransferable.swift */; };
 		7DFBDBC6FD38A20165006543 /* ReviewClipService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F54CE09121B68FC06184F17B /* ReviewClipService.swift */; };
 		82DEFCE31266A6CB5F1D9EE0 /* GolfBallTracker.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = A9D8C25EE04CCB64E5BDC81A /* GolfBallTracker.mlpackage */; };
@@ -38,13 +51,21 @@
 		8F5CCCEF5F10C75E631ECDC0 /* FullScreenTracerEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABB5A8AB9AE066FF80ED1B47 /* FullScreenTracerEditor.swift */; };
 		8FBF41374718E3D2D2C87A26 /* RecordingStudioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 018246E2F7DDD015DB6B335D /* RecordingStudioView.swift */; };
 		92027BBAAA0E374705AA2DC8 /* studio-fixture.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8854875B5A3439C88A499387 /* studio-fixture.mp4 */; };
+		925A20C12EC6B655AA1C7EB0 /* EdgeTAMCoreMLComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CC5AE878F97C82E42CAAB4B /* EdgeTAMCoreMLComponents.swift */; };
+		984EE0B8F5D1EDDC9B9C3555 /* EdgeTAMSourceFrameReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F7E3FBFC968C29E06C1D971 /* EdgeTAMSourceFrameReader.swift */; };
 		9AA16370FFE21227068AAFFD /* ReviewLibrarySafetyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F963CBDCE4144878F11FCA6 /* ReviewLibrarySafetyTests.swift */; };
+		9B0543CE0C5661BFADA8AA6A /* edgetam_memory_encoder_perceiver_sigmoid_tracking.mlmodelc in Resources */ = {isa = PBXBuildFile; fileRef = 103118520B62D55D4B167638 /* edgetam_memory_encoder_perceiver_sigmoid_tracking.mlmodelc */; };
 		9C4DE0A2327C0487E21EB0B4 /* clubhouse-course.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = EEEE4B237859810D159772B8 /* clubhouse-course.mp4 */; };
+		9D011292E2967045BE57A3A4 /* edgetam_sam_heads_no_point.mlmodelc in Resources */ = {isa = PBXBuildFile; fileRef = 5633141BFC3329C4A1052F77 /* edgetam_sam_heads_no_point.mlmodelc */; };
+		9DF2EBCFE89EB050F2C21179 /* edgetam_sam_heads_fixed_prompt.mlmodelc in Resources */ = {isa = PBXBuildFile; fileRef = BB73F30F568917ADF960521A /* edgetam_sam_heads_fixed_prompt.mlmodelc */; };
 		9E0ACE3A968C775E1BE64E32 /* LocalMediaStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57A57F561392E5134F489906 /* LocalMediaStoreTests.swift */; };
 		A0577B9CD3F8DCFF54D636A2 /* AudioImpactPeakSelectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F0ECE5D3F3280BC623265E4 /* AudioImpactPeakSelectorTests.swift */; };
 		A0CF25A4E3D31D7F4BD62A3E /* TrajectoryAnalysisService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAD381B11516C06704E99B29 /* TrajectoryAnalysisService.swift */; };
+		A491B6603D508F8573FD7336 /* ShotAutomaticSeedService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8A6B204B6D85B8820205213 /* ShotAutomaticSeedService.swift */; };
+		ABF79D564748B5599199EE98 /* EdgeTAMAdaptiveTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30606C838218E10C14F80F50 /* EdgeTAMAdaptiveTracker.swift */; };
 		ADDD25EF9E021368BB170787 /* SessionCollectionViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6A6A74928E9336CDF1F98E9 /* SessionCollectionViews.swift */; };
 		B0B9E38993C64FA698BFD5FD /* ShotVideoExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = E02BFC7C5CC15833D7650B92 /* ShotVideoExporter.swift */; };
+		B160F55EBF7DEE363413CC7E /* edgetam-model-identity.json in Resources */ = {isa = PBXBuildFile; fileRef = B99BD939FD6AA47CE66A8BD7 /* edgetam-model-identity.json */; };
 		B18AEE65855A5D70ADD1C530 /* LiveReviewCaptureController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 370DEAC4A634A339B883914A /* LiveReviewCaptureController.swift */; };
 		BA8B8F95EC936A691FFF2224 /* WASB-SBDT-LICENSE.txt in Resources */ = {isa = PBXBuildFile; fileRef = D8BB00D40C6812E77B11B671 /* WASB-SBDT-LICENSE.txt */; };
 		BB24DC84BA905D64A1825C59 /* ShotReviewModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BA2E9D310791562F643695E /* ShotReviewModels.swift */; };
@@ -56,7 +77,10 @@
 		D17D5C582C234F7736867AC7 /* ShotReviewDomainTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51257492B5D94AECBFAE36E0 /* ShotReviewDomainTests.swift */; };
 		D23AA5D1A1182F03B5455057 /* ShotStudioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45CBACF2DDB32D25C3491B38 /* ShotStudioView.swift */; };
 		D253EAB635EEF4827A675B0F /* GolfBallTrackSelector.swift in Sources */ = {isa = PBXBuildFile; fileRef = B058B2FA96AEC83EC88AF26F /* GolfBallTrackSelector.swift */; };
+		D64B481478E3FA8AA2BB73E0 /* ShotAutomaticSeedSelectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 247C4486E65BB22CE9C71277 /* ShotAutomaticSeedSelectionTests.swift */; };
+		D68102F2EBC9E3919CF672AC /* EdgeTAMDeviceIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43B8366BD83E2051A312DD97 /* EdgeTAMDeviceIntegrationTests.swift */; };
 		D8E10FBA9F5273807AE5B5FF /* ImpactCandidateAnalysisService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E21EEA2D449A612CFDDBC694 /* ImpactCandidateAnalysisService.swift */; };
+		DA10E9CD57EE2747EBB0ADA7 /* SeededModelTrace.swift in Sources */ = {isa = PBXBuildFile; fileRef = 879692AD9773A09376CC5937 /* SeededModelTrace.swift */; };
 		DC3DEBF25BC6C301853C029D /* RondeCloud.swift in Sources */ = {isa = PBXBuildFile; fileRef = D28BFF5985919921DA66C2C1 /* RondeCloud.swift */; };
 		DDFDE0FA9A0E7995EAB89EE3 /* WASB-SBDT-NOTICE.txt in Resources */ = {isa = PBXBuildFile; fileRef = 9A8E23A4123E6D76431D4521 /* WASB-SBDT-NOTICE.txt */; };
 		DE76F16235B57DBAF5327F46 /* ShotStudioUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB8C912AD5BEAD397A6B5BC0 /* ShotStudioUITests.swift */; };
@@ -68,6 +92,7 @@
 		F0DBF29AE89129B8DDF446C2 /* GolfBallTrajectoryAnalysisService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD79C5309D88A036FBE2A9BD /* GolfBallTrajectoryAnalysisService.swift */; };
 		F2C805B7917CF0C0C1204477 /* RondeReviewDesign.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5728C22B178027FF9976B9C1 /* RondeReviewDesign.swift */; };
 		F72E7D60AEA0A10C0633E21C /* BodyMotionPeakSelectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1072C5475F5815C64473653 /* BodyMotionPeakSelectorTests.swift */; };
+		FB8D0BE70E2FE97D1806D2A3 /* edgetam-constants.json in Resources */ = {isa = PBXBuildFile; fileRef = 10D27F687C17CCAD1C0F8EB1 /* edgetam-constants.json */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -91,28 +116,45 @@
 		018246E2F7DDD015DB6B335D /* RecordingStudioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingStudioView.swift; sourceTree = "<group>"; };
 		09AE35708CB443163A290263 /* EvidenceAnchoredFlightPathTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EvidenceAnchoredFlightPathTests.swift; sourceTree = "<group>"; };
 		0DD757FFE4F5F4E641C87165 /* LiveReviewCaptureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveReviewCaptureTests.swift; sourceTree = "<group>"; };
+		103118520B62D55D4B167638 /* edgetam_memory_encoder_perceiver_sigmoid_tracking.mlmodelc */ = {isa = PBXFileReference; lastKnownFileType = folder; name = edgetam_memory_encoder_perceiver_sigmoid_tracking.mlmodelc; path = ".local-models/edgetam_memory_encoder_perceiver_sigmoid_tracking.mlmodelc"; sourceTree = SOURCE_ROOT; };
 		107558EAD7501CDAA0E455DE /* EvidenceAnchoredFlightPathExtrapolator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EvidenceAnchoredFlightPathExtrapolator.swift; sourceTree = "<group>"; };
+		10D27F687C17CCAD1C0F8EB1 /* edgetam-constants.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "edgetam-constants.json"; sourceTree = "<group>"; };
 		11FB7A0186F2D427A996681D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		13F0F57A83513C4DF7D7B5F1 /* GolfBallTrajectoryAnalysisTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GolfBallTrajectoryAnalysisTests.swift; sourceTree = "<group>"; };
 		1418F98C8707C5C535FF8135 /* AudioImpactAnalysisService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioImpactAnalysisService.swift; sourceTree = "<group>"; };
 		1C660F6A3785B56D7977826C /* ReviewSessionArchive.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewSessionArchive.swift; sourceTree = "<group>"; };
+		1CC5AE878F97C82E42CAAB4B /* EdgeTAMCoreMLComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EdgeTAMCoreMLComponents.swift; sourceTree = "<group>"; };
 		1F54A9309A32E0A2785AF337 /* ReviewModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewModels.swift; sourceTree = "<group>"; };
+		247C4486E65BB22CE9C71277 /* ShotAutomaticSeedSelectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShotAutomaticSeedSelectionTests.swift; sourceTree = "<group>"; };
 		2F963CBDCE4144878F11FCA6 /* ReviewLibrarySafetyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewLibrarySafetyTests.swift; sourceTree = "<group>"; };
 		2FDB5AFDE4D9F8A0B24F51F0 /* AssistedTracerEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistedTracerEditor.swift; sourceTree = "<group>"; };
+		30606C838218E10C14F80F50 /* EdgeTAMAdaptiveTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EdgeTAMAdaptiveTracker.swift; sourceTree = "<group>"; };
 		370DEAC4A634A339B883914A /* LiveReviewCaptureController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveReviewCaptureController.swift; sourceTree = "<group>"; };
+		397ACBE4723513FE8215068C /* EdgeTAMTrackingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EdgeTAMTrackingService.swift; sourceTree = "<group>"; };
+		3BB1AE29DB85C0A4E78CE424 /* EdgeTAMSegmentTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EdgeTAMSegmentTracker.swift; sourceTree = "<group>"; };
 		3BF91880FE819486AEB75796 /* RondeAppShell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RondeAppShell.swift; sourceTree = "<group>"; };
 		3C1120E8F1C94CCDF959085E /* Ronde iOS AppUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = "Ronde iOS AppUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		3F7E3FBFC968C29E06C1D971 /* EdgeTAMSourceFrameReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EdgeTAMSourceFrameReader.swift; sourceTree = "<group>"; };
+		3F9042B4019A5E92D81FD9D1 /* EdgeTAMTraceAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EdgeTAMTraceAdapter.swift; sourceTree = "<group>"; };
+		43B8366BD83E2051A312DD97 /* EdgeTAMDeviceIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EdgeTAMDeviceIntegrationTests.swift; sourceTree = "<group>"; };
 		45CBACF2DDB32D25C3491B38 /* ShotStudioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShotStudioView.swift; sourceTree = "<group>"; };
 		46D17BA512F515A4D94EACFC /* BodyMotionAnalysisService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyMotionAnalysisService.swift; sourceTree = "<group>"; };
 		4F8E90797C7F11367BBE0C6D /* VideoFileTransferable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoFileTransferable.swift; sourceTree = "<group>"; };
 		51257492B5D94AECBFAE36E0 /* ShotReviewDomainTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShotReviewDomainTests.swift; sourceTree = "<group>"; };
 		55562334A5512A11E95F2091 /* ReviewViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewViews.swift; sourceTree = "<group>"; };
+		55EB20E3D80543EFE050140E /* SeededModelTraceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeededModelTraceTests.swift; sourceTree = "<group>"; };
+		5633141BFC3329C4A1052F77 /* edgetam_sam_heads_no_point.mlmodelc */ = {isa = PBXFileReference; lastKnownFileType = folder; name = edgetam_sam_heads_no_point.mlmodelc; path = ".local-models/edgetam_sam_heads_no_point.mlmodelc"; sourceTree = SOURCE_ROOT; };
 		5728C22B178027FF9976B9C1 /* RondeReviewDesign.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RondeReviewDesign.swift; sourceTree = "<group>"; };
 		57A57F561392E5134F489906 /* LocalMediaStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalMediaStoreTests.swift; sourceTree = "<group>"; };
 		5C3160A301B48E8A9CF856B0 /* ExactClipExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExactClipExporter.swift; sourceTree = "<group>"; };
 		5F0ECE5D3F3280BC623265E4 /* AudioImpactPeakSelectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioImpactPeakSelectorTests.swift; sourceTree = "<group>"; };
+		62A7A0D44901C428C8FDAF50 /* edgetam-license.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "edgetam-license.txt"; sourceTree = "<group>"; };
 		6BA2E9D310791562F643695E /* ShotReviewModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShotReviewModels.swift; sourceTree = "<group>"; };
 		6E4BCA1185FBBCEE0E7A1EBB /* RecordingImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingImportView.swift; sourceTree = "<group>"; };
+		6F7F4A53D0F2EBCF975A8E53 /* edgetam_image_encoder.mlmodelc */ = {isa = PBXFileReference; lastKnownFileType = folder; name = edgetam_image_encoder.mlmodelc; path = ".local-models/edgetam_image_encoder.mlmodelc"; sourceTree = SOURCE_ROOT; };
+		711B071BEC4B1493C1D8FA6C /* edgetam_variable_memory_attention.mlmodelc */ = {isa = PBXFileReference; lastKnownFileType = folder; name = edgetam_variable_memory_attention.mlmodelc; path = ".local-models/edgetam_variable_memory_attention.mlmodelc"; sourceTree = SOURCE_ROOT; };
+		736CA14486E0725A6712CF1C /* EdgeTAMMaskObservation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EdgeTAMMaskObservation.swift; sourceTree = "<group>"; };
+		73C418296016457D57371C35 /* ShotBallTrackingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShotBallTrackingView.swift; sourceTree = "<group>"; };
 		74EF1A5C8DC6DCB8C5240EDF /* clubhouse-range.mp4 */ = {isa = PBXFileReference; path = "clubhouse-range.mp4"; sourceTree = "<group>"; };
 		76FFB9E40F8CB9A6FBB9220F /* RondeRedesignTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RondeRedesignTests.swift; sourceTree = "<group>"; };
 		77D255E8BB9305A6CA1420B6 /* GolfBallTrackSelectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GolfBallTrackSelectorTests.swift; sourceTree = "<group>"; };
@@ -120,23 +162,30 @@
 		81619A391742FA0EB638BEF4 /* ShotVideoExporterIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShotVideoExporterIntegrationTests.swift; sourceTree = "<group>"; };
 		84601EA61D05723C5B1DC8F3 /* TracedVideoExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TracedVideoExporter.swift; sourceTree = "<group>"; };
 		84EFB7858DFE54A83DA99CF9 /* ShotVideoEdit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShotVideoEdit.swift; sourceTree = "<group>"; };
+		879692AD9773A09376CC5937 /* SeededModelTrace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeededModelTrace.swift; sourceTree = "<group>"; };
 		8854875B5A3439C88A499387 /* studio-fixture.mp4 */ = {isa = PBXFileReference; path = "studio-fixture.mp4"; sourceTree = "<group>"; };
 		88AE6409840828F8800109FB /* ShotVideoExportSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShotVideoExportSource.swift; sourceTree = "<group>"; };
 		8B1EED15832E2802FF61DA14 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		8D741B7AF1328356DFA57F62 /* LiveCaptureAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveCaptureAdapter.swift; sourceTree = "<group>"; };
+		985EFF47B7E01C7C519B80D0 /* EdgeTAMImagePreprocessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EdgeTAMImagePreprocessor.swift; sourceTree = "<group>"; };
 		9A8E23A4123E6D76431D4521 /* WASB-SBDT-NOTICE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "WASB-SBDT-NOTICE.txt"; sourceTree = "<group>"; };
 		9FD9CB2A5152001250E97091 /* WASBGolfBallTrackingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WASBGolfBallTrackingService.swift; sourceTree = "<group>"; };
 		A05A9A9343E377F071036F4B /* LocalMediaStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalMediaStore.swift; sourceTree = "<group>"; };
+		A0968A15CCE7E322E9E03002 /* ReviewSeededRetryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewSeededRetryTests.swift; sourceTree = "<group>"; };
 		A498B2C946418FAB40B37039 /* ShotVideoEditTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShotVideoEditTests.swift; sourceTree = "<group>"; };
 		A5101A5E458C1DA558F9FFF1 /* ProvisionalSwingCandidateService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProvisionalSwingCandidateService.swift; sourceTree = "<group>"; };
 		A52D90FAA69D0EA384B759A6 /* ShotVideoSourceInspectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShotVideoSourceInspectorTests.swift; sourceTree = "<group>"; };
 		A9D8C25EE04CCB64E5BDC81A /* GolfBallTracker.mlpackage */ = {isa = PBXFileReference; path = GolfBallTracker.mlpackage; sourceTree = "<group>"; };
 		ABB5A8AB9AE066FF80ED1B47 /* FullScreenTracerEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FullScreenTracerEditor.swift; sourceTree = "<group>"; };
+		B00B131FD76EEC8BF41AA5C5 /* EdgeTAMTensor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EdgeTAMTensor.swift; sourceTree = "<group>"; };
 		B058B2FA96AEC83EC88AF26F /* GolfBallTrackSelector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GolfBallTrackSelector.swift; sourceTree = "<group>"; };
 		B13981078ACD881109808F68 /* AppleSignInNonce.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSignInNonce.swift; sourceTree = "<group>"; };
 		B2605B86C53FA779EFF34F35 /* Ronde Shot Review.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "Ronde Shot Review.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		B628C334237165847DCB3872 /* LiveReviewModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveReviewModels.swift; sourceTree = "<group>"; };
+		B99BD939FD6AA47CE66A8BD7 /* edgetam-model-identity.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "edgetam-model-identity.json"; sourceTree = "<group>"; };
+		BB73F30F568917ADF960521A /* edgetam_sam_heads_fixed_prompt.mlmodelc */ = {isa = PBXFileReference; lastKnownFileType = folder; name = edgetam_sam_heads_fixed_prompt.mlmodelc; path = ".local-models/edgetam_sam_heads_fixed_prompt.mlmodelc"; sourceTree = SOURCE_ROOT; };
 		C0A270661807EA0DA3D5BDFD /* Ronde AppTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = "Ronde AppTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		C8A6B204B6D85B8820205213 /* ShotAutomaticSeedService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShotAutomaticSeedService.swift; sourceTree = "<group>"; };
 		CD79C5309D88A036FBE2A9BD /* GolfBallTrajectoryAnalysisService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GolfBallTrajectoryAnalysisService.swift; sourceTree = "<group>"; };
 		D28BFF5985919921DA66C2C1 /* RondeCloud.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RondeCloud.swift; sourceTree = "<group>"; };
 		D8BB00D40C6812E77B11B671 /* WASB-SBDT-LICENSE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "WASB-SBDT-LICENSE.txt"; sourceTree = "<group>"; };
@@ -149,6 +198,7 @@
 		F54CE09121B68FC06184F17B /* ReviewClipService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewClipService.swift; sourceTree = "<group>"; };
 		F6A6A74928E9336CDF1F98E9 /* SessionCollectionViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionCollectionViews.swift; sourceTree = "<group>"; };
 		F786F02475ED4C46E0BDF22C /* Ronde.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Ronde.entitlements; sourceTree = "<group>"; };
+		F90E52C40FABDDAA82D9D58B /* EdgeTAMDirectVideoFrames.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EdgeTAMDirectVideoFrames.swift; sourceTree = "<group>"; };
 		FAF69FBF1F6FA4E8B82F987B /* LiveReviewStabilityMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveReviewStabilityMonitor.swift; sourceTree = "<group>"; };
 		FB8C912AD5BEAD397A6B5BC0 /* ShotStudioUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShotStudioUITests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -174,9 +224,32 @@
 			path = "Ronde iOS AppUITests";
 			sourceTree = "<group>";
 		};
+		2C202E20304537CE9A0FAB66 /* Native */ = {
+			isa = PBXGroup;
+			children = (
+				30606C838218E10C14F80F50 /* EdgeTAMAdaptiveTracker.swift */,
+				1CC5AE878F97C82E42CAAB4B /* EdgeTAMCoreMLComponents.swift */,
+				F90E52C40FABDDAA82D9D58B /* EdgeTAMDirectVideoFrames.swift */,
+				985EFF47B7E01C7C519B80D0 /* EdgeTAMImagePreprocessor.swift */,
+				736CA14486E0725A6712CF1C /* EdgeTAMMaskObservation.swift */,
+				3BB1AE29DB85C0A4E78CE424 /* EdgeTAMSegmentTracker.swift */,
+				3F7E3FBFC968C29E06C1D971 /* EdgeTAMSourceFrameReader.swift */,
+				B00B131FD76EEC8BF41AA5C5 /* EdgeTAMTensor.swift */,
+			);
+			name = Native;
+			path = Tools/TracerHarness/Native;
+			sourceTree = "<group>";
+		};
 		36A76A54612B0ABC872D16D9 = {
 			isa = PBXGroup;
 			children = (
+				6F7F4A53D0F2EBCF975A8E53 /* edgetam_image_encoder.mlmodelc */,
+				103118520B62D55D4B167638 /* edgetam_memory_encoder_perceiver_sigmoid_tracking.mlmodelc */,
+				BB73F30F568917ADF960521A /* edgetam_sam_heads_fixed_prompt.mlmodelc */,
+				5633141BFC3329C4A1052F77 /* edgetam_sam_heads_no_point.mlmodelc */,
+				711B071BEC4B1493C1D8FA6C /* edgetam_variable_memory_attention.mlmodelc */,
+				9237A070EA866D3E3FE07F38 /* .local-models */,
+				2C202E20304537CE9A0FAB66 /* Native */,
 				4C758E92CE70EC9321E9A561 /* Resources */,
 				6D761B2077684925A944F7C7 /* Ronde iOS App */,
 				776C762F421DC9983E75FB7B /* Ronde iOS AppTests */,
@@ -208,6 +281,7 @@
 		4DC00F3910F3CB9A49408747 /* Domain */ = {
 			isa = PBXGroup;
 			children = (
+				879692AD9773A09376CC5937 /* SeededModelTrace.swift */,
 				6BA2E9D310791562F643695E /* ShotReviewModels.swift */,
 				84EFB7858DFE54A83DA99CF9 /* ShotVideoEdit.swift */,
 			);
@@ -243,6 +317,7 @@
 				1F54A9309A32E0A2785AF337 /* ReviewModels.swift */,
 				55562334A5512A11E95F2091 /* ReviewViews.swift */,
 				F6A6A74928E9336CDF1F98E9 /* SessionCollectionViews.swift */,
+				73C418296016457D57371C35 /* ShotBallTrackingView.swift */,
 				45CBACF2DDB32D25C3491B38 /* ShotStudioView.swift */,
 				4F8E90797C7F11367BBE0C6D /* VideoFileTransferable.swift */,
 			);
@@ -284,13 +359,17 @@
 			children = (
 				5F0ECE5D3F3280BC623265E4 /* AudioImpactPeakSelectorTests.swift */,
 				E1072C5475F5815C64473653 /* BodyMotionPeakSelectorTests.swift */,
+				43B8366BD83E2051A312DD97 /* EdgeTAMDeviceIntegrationTests.swift */,
 				09AE35708CB443163A290263 /* EvidenceAnchoredFlightPathTests.swift */,
 				77D255E8BB9305A6CA1420B6 /* GolfBallTrackSelectorTests.swift */,
 				13F0F57A83513C4DF7D7B5F1 /* GolfBallTrajectoryAnalysisTests.swift */,
 				0DD757FFE4F5F4E641C87165 /* LiveReviewCaptureTests.swift */,
 				57A57F561392E5134F489906 /* LocalMediaStoreTests.swift */,
 				2F963CBDCE4144878F11FCA6 /* ReviewLibrarySafetyTests.swift */,
+				A0968A15CCE7E322E9E03002 /* ReviewSeededRetryTests.swift */,
 				76FFB9E40F8CB9A6FBB9220F /* RondeRedesignTests.swift */,
+				55EB20E3D80543EFE050140E /* SeededModelTraceTests.swift */,
+				247C4486E65BB22CE9C71277 /* ShotAutomaticSeedSelectionTests.swift */,
 				51257492B5D94AECBFAE36E0 /* ShotReviewDomainTests.swift */,
 				A498B2C946418FAB40B37039 /* ShotVideoEditTests.swift */,
 				81619A391742FA0EB638BEF4 /* ShotVideoExporterIntegrationTests.swift */,
@@ -311,6 +390,16 @@
 				E1CEFDCD1CDD3C0CF8ADCA04 /* VideoMetadataProbe.swift */,
 			);
 			path = Media;
+			sourceTree = "<group>";
+		};
+		9237A070EA866D3E3FE07F38 /* .local-models */ = {
+			isa = PBXGroup;
+			children = (
+				10D27F687C17CCAD1C0F8EB1 /* edgetam-constants.json */,
+				62A7A0D44901C428C8FDAF50 /* edgetam-license.txt */,
+				B99BD939FD6AA47CE66A8BD7 /* edgetam-model-identity.json */,
+			);
+			path = ".local-models";
 			sourceTree = "<group>";
 		};
 		94372314B9A196E6F3ECAF7F /* Auth */ = {
@@ -345,11 +434,14 @@
 			children = (
 				1418F98C8707C5C535FF8135 /* AudioImpactAnalysisService.swift */,
 				46D17BA512F515A4D94EACFC /* BodyMotionAnalysisService.swift */,
+				3F9042B4019A5E92D81FD9D1 /* EdgeTAMTraceAdapter.swift */,
+				397ACBE4723513FE8215068C /* EdgeTAMTrackingService.swift */,
 				107558EAD7501CDAA0E455DE /* EvidenceAnchoredFlightPathExtrapolator.swift */,
 				B058B2FA96AEC83EC88AF26F /* GolfBallTrackSelector.swift */,
 				CD79C5309D88A036FBE2A9BD /* GolfBallTrajectoryAnalysisService.swift */,
 				E21EEA2D449A612CFDDBC694 /* ImpactCandidateAnalysisService.swift */,
 				A5101A5E458C1DA558F9FFF1 /* ProvisionalSwingCandidateService.swift */,
+				C8A6B204B6D85B8820205213 /* ShotAutomaticSeedService.swift */,
 				DAD381B11516C06704E99B29 /* TrajectoryAnalysisService.swift */,
 				9FD9CB2A5152001250E97091 /* WASBGolfBallTrackingService.swift */,
 			);
@@ -475,6 +567,14 @@
 				E9A0D8617F31AC80C68B2951 /* Assets.xcassets in Resources */,
 				BA8B8F95EC936A691FFF2224 /* WASB-SBDT-LICENSE.txt in Resources */,
 				DDFDE0FA9A0E7995EAB89EE3 /* WASB-SBDT-NOTICE.txt in Resources */,
+				FB8D0BE70E2FE97D1806D2A3 /* edgetam-constants.json in Resources */,
+				78B2A917499D66B2B0D8FC8B /* edgetam-license.txt in Resources */,
+				B160F55EBF7DEE363413CC7E /* edgetam-model-identity.json in Resources */,
+				3A7E33ABD8BF9C41850AAF93 /* edgetam_image_encoder.mlmodelc in Resources */,
+				9B0543CE0C5661BFADA8AA6A /* edgetam_memory_encoder_perceiver_sigmoid_tracking.mlmodelc in Resources */,
+				9DF2EBCFE89EB050F2C21179 /* edgetam_sam_heads_fixed_prompt.mlmodelc in Resources */,
+				9D011292E2967045BE57A3A4 /* edgetam_sam_heads_no_point.mlmodelc in Resources */,
+				1086BDC8C3A9C282EE3F0771 /* edgetam_variable_memory_attention.mlmodelc in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -506,13 +606,17 @@
 			files = (
 				A0577B9CD3F8DCFF54D636A2 /* AudioImpactPeakSelectorTests.swift in Sources */,
 				F72E7D60AEA0A10C0633E21C /* BodyMotionPeakSelectorTests.swift in Sources */,
+				D68102F2EBC9E3919CF672AC /* EdgeTAMDeviceIntegrationTests.swift in Sources */,
 				6D03F7A81EC53723412217A0 /* EvidenceAnchoredFlightPathTests.swift in Sources */,
 				72E7201A77366E94C80EB08A /* GolfBallTrackSelectorTests.swift in Sources */,
 				24B2C9F49A149A4FA9CA12B1 /* GolfBallTrajectoryAnalysisTests.swift in Sources */,
 				EC63DBAEF3AF38B613D85B5A /* LiveReviewCaptureTests.swift in Sources */,
 				9E0ACE3A968C775E1BE64E32 /* LocalMediaStoreTests.swift in Sources */,
 				9AA16370FFE21227068AAFFD /* ReviewLibrarySafetyTests.swift in Sources */,
+				7352323F5650B361A9A6DA19 /* ReviewSeededRetryTests.swift in Sources */,
 				4984A1D431808C752FFD63DF /* RondeRedesignTests.swift in Sources */,
+				503982A290203DC0F73B3013 /* SeededModelTraceTests.swift in Sources */,
+				D64B481478E3FA8AA2BB73E0 /* ShotAutomaticSeedSelectionTests.swift in Sources */,
 				D17D5C582C234F7736867AC7 /* ShotReviewDomainTests.swift in Sources */,
 				E53B84753F8BB985189EC63C /* ShotVideoEditTests.swift in Sources */,
 				4D47487CAC9EE4352CF62E92 /* ShotVideoExporterIntegrationTests.swift in Sources */,
@@ -528,6 +632,16 @@
 				62984751E1F675A3473F4F32 /* AssistedTracerEditor.swift in Sources */,
 				E21C377208791E8D6244A791 /* AudioImpactAnalysisService.swift in Sources */,
 				E251DBA39DA547BCBFA788ED /* BodyMotionAnalysisService.swift in Sources */,
+				ABF79D564748B5599199EE98 /* EdgeTAMAdaptiveTracker.swift in Sources */,
+				925A20C12EC6B655AA1C7EB0 /* EdgeTAMCoreMLComponents.swift in Sources */,
+				03162BF20B2961A2FDE60769 /* EdgeTAMDirectVideoFrames.swift in Sources */,
+				0C7D49D322629F706E41DFAE /* EdgeTAMImagePreprocessor.swift in Sources */,
+				1928EB6A9379C99B5DC8AA31 /* EdgeTAMMaskObservation.swift in Sources */,
+				5FCF30C72358CE4C66B117D9 /* EdgeTAMSegmentTracker.swift in Sources */,
+				984EE0B8F5D1EDDC9B9C3555 /* EdgeTAMSourceFrameReader.swift in Sources */,
+				06616B75B84AF08FEBAC9436 /* EdgeTAMTensor.swift in Sources */,
+				3E6E53B4E74727C0DAE635F1 /* EdgeTAMTraceAdapter.swift in Sources */,
+				56412D324B84C173505D53B2 /* EdgeTAMTrackingService.swift in Sources */,
 				129D168E8904C7667BF5BDC4 /* EvidenceAnchoredFlightPathExtrapolator.swift in Sources */,
 				8C921CAA14673DD9BF3D3049 /* ExactClipExporter.swift in Sources */,
 				8F5CCCEF5F10C75E631ECDC0 /* FullScreenTracerEditor.swift in Sources */,
@@ -551,7 +665,10 @@
 				8EDD92D2317E6A96D3AD7533 /* RondeAppShell.swift in Sources */,
 				DC3DEBF25BC6C301853C029D /* RondeCloud.swift in Sources */,
 				F2C805B7917CF0C0C1204477 /* RondeReviewDesign.swift in Sources */,
+				DA10E9CD57EE2747EBB0ADA7 /* SeededModelTrace.swift in Sources */,
 				ADDD25EF9E021368BB170787 /* SessionCollectionViews.swift in Sources */,
+				A491B6603D508F8573FD7336 /* ShotAutomaticSeedService.swift in Sources */,
+				129523B1608703288D088021 /* ShotBallTrackingView.swift in Sources */,
 				BB24DC84BA905D64A1825C59 /* ShotReviewModels.swift in Sources */,
 				D23AA5D1A1182F03B5455057 /* ShotStudioView.swift in Sources */,
 				4A21AEC6F3A12B094DA5C8DB /* ShotVideoEdit.swift in Sources */,

@@ -182,7 +182,10 @@ struct RondeAppShell: View {
                 RecordingImportView(store: store, groupID: target.groupID, groupTitle: target.title) { recording in
                     store.select(recording)
                     destination = .sessions
-                    sessionsPath = [.session(recording.groupID ?? recording.id), .recording(recording.id)]
+                    sessionsPath = [
+                        .session(recording.groupID ?? recording.id),
+                        recording.isDirectShotImport ? .shot(recording.id) : .recording(recording.id)
+                    ]
                 }
             }
             .sheet(isPresented: $showsSettings) {

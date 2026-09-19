@@ -112,4 +112,37 @@ final class ShotVideoEditTests: XCTestCase {
         XCTAssertTrue(trace.visiblePoints(at: candidate.impactTime - 0.1).isEmpty)
         XCTAssertEqual(trace.visiblePoints(at: candidate.impactTime), trace.points)
     }
+
+    func testDrawnManualTraceUsesThePersistedPolylineAndSanitisesCoordinates() throws {
+        let path = AssistedTracerPath(
+            launch: ReviewPoint(CGPoint(x: 0.1, y: 0.8)),
+            apex: ReviewPoint(CGPoint(x: 0.5, y: 0.2)),
+            landing: ReviewPoint(CGPoint(x: 0.9, y: 0.7)),
+            drawnPoints: [
+                ReviewPoint(CGPoint(x: -0.2, y: 0.8)),
+                ReviewPoint(CGPoint(x: .nan, y: 0.5)),
+                ReviewPoint(CGPoint(x: 0.5, y: 0.2)),
+                ReviewPoint(CGPoint(x: 1.4, y: 0.7))
+            ]
+        )
+        let sanitised = try XCTUnwrap(path.drawnPoints)
+        XCTAssertEqual(sanitised.map(\.x), [0, 0.5, 1])
+
+        var candidate = try XCTUnwrap(ReviewFixtures.quickReviewSession.defaultCandidate)
+        candidate.assistedTracer = path
+        let trace = try XCTUnwrap(ShotVideoTrace(candidate: candidate, mode: .manual))
+        XCTAssertEqual(trace.points.map(\.x), [0, 0.5, 1])
+        XCTAssertEqual(trace.points.map(\.y), [0.8, 0.2, 0.7])
+        XCTAssertEqual(trace.label, "Manual trace")
+        XCTAssertTrue(trace.presentationTimes.isEmpty)
+    }
+
+    func testLegacyManualTraceWithoutDrawnPointsStillDecodes() throws {
+        let legacy = Data(#"{"launch":{"x":0.1,"y":0.8},"apex":{"x":0.5,"y":0.2},"landing":{"x":0.9,"y":0.7}}"#.utf8)
+        let restored = try JSONDecoder().decode(AssistedTracerPath.self, from: legacy)
+        XCTAssertNil(restored.drawnPoints)
+        XCTAssertEqual(restored.launch.x, 0.1)
+        XCTAssertEqual(restored.apex.y, 0.2)
+        XCTAssertEqual(restored.landing.x, 0.9)
+    }
 }
