@@ -2,9 +2,9 @@
 
 > Generated from Git. Git remains authoritative. Context-only refresh commits are excluded.
 
-- Source commit: `f2b62ece537dad28efa45845701cef505b8cb57b`
+- Source commit: `88308e35461fc0ae02b2d621859e6547f8d55b51`
 - Source commit date: 2026-09-19
-- Tracked commit count: 91
+- Tracked commit count: 93
 
 | Date | Commit | Subject |
 | --- | --- | --- |
@@ -82,3 +82,5 @@
 | 2026-09-19 | `4916366` | Merge pull request #13 from hotherside/codex/concept-fidelity |
 | 2026-09-19 | `1f95922` | feat: add local ball tracing with clip-first correction flow |
 | 2026-09-19 | `f2b62ec` | Merge main design updates with verified clip-first tracing flow |
+| 2026-09-19 | `700735c` | docs: record tracer delivery and physical iPhone evidence |
+| 2026-09-19 | `88308e3` | Merge pull request #14 from hotherside/codex/tracer-evidence-benchmark |
