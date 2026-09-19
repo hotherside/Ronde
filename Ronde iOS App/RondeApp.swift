@@ -10,6 +10,7 @@ struct RondeApp: App {
     private let isMediaDetailPreview: Bool
     private let isTracerEditorPreview: Bool
     private let isSignInPreview: Bool
+    private let isRecordingPreview: Bool
     private let initialTab: RondeAppTab
 
     init() {
@@ -21,7 +22,8 @@ struct RondeApp: App {
             "ios-redesign-library",
             "ios-redesign-profile",
             "ios-redesign-media",
-            "ios-redesign-tracer"
+            "ios-redesign-tracer",
+            "ios-recording-studio"
         ]
         let includeFixture = previewScreen.map(fixtureScreens.contains) ?? false
         let previewSourceURL = ProcessInfo.processInfo.environment["RONDE_PREVIEW_VIDEO_PATH"]
@@ -35,16 +37,32 @@ struct RondeApp: App {
         isMediaDetailPreview = previewScreen == "ios-redesign-media"
         isTracerEditorPreview = previewScreen == "ios-redesign-tracer"
         isSignInPreview = previewScreen == "ios-redesign-signin"
+        isRecordingPreview = previewScreen == "ios-recording-studio"
         switch previewScreen {
         case "ios-redesign-library": initialTab = .library
         case "ios-redesign-profile": initialTab = .profile
         default: initialTab = .home
         }
-        _store = StateObject(wrappedValue: ReviewerStore(
+        let reviewStore = ReviewerStore(
             includeFixtures: includeFixture,
             previewSourceURL: previewSourceURL,
             persistenceEnabled: !includeFixture
-        ))
+        )
+        #if DEBUG
+        if isRecordingPreview {
+            let recording = ReviewSession(
+                id: UUID(uuidString: "B5522071-A1C8-49D1-9D0B-1F37A852C427")!,
+                mode: .range, importKind: .recording,
+                title: "Saturday at the range", sourceName: "Studio test recording.mp4",
+                sourceURL: previewSourceURL, createdAt: .now, duration: 6.634,
+                sourceAspectRatio: 9.0 / 16, status: .reviewing, progress: 1, candidates: [],
+                errorMessage: nil, groupTitle: "Saturday at the range"
+            )
+            reviewStore.sessions = [recording]
+            reviewStore.select(recording)
+        }
+        #endif
+        _store = StateObject(wrappedValue: reviewStore)
         _accountStore = StateObject(wrappedValue: RondeAccountStore(
             previewAccount: includeFixture
                 ? RondeAccount(
@@ -61,6 +79,8 @@ struct RondeApp: App {
             Group {
                 if isSignInPreview {
                     RondeSignInView(accountStore: accountStore)
+                } else if isRecordingPreview, let recording = store.sessions.first(where: \.isRecording) {
+                    RecordingStudioPreviewRoute(store: store, accountStore: accountStore, recordingID: recording.id)
                 } else if isTracerEditorPreview,
                           let session = store.selectedSession,
                           let candidate = session.defaultCandidate {
@@ -79,6 +99,22 @@ struct RondeApp: App {
             }
                 .tint(RondeReviewDesign.fairway)
                 .preferredColorScheme(.light)
+        }
+    }
+}
+
+private struct RecordingStudioPreviewRoute: View {
+    @ObservedObject var store: ReviewerStore
+    @ObservedObject var accountStore: RondeAccountStore
+    let recordingID: UUID
+    @State private var path: [UUID] = []
+
+    var body: some View {
+        NavigationStack(path: $path) {
+            RecordingStudioView(store: store, accountStore: accountStore, recordingID: recordingID) { path.append($0) }
+                .navigationDestination(for: UUID.self) { shotID in
+                    RondeMediaDetailRoute(store: store, accountStore: accountStore, sessionID: shotID)
+                }
         }
     }
 }

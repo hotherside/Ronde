@@ -2,6 +2,28 @@
 
 ## 19 September 2026
 
+### Native Recording Studio and source-linked Shots
+
+- Implemented the Clubhouse foundation with Cutroom's focused editing vocabulary and native SwiftUI Liquid Glass controls across Sessions, Recordings, Bookmarks, source-linked Shots and Keepers.
+- Added manual Recording Studio imports up to 20 minutes through Photos, Files and the native camera. The original local source remains preserved; source-linked Shots share it while keeping their own source clip range and reversible Shot Studio edits.
+- Added default ±5-second bookmark windows, source-clamped adjustment in 5-second increments from 0 to 60 seconds, duplicate-safe batch extraction and preservation of existing Shot edits on repeat extraction. Recording playback spans the full source; sparse thumbnail generation is capped at 12 frames and derived Shot frame inspection is limited to the source clip plus five seconds per side.
+- Refined native glass-button contrast, large-text transport and inspector reflow, format silhouettes and filmstrip width. Recording deletion now removes matching synced metadata, and cancelling the Files picker returns quietly.
+- Built with Xcode 27.1 and passed 119 unit/media checks with three optional external-media skips and zero failures. The complete iPhone UI suite passed all six journeys, including native share-sheet presentation; two focused Session/recording journeys also passed on each of iPad and Duo, including rotation and the iPad's largest accessibility text size. See [Current State](CURRENT_STATE.md#verification) for exact destinations and local result bundles.
+- Automatic moment suggestions and automatic analysis of long-source derived Shots remain deferred; manual annotation and export work without tracking. This implementation makes no new tracer-accuracy claim. The work is uncommitted on `codex/clubhouse-native-studio` at `d9b405c`; signed-device and shared Git delivery remain separate. Recorded [ADR 0014](decisions/0014-native-recording-studio-and-source-linked-shots.md), updated the mapped Notion product summary and verified the read-back.
+
+### Clubhouse selected and recording Studio clarified
+
+- The owner selected Clubhouse as the design foundation, with substantial further refinement required. Accepted Studio intent is manual bookmarking of full 10–20-minute source recordings and batch creation of smaller, source-linked Shots while preserving the original. Recorded [ADR 0013](decisions/0013-clubhouse-and-bookmarked-recording-studio.md).
+- Separated source-time bookmarks from keeper favourites. Manual clipping does not require automatic suggestions or ball tracking. Five seconds before/after each bookmark, adjustable source-clamped windows and duplicate-free repeat extraction are proposed implementation defaults, not separately approved precision requirements.
+- Updated the design brief, product direction, contract and roadmap. This checkpoint was local HTML/design work against `main` at `d9b405c`; the native 60-second import limit, tracer evidence and release state were unchanged at that point. Browser checks covered bookmark ranges, boundary clamping, batch creation, existing-edit preservation, source/session isolation and phone-to-wide continuity. JavaScript syntax, HTML resources and context checks passed. The mapped Notion summary was updated and read back. The later native execution above supersedes this checkpoint's implementation gate.
+
+### Shot-media design exploration
+
+- Responded to the owner's request for three complete HTML design directions around sessions, multi-recording review, selected shots, tracing and social clips. Added [Clubhouse, Cutroom and Fieldwork](../design/2026-09-19-shot-media/README.md), an interactive device-size review board and a separate Duo pose study.
+- Recorded the initial proposed Session / Recording / Moment / Shot / Edit / Export structure and keeper flag in the [review proposal](../design/2026-09-19-shot-media/PRODUCT_DIRECTION.md). These were unselected at the initial exploration checkpoint; the subsequent Clubhouse and manual-bookmark decision is recorded above. No native migration or automatic session capability was implemented by this exploration.
+- Used fictional generated stills, sample candidates and labelled manual annotations. HTML interaction checks do not change the existing tracer, persistence, hardware or release evidence.
+- Added the exploration locally against the shared checkout, now `main` at `d9b405c`. Native source, hosted services and the older design exploration are preserved. The initial owner-review gate led to the Clubhouse decision above.
+
 ### iPhone/iPad-only product reset
 
 - Retired the Apple Watch shot-counter product and made the universal iPhone/iPad shot media library, tracer and editor the whole of Ronde.

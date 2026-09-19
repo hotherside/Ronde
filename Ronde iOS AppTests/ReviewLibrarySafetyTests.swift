@@ -1,3 +1,4 @@
+import AVFoundation
 import Foundation
 import XCTest
 @testable import Ronde
@@ -90,6 +91,33 @@ final class ReviewLibrarySafetyTests: XCTestCase {
         XCTAssertFalse(encoded.contains("old-container"))
     }
 
+    func testLegacyArchiveWithoutRecordingFieldsStillDecodesAndNewBookmarksRoundTrip() throws {
+        let root = try makeRoot()
+        var legacy = ReviewFixtures.quickReviewSession
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        var rows = try XCTUnwrap(JSONSerialization.jsonObject(with: encoder.encode([legacy])) as? [[String: Any]])
+        for key in ["groupID", "groupTitle", "sourceRecordingID", "sourceBookmarkID", "sourceClipRange", "storedBookmarks"] {
+            rows[0].removeValue(forKey: key)
+        }
+        try JSONSerialization.data(withJSONObject: rows).write(to: archiveURL(root: root))
+
+        let archive = try ReviewSessionArchive(rootURL: root)
+        let restoredLegacy = try XCTUnwrap(archive.load().first)
+        XCTAssertTrue(restoredLegacy.bookmarks.isEmpty)
+        XCTAssertNil(restoredLegacy.sourceClipRange)
+
+        legacy.importKind = .recording
+        legacy.groupID = legacy.id
+        legacy.groupTitle = "Saturday practice"
+        legacy.bookmarks = [RecordingBookmark(sourceTime: 20)]
+        try archive.save([legacy])
+        let restoredRecording = try XCTUnwrap(archive.load().first)
+        XCTAssertEqual(restoredRecording.groupID, legacy.id)
+        XCTAssertEqual(restoredRecording.groupTitle, "Saturday practice")
+        XCTAssertEqual(restoredRecording.bookmarks.map(\.sourceTime), [20])
+    }
+
     func testInvalidRelativeMediaPathCannotEscapeItsLibrary() throws {
         let root = try makeRoot()
         var session = ReviewFixtures.quickReviewSession
@@ -145,6 +173,80 @@ final class ReviewLibrarySafetyTests: XCTestCase {
     }
 
     @MainActor
+    func testFailedBookmarkExtractionRollsBackTheEntireBatch() throws {
+        let root = try makeRoot()
+        let account = UUID()
+        var recording = ReviewFixtures.quickReviewSession
+        recording.importKind = .recording
+        recording.groupID = recording.id
+        recording.groupTitle = recording.title
+        try ReviewSessionArchive(accountID: account, rootURL: root).save([recording])
+        let store = ReviewerStore(persistenceEnabled: true, libraryRootURL: root)
+        store.activateLibrary(for: account)
+        let openRecording = try XCTUnwrap(store.sessions.first)
+        XCTAssertNotNil(store.addBookmark(at: 3, to: openRecording))
+
+        let url = archiveURL(root: root, accountID: account)
+        try FileManager.default.removeItem(at: url)
+        try FileManager.default.createDirectory(at: url, withIntermediateDirectories: false)
+
+        XCTAssertTrue(store.createShots(from: openRecording).isEmpty)
+        XCTAssertEqual(store.sessions.map(\.id), [recording.id])
+        XCTAssertNotNil(store.libraryError)
+    }
+
+    @MainActor
+    func testRecordingImportPersistsTwentyMinuteSourceAndCreatesBoundedManualShot() async throws {
+        let root = try makeRoot()
+        let source = root.appendingPathComponent("twenty-minute-source.mov")
+        try await writeSparseVideo(to: source, endSessionAt: 1_200)
+        let originalBytes = try Data(contentsOf: source)
+        let account = UUID()
+        let store = ReviewerStore(persistenceEnabled: true, libraryRootURL: root)
+        store.activateLibrary(for: account)
+
+        let result = await store.importVideo(
+            at: source,
+            sourceName: "Twenty minute practice.mov",
+            importKind: .recording
+        )
+        guard case .imported(let imported) = result else {
+            return XCTFail("A valid recording should be copied and persisted without analysis: \(String(describing: result))")
+        }
+        let recording = try XCTUnwrap(store.sessions.first { $0.id == imported.id })
+        XCTAssertTrue(recording.isRecording)
+        XCTAssertGreaterThanOrEqual(recording.duration, 1_199)
+        XCTAssertLessThanOrEqual(recording.duration, RecordingImportPolicy.maximumDuration)
+        XCTAssertNil(recording.errorMessage)
+        XCTAssertNotEqual(recording.sourceURL, source)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: source.path))
+        XCTAssertEqual(try Data(contentsOf: source), originalBytes)
+
+        let bookmark = try XCTUnwrap(store.addBookmark(at: 600, to: recording))
+        let shotID = try XCTUnwrap(store.createShots(from: recording, bookmarkIDs: [bookmark.id]).first)
+        let shot = try XCTUnwrap(store.sessions.first { $0.id == shotID })
+        XCTAssertEqual(shot.sourceClipRange, ReviewTimeRange(start: 595, duration: 10))
+        XCTAssertEqual(shot.videoEdit?.sourceRange, ReviewTimeRange(start: 595, duration: 10))
+        XCTAssertEqual(try XCTUnwrap(ReviewSessionArchive(accountID: account, rootURL: root).load().first { $0.id == shotID }).sourceClipRange,
+                       ReviewTimeRange(start: 595, duration: 10))
+    }
+
+    @MainActor
+    func testRecordingImportRejectsSourceLongerThanTwentyMinutes() async throws {
+        let root = try makeRoot()
+        let source = root.appendingPathComponent("too-long-source.mov")
+        try await writeSparseVideo(to: source, endSessionAt: 1_201)
+        let store = ReviewerStore(persistenceEnabled: true, libraryRootURL: root)
+        store.activateLibrary(for: UUID())
+
+        let result = await store.importVideo(at: source, sourceName: "Too long.mov", importKind: .recording)
+        guard case .failed(let message) = result else { return XCTFail("A source longer than twenty minutes must be rejected") }
+        XCTAssertTrue(message.contains("20 minutes"))
+        XCTAssertTrue(store.sessions.isEmpty)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: source.path))
+    }
+
+    @MainActor
     func testRelaunchOffersRecoveryForInterruptedAnalysis() throws {
         let root = try makeRoot()
         let account = UUID()
@@ -182,6 +284,39 @@ final class ReviewLibrarySafetyTests: XCTestCase {
         XCTAssertEqual(store.sessions.first?.id, session.id)
         XCTAssertEqual(try Data(contentsOf: source), Data("synthetic source".utf8))
         XCTAssertNotNil(store.libraryError)
+    }
+
+    @MainActor
+    func testDeletingASourceLinkedShotKeepsSharedRecordingMediaAndRootDeletionIsBlocked() async throws {
+        let root = try makeRoot()
+        let account = UUID()
+        let source = root.appendingPathComponent("sources/recording.mov")
+        try FileManager.default.createDirectory(at: source.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data("shared source".utf8).write(to: source)
+        var recording = ReviewFixtures.quickReviewSession
+        recording.importKind = .recording
+        recording.sourceURL = source
+        recording.sourceRelativePath = "sources/recording.mov"
+        recording.groupID = recording.id
+        let shot = ReviewSession(
+            id: UUID(), mode: .range, importKind: .oneShot, title: "Bookmark shot",
+            sourceName: recording.sourceName, sourceURL: source, sourceRelativePath: "sources/recording.mov",
+            videoEdit: ShotVideoEdit(trimStart: 10, trimEnd: 20, overlay: .original),
+            createdAt: .now, duration: recording.duration, sourceAspectRatio: recording.sourceAspectRatio,
+            status: .reviewing, progress: 1, candidates: [], groupID: recording.groupID,
+            groupTitle: recording.title, sourceRecordingID: recording.id, sourceBookmarkID: UUID(),
+            sourceClipRange: .init(start: 10, duration: 10), storedBookmarks: nil
+        )
+        try ReviewSessionArchive(accountID: account, rootURL: root).save([recording, shot])
+        let store = ReviewerStore(persistenceEnabled: true, libraryRootURL: root)
+        store.activateLibrary(for: account)
+
+        let deletedRecording = await store.delete(recording)
+        XCTAssertFalse(deletedRecording)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: source.path))
+        let deletedShot = await store.delete(shot)
+        XCTAssertTrue(deletedShot)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: source.path))
     }
 
     @MainActor
@@ -270,6 +405,67 @@ final class ReviewLibrarySafetyTests: XCTestCase {
         let name = accountID.map { "review-sessions-\($0.uuidString.lowercased())-v1.json" } ?? "review-sessions-v1.json"
         return root.appendingPathComponent(name)
     }
+
+    /// Encodes only two small frames at distant source presentation times. `endSession` supplies
+    /// the exact asset duration, so this is a real 20-minute metadata/import path without a large
+    /// fixture or a 20-minute test run.
+    @MainActor
+    private func writeSparseVideo(to url: URL, endSessionAt endTime: TimeInterval) async throws {
+        let width = 16
+        let height = 16
+        let writer = try AVAssetWriter(outputURL: url, fileType: .mov)
+        let input = AVAssetWriterInput(mediaType: .video, outputSettings: [
+            AVVideoCodecKey: AVVideoCodecType.h264,
+            AVVideoWidthKey: width,
+            AVVideoHeightKey: height
+        ])
+        input.expectsMediaDataInRealTime = false
+        let adaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: input, sourcePixelBufferAttributes: [
+            kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
+            kCVPixelBufferWidthKey as String: width,
+            kCVPixelBufferHeightKey as String: height,
+            kCVPixelBufferIOSurfacePropertiesKey as String: [:]
+        ])
+        guard writer.canAdd(input) else { throw SparseVideoFixtureError.cannotAddInput }
+        writer.add(input)
+        guard writer.startWriting() else { throw writer.error ?? SparseVideoFixtureError.cannotStart }
+        writer.startSession(atSourceTime: .zero)
+
+        for seconds in [0, endTime - 1] {
+            var attempts = 0
+            while !input.isReadyForMoreMediaData && attempts < 500 {
+                try await Task.sleep(nanoseconds: 10_000_000)
+                attempts += 1
+            }
+            guard input.isReadyForMoreMediaData, let pool = adaptor.pixelBufferPool else {
+                throw SparseVideoFixtureError.cannotAppend
+            }
+            var pixelBuffer: CVPixelBuffer?
+            guard CVPixelBufferPoolCreatePixelBuffer(nil, pool, &pixelBuffer) == kCVReturnSuccess,
+                  let pixelBuffer else { throw SparseVideoFixtureError.cannotAppend }
+            CVPixelBufferLockBaseAddress(pixelBuffer, [])
+            if let bytes = CVPixelBufferGetBaseAddress(pixelBuffer) {
+                memset(bytes, seconds == 0 ? 0x30 : 0xA0, CVPixelBufferGetDataSize(pixelBuffer))
+            }
+            CVPixelBufferUnlockBaseAddress(pixelBuffer, [])
+            guard adaptor.append(pixelBuffer, withPresentationTime: CMTime(seconds: seconds, preferredTimescale: 600)) else {
+                throw writer.error ?? SparseVideoFixtureError.cannotAppend
+            }
+        }
+        writer.endSession(atSourceTime: CMTime(seconds: endTime, preferredTimescale: 600))
+        input.markAsFinished()
+        await withCheckedContinuation { continuation in
+            writer.finishWriting { continuation.resume() }
+        }
+        guard writer.status == .completed else { throw writer.error ?? SparseVideoFixtureError.cannotFinish }
+    }
+}
+
+private enum SparseVideoFixtureError: Error {
+    case cannotAddInput
+    case cannotStart
+    case cannotAppend
+    case cannotFinish
 }
 
 private actor SuspendedReviewMedia: ReviewMediaImporting {

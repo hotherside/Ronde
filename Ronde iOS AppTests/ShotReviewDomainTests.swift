@@ -45,6 +45,85 @@ final class ShotReviewDomainTests: XCTestCase {
         XCTAssertEqual(late.duration, 7, accuracy: 0.0001)
     }
 
+    func testReviewTimeRangeClipsToFiniteSourceAndRejectsMalformedValues() {
+        XCTAssertEqual(
+            ReviewTimeRange(start: 8, duration: 8).clipped(to: 10),
+            .init(start: 8, duration: 2)
+        )
+        XCTAssertEqual(
+            ReviewTimeRange(start: 20, duration: 1).clipped(to: 10),
+            .init(start: 10, duration: 0)
+        )
+        XCTAssertEqual(ReviewTimeRange(start: .infinity, duration: 1), .init(start: 0, duration: 1))
+        XCTAssertEqual(ReviewTimeRange(start: 2, duration: .infinity), .init(start: 2, duration: 0))
+        XCTAssertEqual(
+            ReviewTimeRange(start: 2, duration: 1).clipped(to: .infinity),
+            .init(start: 0, duration: 0)
+        )
+    }
+
+    func testRecordingBookmarkClampsItsManualClipToTheOriginalSource() {
+        let early = RecordingBookmark(sourceTime: -5, beforeDuration: 8, afterDuration: 5)
+        XCTAssertEqual(early.clipRange(sourceDuration: 120), .init(start: 0, duration: 5))
+
+        let late = RecordingBookmark(sourceTime: 119, beforeDuration: 5, afterDuration: 9)
+        XCTAssertEqual(late.clipRange(sourceDuration: 120), .init(start: 114, duration: 6))
+    }
+
+    @MainActor
+    func testManualBookmarkCreatesAnEvidenceFreeSourceLinkedShotAndDoesNotDuplicateIt() throws {
+        let store = ReviewerStore()
+        let recording = Self.recording(duration: 600)
+        store.sessions = [recording]
+
+        let bookmark = try XCTUnwrap(store.addBookmark(at: 120, to: recording))
+        XCTAssertEqual(store.addBookmark(at: 120.02, to: recording)?.id, bookmark.id)
+
+        let created = store.createShots(from: recording)
+        let shotID = try XCTUnwrap(created.first)
+        let shot = try XCTUnwrap(store.sessions.first { $0.id == shotID })
+        XCTAssertEqual(shot.sourceRecordingID, recording.id)
+        XCTAssertEqual(shot.sourceBookmarkID, bookmark.id)
+        XCTAssertEqual(shot.duration, recording.duration)
+        XCTAssertEqual(shot.sourceClipRange, .init(start: 115, duration: 10))
+        XCTAssertEqual(shot.videoEdit?.sourceRange, shot.sourceClipRange)
+        XCTAssertEqual(shot.displayRange, shot.sourceClipRange)
+        XCTAssertFalse(try XCTUnwrap(shot.defaultCandidate).hasAutomaticTracer)
+        XCTAssertEqual(try XCTUnwrap(shot.defaultCandidate).tracerSource, .unavailable)
+        XCTAssertNil(shot.errorMessage)
+        XCTAssertTrue(store.createShots(from: recording).isEmpty)
+    }
+
+    @MainActor
+    func testRepeatBookmarkExtractionPreservesAnIndependentlyEditedShot() throws {
+        let store = ReviewerStore()
+        let recording = Self.recording(duration: 600)
+        store.sessions = [recording]
+        let bookmark = try XCTUnwrap(store.addBookmark(at: 120, to: recording))
+        let shotID = try XCTUnwrap(store.createShots(from: recording).first)
+        let shot = try XCTUnwrap(store.sessions.first { $0.id == shotID })
+        XCTAssertTrue(store.setVideoEdit(ShotVideoEdit(trimStart: 116, trimEnd: 123, overlay: .original), for: shot))
+
+        XCTAssertTrue(store.createShots(from: recording, bookmarkIDs: [bookmark.id]).isEmpty)
+        let edited = try XCTUnwrap(store.sessions.first { $0.id == shotID })
+        XCTAssertEqual(edited.videoEdit?.sourceRange, .init(start: 116, duration: 7))
+        XCTAssertEqual(edited.displayRange, .init(start: 116, duration: 7))
+
+        let nextBookmark = try XCTUnwrap(store.addBookmark(at: 240, to: recording))
+        let nextShotID = try XCTUnwrap(store.createShots(from: recording, bookmarkIDs: [nextBookmark.id]).first)
+        XCTAssertEqual(store.sessions.first { $0.id == nextShotID }?.title, "Practice session shot 2")
+    }
+
+    @MainActor
+    func testLegacyRowsFormAStableSingleShotGroup() {
+        let store = ReviewerStore(includeFixtures: true)
+        let group = try! XCTUnwrap(store.sessionGroups.first)
+
+        XCTAssertEqual(group.id, ReviewFixtures.quickReviewSession.id)
+        XCTAssertEqual(group.recordings.map(\.id), [ReviewFixtures.quickReviewSession.id])
+        XCTAssertEqual(group.shots.map(\.id), [ReviewFixtures.quickReviewSession.id])
+    }
+
     func testProvisionalServiceRequiresTwoIndependentSignals() {
         let service = ProvisionalSwingCandidateService()
         let insufficient = service.candidate(from: .init(
@@ -355,6 +434,28 @@ final class ShotReviewDomainTests: XCTestCase {
                 belongsToTargetGolfer: true,
                 detectorDescription: "Fixture golf-ball detector"
             )
+        )
+    }
+
+    private static func recording(duration: TimeInterval) -> ReviewSession {
+        ReviewSession(
+            id: UUID(),
+            mode: .range,
+            importKind: .recording,
+            title: "Practice session",
+            sourceName: "practice.mov",
+            sourceURL: nil,
+            createdAt: .now,
+            duration: duration,
+            status: .reviewing,
+            progress: 1,
+            candidates: [],
+            groupID: nil,
+            groupTitle: nil,
+            sourceRecordingID: nil,
+            sourceBookmarkID: nil,
+            sourceClipRange: nil,
+            storedBookmarks: nil
         )
     }
 }

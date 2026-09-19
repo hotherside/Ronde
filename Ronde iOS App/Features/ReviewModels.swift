@@ -32,6 +32,8 @@ enum ReviewMode: String, CaseIterable, Identifiable, Hashable, Codable, Sendable
 enum ReviewImportKind: String, Hashable, Codable, Sendable {
     case oneShot
     case rangeSession
+    /// A manually reviewed 10–20 minute source. Recording imports never start perception work.
+    case recording
 }
 
 enum ShotVideoImportPolicy {
@@ -39,6 +41,50 @@ enum ShotVideoImportPolicy {
 
     static func accepts(duration: TimeInterval) -> Bool {
         duration.isFinite && duration > 0 && duration <= maximumDuration
+    }
+}
+
+enum RecordingImportPolicy {
+    static let maximumDuration: TimeInterval = 20 * 60
+
+    static func accepts(duration: TimeInterval) -> Bool {
+        duration.isFinite && duration > 0 && duration <= maximumDuration
+    }
+}
+
+/// A person-authored point in a full recording. It is deliberately not an analysis result and
+/// carries no implication that a ball or impact was observed.
+struct RecordingBookmark: Identifiable, Codable, Hashable, Sendable {
+    static let defaultBeforeDuration: TimeInterval = 5
+    static let defaultAfterDuration: TimeInterval = 5
+    static let duplicateTolerance: TimeInterval = 0.05
+
+    let id: UUID
+    var sourceTime: TimeInterval
+    var beforeDuration: TimeInterval
+    var afterDuration: TimeInterval
+    var createdAt: Date
+
+    init(
+        id: UUID = UUID(),
+        sourceTime: TimeInterval,
+        beforeDuration: TimeInterval = Self.defaultBeforeDuration,
+        afterDuration: TimeInterval = Self.defaultAfterDuration,
+        createdAt: Date = .now
+    ) {
+        self.id = id
+        self.sourceTime = sourceTime.isFinite ? max(0, sourceTime) : 0
+        self.beforeDuration = beforeDuration.isFinite ? max(0, beforeDuration) : Self.defaultBeforeDuration
+        self.afterDuration = afterDuration.isFinite ? max(0, afterDuration) : Self.defaultAfterDuration
+        self.createdAt = createdAt
+    }
+
+    func clipRange(sourceDuration: TimeInterval) -> ReviewTimeRange {
+        let safeDuration = sourceDuration.isFinite ? max(0, sourceDuration) : 0
+        let impact = min(max(0, sourceTime), safeDuration)
+        let start = max(0, impact - beforeDuration)
+        let end = min(safeDuration, impact + afterDuration)
+        return ReviewTimeRange(start: start, duration: max(0, end - start))
     }
 }
 
@@ -248,6 +294,25 @@ struct ReviewSession: Identifiable, Codable, Sendable {
     var note: String = ""
     var isFavourite: Bool = false
     var errorMessage: String?
+    /// Rows in the same user-facing Session. Legacy rows remain valid and form their own group.
+    var groupID: UUID? = nil
+    var groupTitle: String? = nil
+    /// A source-linked shot points to its full recording. Root recordings leave this nil.
+    var sourceRecordingID: UUID? = nil
+    var sourceBookmarkID: UUID? = nil
+    /// The immutable extraction window of a derived shot in absolute source time. Nil means that
+    /// the row's studio uses the full source, which preserves legacy archive behaviour.
+    /// Set only when the source-linked shot is created. The studio treats it as immutable and
+    /// applies later trim edits inside its bounded source range.
+    var sourceClipRange: ReviewTimeRange? = nil
+    // Optional backing storage is intentional: synthesised Codable must tolerate pre-bookmark
+    // archives that have no corresponding key. `bookmarks` is the safe public collection.
+    var storedBookmarks: [RecordingBookmark]? = nil
+
+    var bookmarks: [RecordingBookmark] {
+        get { storedBookmarks ?? [] }
+        set { storedBookmarks = newValue }
+    }
 
     var keptCount: Int { candidates.filter { $0.decision == .kept }.count }
     var unreviewedCount: Int { candidates.filter { $0.decision == .unreviewed }.count }
@@ -256,6 +321,40 @@ struct ReviewSession: Identifiable, Codable, Sendable {
     /// not a reliable proxy for how many shots a recording contains.
     var isSingleShotImport: Bool {
         importKind == .oneShot
+    }
+
+    var isRecording: Bool { importKind == .recording }
+    var isDerivedShot: Bool { sourceRecordingID != nil }
+    /// A pre-recording-library row remains a source root even though it uses the original
+    /// one-shot/range import kinds. It routes to its existing studio rather than becoming a
+    /// phantom child shot in the new Sessions collection.
+    var isLegacySourceRoot: Bool {
+        !isRecording && !isDerivedShot && groupID == nil && sourceClipRange == nil
+    }
+
+    /// A stable local source identity. Legacy rows use their own ID, while derived rows always
+    /// resolve to the root recording so shared media is never removed prematurely.
+    var recordingID: UUID { sourceRecordingID ?? id }
+
+    var studioSourceRange: ReviewTimeRange {
+        sourceClipRange?.clipped(to: duration)
+            ?? ReviewTimeRange(start: 0, duration: max(0, duration))
+    }
+
+    var editableSourceRange: ReviewTimeRange { studioSourceRange }
+
+    /// The range a library card should describe. A saved reversible cut takes precedence; an
+    /// unedited source-linked shot describes its immutable bookmarked extraction instead.
+    var displayRange: ReviewTimeRange {
+        videoEdit?.normalised(sourceDuration: duration).sourceRange ?? studioSourceRange
+    }
+
+    func bookmark(id: UUID) -> RecordingBookmark? {
+        bookmarks.first { $0.id == id }
+    }
+
+    func clipRange(for bookmark: RecordingBookmark) -> ReviewTimeRange {
+        bookmark.clipRange(sourceDuration: duration)
     }
 
     var acceptedShots: [ReviewCandidate] {
@@ -269,6 +368,18 @@ struct ReviewSession: Identifiable, Codable, Sendable {
     var defaultCandidate: ReviewCandidate? {
         (isSingleShotImport ? candidates : acceptedShots).first ?? candidates.first
     }
+}
+
+/// A presentation-only grouping derived from persisted rows. No separate archive envelope is
+/// required, so old archives remain readable and account-scoped exactly as before.
+struct ReviewSessionGroup: Identifiable, Hashable, Sendable {
+    let id: UUID
+    let title: String
+    let recordings: [ReviewSession]
+    let shots: [ReviewSession]
+
+    static func == (lhs: Self, rhs: Self) -> Bool { lhs.id == rhs.id }
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
 }
 
 enum LibrarySection: String, CaseIterable, Identifiable, Hashable {
@@ -618,6 +729,31 @@ final class ReviewerStore: ObservableObject {
         return sessions.first { $0.id == selectedSessionID }
     }
 
+    /// User-facing Sessions are derived from durable row grouping, keeping the archive format
+    /// compatible with the original one-shot-only library.
+    var sessionGroups: [ReviewSessionGroup] {
+        let grouped = Dictionary(grouping: sessions) { $0.groupID ?? $0.recordingID }
+        return grouped.compactMap { id, rows in
+            let ordered = rows.sorted { $0.createdAt > $1.createdAt }
+            let recording = ordered.first(where: { $0.isRecording })
+            let title = ordered.compactMap(\.groupTitle).first
+                ?? recording?.title
+                ?? ordered.first?.title
+                ?? "Session"
+            return ReviewSessionGroup(
+                id: id,
+                title: title,
+                recordings: ordered.filter { $0.isRecording || $0.isLegacySourceRoot },
+                shots: ordered.filter { !$0.isRecording }
+            )
+        }
+        .sorted { lhs, rhs in
+            let left = (lhs.recordings + lhs.shots).map(\.createdAt).max() ?? .distantPast
+            let right = (rhs.recordings + rhs.shots).map(\.createdAt).max() ?? .distantPast
+            return left > right
+        }
+    }
+
     func select(_ session: ReviewSession) {
         selectedSessionID = session.id
         selectedCandidateID = session.defaultCandidate?.id
@@ -691,6 +827,132 @@ final class ReviewerStore: ObservableObject {
         updateSession(session) { $0.isFavourite.toggle() }
     }
 
+    /// Adds a manual moment to a recording. Repeating a bookmark at the same source time returns
+    /// the existing moment instead of creating another extractable shot.
+    @discardableResult
+    func addBookmark(
+        at sourceTime: TimeInterval,
+        before: TimeInterval = RecordingBookmark.defaultBeforeDuration,
+        after: TimeInterval = RecordingBookmark.defaultAfterDuration,
+        to recording: ReviewSession
+    ) -> RecordingBookmark? {
+        guard sourceTime.isFinite, before.isFinite, after.isFinite,
+              let current = sessions.first(where: { $0.id == recording.id }), current.isRecording else { return nil }
+        let clampedTime = min(max(0, sourceTime), max(0, current.duration))
+        if let existing = current.bookmarks.first(where: {
+            abs($0.sourceTime - clampedTime) <= RecordingBookmark.duplicateTolerance
+        }) {
+            return existing
+        }
+        let bookmark = RecordingBookmark(sourceTime: clampedTime, beforeDuration: before, afterDuration: after)
+        guard mutateAtomically({ rows in
+            guard let index = rows.firstIndex(where: { $0.id == recording.id }) else { return }
+            rows[index].bookmarks.append(bookmark)
+        }) else { return nil }
+        return bookmark
+    }
+
+    @discardableResult
+    func updateBookmark(
+        _ bookmarkID: UUID,
+        sourceTime: TimeInterval,
+        before: TimeInterval,
+        after: TimeInterval,
+        in recording: ReviewSession
+    ) -> Bool {
+        guard sourceTime.isFinite, before.isFinite, after.isFinite,
+              let current = sessions.first(where: { $0.id == recording.id }), current.isRecording else { return false }
+        let clampedTime = min(max(0, sourceTime), max(0, current.duration))
+        guard !current.bookmarks.contains(where: {
+            $0.id != bookmarkID && abs($0.sourceTime - clampedTime) <= RecordingBookmark.duplicateTolerance
+        }) else { return false }
+        return mutateAtomically { rows in
+            guard let sessionIndex = rows.firstIndex(where: { $0.id == recording.id }),
+                  let bookmarkIndex = rows[sessionIndex].bookmarks.firstIndex(where: { $0.id == bookmarkID }) else { return }
+            rows[sessionIndex].bookmarks[bookmarkIndex].sourceTime = clampedTime
+            rows[sessionIndex].bookmarks[bookmarkIndex].beforeDuration = max(0, before)
+            rows[sessionIndex].bookmarks[bookmarkIndex].afterDuration = max(0, after)
+        }
+    }
+
+    @discardableResult
+    func removeBookmark(_ bookmarkID: UUID, from recording: ReviewSession) -> Bool {
+        guard let current = sessions.first(where: { $0.id == recording.id }), current.isRecording,
+              current.bookmark(id: bookmarkID) != nil,
+              !sessions.contains(where: { $0.sourceRecordingID == recording.id && $0.sourceBookmarkID == bookmarkID }) else {
+            return false
+        }
+        return mutateAtomically { rows in
+            guard let index = rows.firstIndex(where: { $0.id == recording.id }) else { return }
+            rows[index].bookmarks.removeAll { $0.id == bookmarkID }
+        }
+    }
+
+    /// Creates source-linked shots without copying or mutating the original recording. Each
+    /// bookmark may be extracted once; a retry deliberately preserves the existing shot's edits.
+    @discardableResult
+    func createShots(from recording: ReviewSession, bookmarkIDs: [UUID]? = nil) -> [UUID] {
+        guard let current = sessions.first(where: { $0.id == recording.id }), current.isRecording else { return [] }
+        let requested = bookmarkIDs.map(Set.init) ?? Set(current.bookmarks.map(\.id))
+        let bookmarks = current.bookmarks.filter { requested.contains($0.id) }
+        let existingLinks = Set(sessions.compactMap { row -> UUID? in
+            row.sourceRecordingID == current.id ? row.sourceBookmarkID : nil
+        })
+        let pending = bookmarks.filter { !existingLinks.contains($0.id) }
+        guard !pending.isEmpty else { return [] }
+
+        let groupID = current.groupID ?? current.id
+        let groupTitle = current.groupTitle ?? current.title
+        let nextShotOrdinal = sessions.filter { $0.sourceRecordingID == current.id }.count
+        let created = pending.enumerated().compactMap { offset, bookmark -> ReviewSession? in
+            let range = bookmark.clipRange(sourceDuration: current.duration)
+            guard range.duration > 0 else { return nil }
+            let candidate = ReviewCandidate(
+                ordinal: 1,
+                impactTime: min(max(0, bookmark.sourceTime), current.duration),
+                sourceDuration: current.duration,
+                classification: .uncertain,
+                confidence: .low,
+                evidence: ["Created from a manual bookmark", "Ball flight not tracked"],
+                tracerAvailable: false,
+                tracerSource: .unavailable,
+                usesFullSourceRange: false
+            )
+            var shot = ReviewSession(
+                id: UUID(),
+                mode: .range,
+                importKind: .oneShot,
+                title: "\(groupTitle) shot \(nextShotOrdinal + offset + 1)",
+                sourceName: current.sourceName,
+                sourceURL: current.sourceURL,
+                sourceRelativePath: current.sourceRelativePath,
+                videoEdit: ShotVideoEdit(trimStart: range.start, trimEnd: range.end, overlay: .original),
+                createdAt: .now,
+                duration: current.duration,
+                sourceAspectRatio: current.sourceAspectRatio,
+                status: .reviewing,
+                progress: 1,
+                candidates: [candidate],
+                placeName: current.placeName,
+                clubName: current.clubName,
+                note: "",
+                isFavourite: false,
+                errorMessage: nil,
+                sourceClipRange: range
+            )
+            shot.groupID = groupID
+            shot.groupTitle = groupTitle
+            shot.sourceRecordingID = current.id
+            shot.sourceBookmarkID = bookmark.id
+            return shot
+        }
+        guard !created.isEmpty, mutateAtomically({ rows in
+            rows.insert(contentsOf: created.reversed(), at: 0)
+        }) else { return [] }
+        if let first = created.first { select(first) }
+        return created.map(\.id)
+    }
+
     func updateDetails(
         for session: ReviewSession,
         title: String,
@@ -716,6 +978,11 @@ final class ReviewerStore: ObservableObject {
     func delete(_ session: ReviewSession) async -> Bool {
         guard let owner = captureImportOwnership(),
               let current = sessions.first(where: { $0.id == session.id }) else { return false }
+        if current.isRecording,
+           sessions.contains(where: { $0.sourceRecordingID == current.id }) {
+            libraryError = "Remove this recording's shots before removing the original recording."
+            return false
+        }
         let previous = sessions
         let wasUnsaved = hasUnsavedChanges
         sessions.removeAll { $0.id == session.id }
@@ -731,7 +998,7 @@ final class ReviewerStore: ObservableObject {
             selectedSessionID = sessions.first?.id
             selectedCandidateID = sessions.first?.defaultCandidate?.id
         }
-        if let sourceURL = current.sourceURL {
+        if let sourceURL = current.sourceURL, !hasRemainingMediaReference(to: current) {
             do {
                 try await mediaStore?.delete(sourceURL)
             } catch {
@@ -808,6 +1075,8 @@ final class ReviewerStore: ObservableObject {
         at sourceURL: URL,
         sourceName: String,
         importKind: ReviewImportKind,
+        groupID: UUID? = nil,
+        groupTitle: String? = nil,
         ownership: ReviewImportOwnership? = nil,
         onPrepared: (@MainActor (ReviewSession) -> Void)? = nil
     ) async -> ReviewImportResult {
@@ -819,6 +1088,7 @@ final class ReviewerStore: ObservableObject {
         let task = Task { @MainActor in
             await self.performImport(
                 at: sourceURL, sourceName: sourceName, importKind: importKind,
+                groupID: groupID, groupTitle: groupTitle,
                 ownership: owner, operationID: operationID, onPrepared: onPrepared
             )
         }
@@ -830,6 +1100,9 @@ final class ReviewerStore: ObservableObject {
         guard let owner = captureImportOwnership(),
               sessions.contains(where: { $0.id == session.id }) else {
             return .failed(libraryError ?? "This review is no longer in the open library.")
+        }
+        guard !session.isRecording, !session.isDerivedShot else {
+            return .failed("Automatic analysis is unavailable for manually bookmarked recordings and source-linked shots.")
         }
         guard analysisOperations[session.id] == nil else {
             return .failed("This video is already being analysed.")
@@ -865,6 +1138,8 @@ final class ReviewerStore: ObservableObject {
         at sourceURL: URL,
         sourceName: String,
         importKind: ReviewImportKind,
+        groupID: UUID?,
+        groupTitle: String?,
         ownership: ReviewImportOwnership,
         operationID: UUID,
         onPrepared: (@MainActor (ReviewSession) -> Void)?
@@ -885,16 +1160,29 @@ final class ReviewerStore: ObservableObject {
             guard ownsLibrary(ownership) else { throw CancellationError() }
             let duration = metadata.duration
             guard duration.isFinite, duration > 0,
-                  importKind != .oneShot || ShotVideoImportPolicy.accepts(duration: duration) else {
+                  importKind != .oneShot || ShotVideoImportPolicy.accepts(duration: duration),
+                  importKind != .recording || RecordingImportPolicy.accepts(duration: duration) else {
                 try? await mediaStore.delete(localURL)
-                return .failed("Choose one shot video that is 1 minute or shorter.")
+                return .failed(importKind == .recording
+                    ? "Choose a recording that is 20 minutes or shorter."
+                    : "Choose one shot video that is 1 minute or shorter.")
             }
             var session = makeSession(
                 title: sourceName, sourceName: reference.originalFilename, sourceURL: localURL,
-                duration: duration, importKind: importKind, status: .analysing, progress: 0, errorMessage: nil
+                duration: duration, importKind: importKind,
+                status: importKind == .recording ? .reviewing : .analysing,
+                progress: importKind == .recording ? 1 : 0,
+                errorMessage: nil
             )
             session.sourceRelativePath = reference.relativePath
             session.sourceAspectRatio = metadata.displayAspectRatio
+            if importKind == .recording {
+                session.groupID = groupID ?? session.id
+                session.groupTitle = Self.cleanOptional(groupTitle ?? sourceName, limit: 160) ?? session.title
+            } else if let groupID {
+                session.groupID = groupID
+                session.groupTitle = Self.cleanOptional(groupTitle ?? sourceName, limit: 160)
+            }
             let priorSelection = selectedSessionID
             let priorCandidate = selectedCandidateID
             let wasUnsaved = hasUnsavedChanges
@@ -910,6 +1198,7 @@ final class ReviewerStore: ObservableObject {
             }
             stagedURL = nil // The durable archive now owns the copied source.
             onPrepared?(session)
+            if importKind == .recording { return .imported(session) }
             return await performAnalysis(sessionID: session.id, ownership: ownership, operationID: operationID)
         } catch {
             if let stagedURL { try? await mediaStore.delete(stagedURL) }
@@ -924,6 +1213,9 @@ final class ReviewerStore: ObservableObject {
         operationID: UUID
     ) async -> ReviewImportResult {
         guard ownsLibrary(ownership), let initial = sessions.first(where: { $0.id == sessionID }) else { return .cancelled }
+        guard !initial.isRecording, !initial.isDerivedShot else {
+            return .failed("Automatic analysis is unavailable for manually bookmarked recordings and source-linked shots.")
+        }
         guard analysisOperations[sessionID] == nil || analysisOperations[sessionID] == operationID else {
             return .failed("This video is already being analysed.")
         }
@@ -1207,6 +1499,36 @@ final class ReviewerStore: ObservableObject {
         guard canModifyLibrary, let index = sessions.firstIndex(where: { $0.id == session.id }) else { return false }
         update(&sessions[index])
         return persistSessions()
+    }
+
+    /// Applies a multi-row local mutation only when the replacement archive can be written. This
+    /// is used for bookmark extraction so a failed save cannot leave duplicate or orphaned shots
+    /// in the visible in-memory library.
+    @discardableResult
+    private func mutateAtomically(_ mutation: (inout [ReviewSession]) -> Void) -> Bool {
+        guard canModifyLibrary else { return false }
+        let previousSessions = sessions
+        let previousSelection = selectedSessionID
+        let previousCandidate = selectedCandidateID
+        let wasUnsaved = hasUnsavedChanges
+        mutation(&sessions)
+        guard persistSessions() else {
+            sessions = previousSessions
+            selectedSessionID = previousSelection
+            selectedCandidateID = previousCandidate
+            hasUnsavedChanges = wasUnsaved
+            libraryError = "The change could not be saved. Your recording and existing shots have been kept. Try again."
+            return false
+        }
+        return true
+    }
+
+    private func hasRemainingMediaReference(to session: ReviewSession) -> Bool {
+        sessions.contains { other in
+            if let relative = session.sourceRelativePath, other.sourceRelativePath == relative { return true }
+            guard let sourceURL = session.sourceURL, let otherURL = other.sourceURL else { return false }
+            return sourceURL.standardizedFileURL == otherURL.standardizedFileURL
+        }
     }
 
     private func updateCandidate(_ candidate: ReviewCandidate, in session: ReviewSession, _ update: (inout ReviewCandidate) -> Void) {

@@ -10,6 +10,24 @@ final class ShotStudioUITests: XCTestCase {
         continueAfterFailure = false
     }
 
+    func testSessionNavigationAndAddingARecordingKeepTheSessionContext() throws {
+        let app = try launch(screen: "ios-redesign-home")
+        let session = app.buttons["session-card-0B436158-6DE4-43E8-9317-4EFD8840474A"]
+        reveal(session, in: app)
+        capture("Sessions", app: app)
+        session.tap()
+        let add = app.buttons["session-add-recording"]
+        XCTAssertTrue(add.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Shots from this session"].exists)
+        add.tap()
+        XCTAssertTrue(app.buttons["add-recording-photos"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.textFields["recording-session-title"].exists, "Adding a recording must preserve the existing session.")
+        XCTAssertTrue(app.buttons["add-recording-files"].exists)
+        capture("Add recording", app: app)
+        app.navigationBars.buttons["Cancel"].firstMatch.tap()
+        XCTAssertTrue(add.waitForExistence(timeout: 5))
+    }
+
     func testLibraryOpensStudioAndCancellingDetailsKeepsTheTitle() throws {
         let app = try launch(screen: "ios-redesign-library")
         let card = app.descendants(matching: .any).matching(identifier: fixtureCardID).firstMatch
@@ -72,12 +90,12 @@ final class ShotStudioUITests: XCTestCase {
         play.tap()
     }
 
-    func testFineCutAndSquareExportReachTheNativeShareSheet() throws {
+    func testTrimFormatTilesAndSquareExportReachTheNativeShareSheet() throws {
         let app = try launch(screen: "ios-redesign-media")
         XCTAssertTrue(app.buttons["studio-play"].waitForExistence(timeout: 10))
-        let fineCut = app.buttons["Fine-tune cut"]
-        reveal(fineCut, in: app)
-        fineCut.tap()
+        let trimTab = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Trim")).firstMatch
+        reveal(trimTab, in: app)
+        trimTab.tap()
         let start = app.sliders["studio-trim-start"]
         let end = app.sliders["studio-trim-end"]
         reveal(start, in: app)
@@ -90,12 +108,25 @@ final class ShotStudioUITests: XCTestCase {
         XCTAssertGreaterThan(cutEnd, cutStart + 0.5)
         XCTAssertLessThan(cutEnd, 5)
 
+        let traceTab = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Trace")).firstMatch
+        reveal(traceTab, in: app)
+        traceTab.tap()
+        XCTAssertTrue(traceTab.exists)
+
+        let formatTab = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Format")).firstMatch
+        reveal(formatTab, in: app)
+        formatTab.tap()
+        for title in ["Original canvas", "9:16 vertical canvas", "1:1 square canvas", "16:9 landscape canvas"] {
+            XCTAssertTrue(app.buttons[title].waitForExistence(timeout: 5), "Studio format tile \(title) should be available.")
+        }
+        let studioSquare = app.buttons["1:1 square canvas"]
+        reveal(studioSquare, in: app)
+        studioSquare.tap()
+
         app.buttons["studio-share"].tap()
-        let format = app.buttons["studio-export-format"]
-        reveal(format, in: app)
-        format.tap()
-        let square = app.buttons["1:1 square"]
+        let square = app.buttons["studio-export-format-square"]
         XCTAssertTrue(square.waitForExistence(timeout: 5))
+        reveal(square, in: app)
         square.tap()
         let preview = app.descendants(matching: .any).matching(identifier: "studio-export-preview").firstMatch
         XCTAssertTrue(preview.waitForExistence(timeout: 5))
@@ -139,6 +170,53 @@ final class ShotStudioUITests: XCTestCase {
         XCTAssertFalse(app.buttons["Remove manual trace"].exists)
     }
 
+    func testRecordingBookmarkCreatesShotAndOpensStudioFormats() throws {
+        let app = try launch(screen: "ios-recording-studio")
+        let position = app.sliders["recording-position"]
+        XCTAssertTrue(position.waitForExistence(timeout: 10))
+        position.adjust(toNormalizedSliderPosition: 0.5)
+
+        let play = app.buttons["recording-play"]
+        XCTAssertTrue(play.waitForExistence(timeout: 5))
+
+        let addBookmark = app.buttons["recording-add-bookmark"]
+        reveal(addBookmark, in: app)
+        addBookmark.tap()
+        let beforeRotation = position.value as? String
+        XCUIDevice.shared.orientation = .landscapeLeft
+        XCTAssertTrue(app.buttons["recording-create-shots"].waitForExistence(timeout: 5))
+        XCTAssertEqual(position.value as? String, beforeRotation, "Changing layout must retain the source playhead.")
+        XCUIDevice.shared.orientation = .portrait
+        capture("Recording Studio bookmark", app: app)
+
+        for identifier in [
+            "recording-before-increase",
+            "recording-before-decrease",
+            "recording-after-increase",
+            "recording-after-decrease"
+        ] {
+            let control = app.buttons[identifier].firstMatch
+            XCTAssertTrue(control.waitForExistence(timeout: 5), "Bookmark control \(identifier) should be available.")
+            control.tap()
+        }
+
+        let createShots = app.buttons["recording-create-shots"]
+        reveal(createShots, in: app)
+        createShots.tap()
+
+        let openShot = app.buttons["recording-open-shot"].firstMatch
+        XCTAssertTrue(openShot.waitForExistence(timeout: 10))
+        openShot.tap()
+        XCTAssertTrue(app.buttons["studio-play"].waitForExistence(timeout: 10))
+
+        let formatTab = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Format")).firstMatch
+        reveal(formatTab, in: app)
+        formatTab.tap()
+        XCTAssertTrue(app.buttons["1:1 square canvas"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["9:16 vertical canvas"].waitForExistence(timeout: 5))
+        capture("Shot Studio formats", app: app)
+    }
+
     private func launch(screen: String) throws -> XCUIApplication {
         let bundle = Bundle(for: Self.self)
         let fixture = try XCTUnwrap(
@@ -162,6 +240,18 @@ final class ShotStudioUITests: XCTestCase {
             scroll.swipeUp()
         }
         XCTAssertTrue(element.isHittable, "Control must be reachable by scrolling.", file: file, line: line)
+    }
+
+    private func capture(_ name: String, app: XCUIApplication) {
+        // Multi-display Simulators can render the app away from the main display.
+        // Preserve every active display so the artifact can be checked against the UI test.
+        let screens = XCUIScreen.screens.isEmpty ? [XCUIScreen.main] : XCUIScreen.screens
+        for (index, screen) in screens.enumerated() {
+            let attachment = XCTAttachment(screenshot: screen.screenshot())
+            attachment.name = "\(name) - display \(index + 1)"
+            attachment.lifetime = .keepAlways
+            add(attachment)
+        }
     }
 
     private func timeValue(of element: XCUIElement) -> Double? {

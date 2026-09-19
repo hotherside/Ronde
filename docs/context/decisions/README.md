@@ -16,3 +16,5 @@ Each record states status, date, context, decision, alternatives and consequence
 - [0010: Immersive review and full-screen manual trace editing](0010-immersive-review-and-manual-trace-editor.md)
 - [0011: Library and shot studio with observed-only automatic media](0011-library-and-shot-studio.md)
 - [0012: Make Ronde an iPhone/iPad-only shot media product](0012-ios-ipad-only-product.md)
+- [0013: Clubhouse and a bookmarked recording Studio](0013-clubhouse-and-bookmarked-recording-studio.md)
+- [0014: Native Recording Studio and source-linked Shots](0014-native-recording-studio-and-source-linked-shots.md)
