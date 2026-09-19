@@ -1,6 +1,6 @@
 # Ronde shot-media exploration
 
-19 September 2026. Requested by the owner in this design session. Starting source: `codex/retire-watch-ios-only` at `17cbc55`; the shared checkout subsequently advanced to `main` at `d9b405c`. The concepts and follow-up refinement remain local, uncommitted HTML work; native implementation and hosted services are unchanged.
+19 September 2026. Requested by the owner in this design session. Starting source: `codex/retire-watch-ios-only` at `17cbc55`; the shared checkout subsequently advanced to `main` at `d9b405c`. At the exploration checkpoint these were local HTML concepts, with native implementation and hosted services unchanged. The later native execution and these design artifacts are recorded in [PR #12](https://github.com/hotherside/Ronde/pull/12); this brief preserves the original exploration scope.
 
 ## Intent and review agenda
 

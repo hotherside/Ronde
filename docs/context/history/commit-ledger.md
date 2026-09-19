@@ -2,9 +2,9 @@
 
 > Generated from Git. Git remains authoritative. Context-only refresh commits are excluded.
 
-- Source commit: `d9b405c33f9218d909339d4a56a72f73b5745e19`
-- Source commit date: 2026-09-18
-- Tracked commit count: 81
+- Source commit: `6fdb6a6dcd3858f0125f657aa42337c0e661926d`
+- Source commit date: 2026-09-19
+- Tracked commit count: 82
 
 | Date | Commit | Subject |
 | --- | --- | --- |
@@ -74,3 +74,4 @@
 | 2026-09-12 | `7f294b4` | Merge pull request #10 from hotherside/codex/portable-context-2026-09-12 |
 | 2026-09-19 | `794db87` | refactor: make Ronde iPhone and iPad only |
 | 2026-09-19 | `d825f0a` | Merge pull request #11 from hotherside/codex/retire-watch-ios-only |
+| 2026-09-19 | `6fdb6a6` | feat: build Clubhouse recording and shot studio |

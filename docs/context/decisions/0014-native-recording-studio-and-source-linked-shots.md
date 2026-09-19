@@ -1,12 +1,12 @@
 # 0014: Native Recording Studio and source-linked Shots
 
-**Status:** Implemented and Simulator-verified in the current uncommitted working tree; signed-device and Git delivery gates remain
+**Status:** Implemented and Simulator-verified; source delivery in [PR #12](https://github.com/hotherside/Ronde/pull/12); signed-device and distribution gates remain
 
 **Date:** 19 September 2026
 
 ## Context and source
 
-ADR 0013 selected Clubhouse as the design foundation and described a manual recording-to-shots workflow, while leaving the native migration as a later gate. The owner then explicitly authorised native execution, combining Clubhouse, Cutroom's Studio controls and Liquid Glass, with Astra owning design and orchestration. The current checkout is `codex/clubhouse-native-studio` at committed `d9b405c` with the implementation and documentation changes uncommitted. The Apple Watch product remains retired by ADR 0012. [Current State](../CURRENT_STATE.md#verification) records the completed local build, media and Simulator UI checks; signed-device and release evidence remain separate.
+ADR 0013 selected Clubhouse as the design foundation and described a manual recording-to-shots workflow, while leaving the native migration as a later gate. The owner then explicitly authorised native execution, combining Clubhouse, Cutroom's Studio controls and Liquid Glass, with Astra owning design and orchestration. Implementation `6fdb6a6` was prepared on `codex/clubhouse-native-studio` from `d9b405c` and is recorded in PR #12. The Apple Watch product remains retired by ADR 0012. [Current State](../CURRENT_STATE.md#verification) records the completed local build, media and Simulator UI checks; signed-device and release evidence remain separate.
 
 ## Decision
 

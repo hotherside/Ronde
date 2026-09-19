@@ -2,7 +2,7 @@
 
 **Reviewed:** 19 September 2026
 
-**Context maintenance:** the current checkout is branch `codex/clubhouse-native-studio` at committed `d9b405c`, with the Clubhouse/Cutroom native recording implementation and this documentation uncommitted in the working tree. The Apple Watch product, source target and build relationship are removed. The current local implementation has passed the Simulator checks below; signed-device and external-service evidence remain separate. Follow the [session-completion contract](DOCUMENTATION_CONTRACT.md#session-completion-across-tools).
+**Source delivery:** the Clubhouse/Cutroom native implementation, reviewed concepts and synthetic native captures are recorded at [`6fdb6a6`](https://github.com/hotherside/Ronde/commit/6fdb6a6dcd3858f0125f657aa42337c0e661926d), prepared on `codex/clubhouse-native-studio` from `d9b405c` and delivered through [PR #12](https://github.com/hotherside/Ronde/pull/12). Git and the PR record the current merge state; committed `main` remains the shared baseline. The Apple Watch product, source target and build relationship are removed. The implementation passed the Simulator checks below; signed-device and external-service evidence remain separate. Follow the [session-completion contract](DOCUMENTATION_CONTRACT.md#session-completion-across-tools).
 
 **Delivery scope:** iPhone/iPad-only product reset, Sessions library, Recording Studio, source-linked Shots, Shot Studio, local archive/import safety and deterministic tracker repairs. Git is authoritative for the current branch, commit and merge state.
 
@@ -31,7 +31,7 @@ Recording Studio plays the full source and generates a sparse thumbnail strip, c
 
 ## Verification
 
-The following results cover the 19 September native working tree on `codex/clubhouse-native-studio`, based on `d9b405c`. Xcode 27.1 (27A9269) generated/built the universal iOS 17+ app and its two test bundles. No Watch target or embedding relationship remains.
+The following results cover the 19 September native implementation recorded at `6fdb6a6`; subsequent delivery updates change documentation only. Xcode 27.1 (27A9269) generated/built the universal iOS 17+ app and its two test bundles. No Watch target or embedding relationship remains.
 
 | Check | Destination | Result |
 | --- | --- | --- |
@@ -53,6 +53,6 @@ The following results cover the 19 September native working tree on `codex/clubh
 - Review actual rendered line alignment and trimmed social exports frame by frame on a signed iPhone, including portrait rotation, slow motion/VFR, silent sources and audio.
 - Complete first/repeat Apple login, cold offline launch, two-account archive isolation and cloud metadata failure/reconciliation checks.
 - Verify Photos/Files permissions and actual camera capture on signed hardware, including representative 20-minute recordings, interruption recovery, memory/thermal behaviour and repeated editing/export. The Simulator source-range/archive checks do not close this gate.
-- Verify signing, TestFlight compliance/internal access and distribution directly. This uncommitted local working tree is not a TestFlight upload.
+- Verify signing, TestFlight compliance/internal access and distribution directly. Merged source is not a TestFlight upload.
 
 See [ADR 0014](decisions/0014-native-recording-studio-and-source-linked-shots.md), [ADR 0013](decisions/0013-clubhouse-and-bookmarked-recording-studio.md), [ADR 0012](decisions/0012-ios-ipad-only-product.md), [ADR 0011](decisions/0011-library-and-shot-studio.md), [Roadmap](ROADMAP.md) and [review findings](reviews/2026-09-07-app-review.md).

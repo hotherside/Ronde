@@ -6,7 +6,7 @@
 
 ## Context and source
 
-After reviewing the three [shot-media HTML concepts](../../design/2026-09-19-shot-media/README.md), the owner said Clubhouse's overall concept was sound and requested much more refinement. They clarified that Studio should bookmark points in a 10–20-minute recording and produce a list of smaller shots with quick before/after range adjustment. This decision is recorded in the local work against `main` at `d9b405c`; it is not a committed or shipped native capability.
+After reviewing the three [shot-media HTML concepts](../../design/2026-09-19-shot-media/README.md), the owner said Clubhouse's overall concept was sound and requested much more refinement. They clarified that Studio should bookmark points in a 10–20-minute recording and produce a list of smaller shots with quick before/after range adjustment. This decision was initially recorded during local exploration against `main` at `d9b405c`; native implementation had not started at that checkpoint. [ADR 0014](0014-native-recording-studio-and-source-linked-shots.md) records the subsequent native execution and source delivery.
 
 ## Decision
 
