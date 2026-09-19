@@ -166,6 +166,7 @@ struct RondeAppShell: View {
     @State private var importTarget: RondeImportTarget?
     @State private var showsSettings = false
     @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.horizontalSizeClass) private var sizeClass
 
     init(store: ReviewerStore, accountStore: RondeAccountStore, initialSelection: RondeAppTab = .home) {
         self.store = store
@@ -223,27 +224,33 @@ struct RondeAppShell: View {
     private func libraryNavigation(_ section: RondeLibraryDestination, path: Binding<[RondeNavigationRoute]>) -> some View {
         NavigationStack(path: path) {
             ScrollView {
-                VStack(alignment: .leading, spacing: 28) {
+                VStack(alignment: .leading, spacing: 20) {
                     if let error = store.libraryError { LibrarySaveNotice(store: store, message: error) }
                     if section == .sessions {
-                        RondeSessionsCollection(store: store, search: search, onImport: { importTarget = RondeImportTarget() })
+                        RondeSessionsCollection(store: store, search: search, onImport: { importTarget = RondeImportTarget() }, onShowKeepers: { destination = .keepers })
                     } else {
                         shotsCollection(keepersOnly: section == .keepers)
                     }
                 }
-                .padding(.horizontal, 20).padding(.top, 12).padding(.bottom, 28)
-                .frame(maxWidth: 1240, alignment: .leading).frame(maxWidth: .infinity)
+                .padding(.horizontal, 16).padding(.top, 12).padding(.bottom, 24)
+                .frame(maxWidth: 1100, alignment: .leading).frame(maxWidth: .infinity)
             }
             .reviewCanvasBackground()
-            .navigationTitle(section.title)
-            .searchable(text: $search, prompt: section == .sessions ? "Find a session" : "Find a shot or club")
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
+            .modifier(RondeLibrarySearch(text: $search, prompt: section == .sessions ? "Find a session" : "Find a shot or club"))
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                if #available(iOS 26.0, *) {
+                    ToolbarItem(placement: .topBarLeading) { wordmark }
+                        .sharedBackgroundVisibility(.hidden)
+                } else {
+                    ToolbarItem(placement: .topBarLeading) { wordmark }
+                }
+                ToolbarItemGroup(placement: .topBarTrailing) {
                     Button { showsSettings = true } label: { Image(systemName: "person.crop.circle") }
                         .accessibilityLabel("Library settings").accessibilityIdentifier("library-settings")
-                }
-                ToolbarItem(placement: .primaryAction) {
-                    Button { importTarget = RondeImportTarget() } label: { Label("Add recording", systemImage: "plus") }
+                    Button { importTarget = RondeImportTarget() } label: { Image(systemName: "plus") }
+                        .accessibilityLabel("Add recording")
                         .disabled(!store.canModifyLibrary).accessibilityIdentifier("add-video")
                 }
             }
@@ -264,23 +271,23 @@ struct RondeAppShell: View {
         }
     }
 
+    private var wordmark: some View {
+        Text("ronde").font(.rondeBrand).tracking(-1.5).fixedSize()
+            .foregroundStyle(RondeReviewDesign.graphite).accessibilityLabel("Ronde")
+    }
+
     private func shotsCollection(keepersOnly: Bool) -> some View {
         let shots = store.sessions.filter {
             !$0.isRecording && (!keepersOnly || $0.isFavourite) &&
             (search.isEmpty || [$0.title, $0.placeName ?? "", $0.clubName ?? "", $0.note].joined(separator: " ").localizedCaseInsensitiveContains(search))
         }.sorted { $0.createdAt > $1.createdAt }
-        return VStack(alignment: .leading, spacing: 24) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(keepersOnly ? "The good ones." : "Every shot, a little closer.")
-                    .font(.largeTitle.weight(.semibold)).tracking(-1)
-                Text(keepersOnly ? "Your favourites, ready for another look." : "Trim it. Trace it. Make it yours.")
-                    .font(.subheadline).foregroundStyle(RondeReviewDesign.graphiteMuted)
-            }
+        return VStack(alignment: .leading, spacing: 20) {
+            RondeCollectionHeading(title: keepersOnly ? "Keepers" : "Shots", count: shots.count)
             if shots.isEmpty {
                 ContentUnavailableView {
-                    Label(keepersOnly ? "Your next keeper is out there." : "Your shots start here.", systemImage: keepersOnly ? "star" : "film.stack")
+                    Label(keepersOnly ? "No keepers yet" : "No shots yet", systemImage: keepersOnly ? "star" : "film.stack")
                 } description: {
-                    Text(keepersOnly ? "Favourite a shot to keep it close." : "Add a recording, bookmark the good moments and create your shots.")
+                    Text(keepersOnly ? "Tap the star on a shot to save it here." : "Add a recording, bookmark the good moments and create your shots.")
                 } actions: {
                     if !keepersOnly {
                         Button("Add a recording") { importTarget = RondeImportTarget() }
@@ -289,7 +296,7 @@ struct RondeAppShell: View {
                 }
                 .padding(.vertical, 28)
             } else {
-                LazyVGrid(columns: typeSize.isAccessibilitySize ? [GridItem(.flexible())] : [GridItem(.adaptive(minimum: 240), spacing: 20)], alignment: .leading, spacing: 26) {
+                LazyVGrid(columns: RondeShotGrid.columns(accessibility: typeSize.isAccessibilitySize, regular: sizeClass == .regular), alignment: .leading, spacing: 18) {
                     ForEach(shots) { shot in
                         NavigationLink(value: RondeNavigationRoute.shot(shot.id)) { ShotLibraryCard(session: shot) }
                             .buttonStyle(.plain)
@@ -305,6 +312,19 @@ struct RondeAppShell: View {
     }
 }
 
+private struct RondeLibrarySearch: ViewModifier {
+    @Binding var text: String
+    let prompt: String
+
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.searchable(text: $text, prompt: prompt).searchToolbarBehavior(.minimize)
+        } else {
+            content.searchable(text: $text, placement: .navigationBarDrawer(displayMode: .automatic), prompt: prompt)
+        }
+    }
+}
+
 struct ShotLibraryCard: View {
     let session: ReviewSession
 
@@ -314,32 +334,36 @@ struct ShotLibraryCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 6) {
             ShotPoster(sourceURL: session.sourceURL, time: session.defaultCandidate?.impactTime ?? session.displayRange.start)
-                .aspectRatio(16 / 10, contentMode: .fit)
+                .aspectRatio(1.08, contentMode: .fit)
                 .overlay(alignment: .bottomTrailing) {
                     Text(Self.duration(session.displayRange.duration))
-                        .font(.subheadline.monospacedDigit().weight(.medium))
+                        .font(.system(.caption2, design: .monospaced).weight(.semibold))
                         .foregroundStyle(.white)
-                        .padding(.horizontal, 10).padding(.vertical, 6)
-                        .background(.black.opacity(0.65), in: RoundedRectangle(cornerRadius: 6))
-                        .padding(12)
+                        .padding(.horizontal, 6).padding(.vertical, 4)
+                        .background(.black.opacity(0.65), in: RoundedRectangle(cornerRadius: 4))
+                        .padding(8)
                 }
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Text(session.title).font(.headline).lineLimit(2)
-                Spacer(minLength: 0)
-                if session.isFavourite {
-                    Image(systemName: "star.fill").foregroundStyle(RondeReviewDesign.graphiteMuted)
-                        .accessibilityLabel("Favourite")
+                .overlay(alignment: .topTrailing) {
+                    if session.isFavourite {
+                        Image(systemName: "star.fill").font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(RondeReviewDesign.graphite)
+                            .frame(width: 26, height: 26)
+                            .background(RondeReviewDesign.fairwayWash, in: Circle()).padding(8)
+                            .accessibilityHidden(true)
+                    }
                 }
-            }
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+            Text(session.title).font(.rondeLabel).lineLimit(2)
+                .padding(.top, 3)
             Text(session.status == .analysing ? "Finding your shot…" : subtitle)
-                .font(.subheadline).foregroundStyle(.secondary).lineLimit(2)
+                .font(.rondeCaption).foregroundStyle(RondeReviewDesign.graphiteMuted).lineLimit(1)
         }
         .foregroundStyle(RondeReviewDesign.graphite)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
+        .accessibilityValue(session.isFavourite ? "Keeper" : "")
         .accessibilityIdentifier("shot-card-\(session.id)")
     }
 

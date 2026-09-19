@@ -8,6 +8,8 @@ Automatic moment suggestions remain deferred. Manual selection works without sug
 
 ## Now: earn trust in the media loop
 
+- Continue functionality work from the authorised Clubhouse/Cutroom correction. The owner rejected the first native translation on 19 September; `codex/concept-fidelity` removes marketing headers, restores compact media grids and strengthens typography and editing hierarchy. Source delivery was then authorised with no more app testing. Use the populated native captures for reference, and keep a repeat physical-iPhone UAT pass as a separate device gate.
+
 - Run a signed-iPhone matrix for the locally implemented Sessions/Recording Studio/Shot Studio slice for Photos/Files/camera recording import up to 20 minutes, source preservation, bookmarks, boundary clamping, duplicate-safe batch extraction, pause/resume, frame stepping, trim, all four output canvases, audio, cancellation and native sharing. Include slow-motion/VFR, rotated portrait, no-audio and unsupported input.
 - Label the exact five rejected owner clips before another detector experiment. Separate acquisition misses, wrong-object association, timing error and renderer error. Keep the automatic studio line observed-only.
 - Build a consented held-out golf set with varied lighting, phone distance, camera angle, ball colours and distractors. Measure acquisition recall, false-tracer rate, point error in source pixels, visible-track coverage and processing cost. Deterministic tracker tests protect invariants; they do not supply these scores.

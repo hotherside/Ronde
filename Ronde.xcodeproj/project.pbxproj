@@ -39,6 +39,7 @@
 		8FBF41374718E3D2D2C87A26 /* RecordingStudioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 018246E2F7DDD015DB6B335D /* RecordingStudioView.swift */; };
 		92027BBAAA0E374705AA2DC8 /* studio-fixture.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8854875B5A3439C88A499387 /* studio-fixture.mp4 */; };
 		9AA16370FFE21227068AAFFD /* ReviewLibrarySafetyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F963CBDCE4144878F11FCA6 /* ReviewLibrarySafetyTests.swift */; };
+		9C4DE0A2327C0487E21EB0B4 /* clubhouse-course.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = EEEE4B237859810D159772B8 /* clubhouse-course.mp4 */; };
 		9E0ACE3A968C775E1BE64E32 /* LocalMediaStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57A57F561392E5134F489906 /* LocalMediaStoreTests.swift */; };
 		A0577B9CD3F8DCFF54D636A2 /* AudioImpactPeakSelectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F0ECE5D3F3280BC623265E4 /* AudioImpactPeakSelectorTests.swift */; };
 		A0CF25A4E3D31D7F4BD62A3E /* TrajectoryAnalysisService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAD381B11516C06704E99B29 /* TrajectoryAnalysisService.swift */; };
@@ -50,6 +51,7 @@
 		BBA5AF22398AE2000970C731 /* LiveReviewModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B628C334237165847DCB3872 /* LiveReviewModels.swift */; };
 		C1ED29FDA24781E78A160091 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 559D0E5059FECF5E6F6EA65C /* Supabase */; };
 		C30522F5314EE7A567A31936 /* AppleSignInNonce.swift in Sources */ = {isa = PBXBuildFile; fileRef = B13981078ACD881109808F68 /* AppleSignInNonce.swift */; };
+		C353EDF54FE06866AC3F2E0E /* clubhouse-range.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 74EF1A5C8DC6DCB8C5240EDF /* clubhouse-range.mp4 */; };
 		C777CD29A4CD2583B334D61C /* ReviewViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55562334A5512A11E95F2091 /* ReviewViews.swift */; };
 		D17D5C582C234F7736867AC7 /* ShotReviewDomainTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51257492B5D94AECBFAE36E0 /* ShotReviewDomainTests.swift */; };
 		D23AA5D1A1182F03B5455057 /* ShotStudioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45CBACF2DDB32D25C3491B38 /* ShotStudioView.swift */; };
@@ -111,6 +113,7 @@
 		5F0ECE5D3F3280BC623265E4 /* AudioImpactPeakSelectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioImpactPeakSelectorTests.swift; sourceTree = "<group>"; };
 		6BA2E9D310791562F643695E /* ShotReviewModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShotReviewModels.swift; sourceTree = "<group>"; };
 		6E4BCA1185FBBCEE0E7A1EBB /* RecordingImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingImportView.swift; sourceTree = "<group>"; };
+		74EF1A5C8DC6DCB8C5240EDF /* clubhouse-range.mp4 */ = {isa = PBXFileReference; path = "clubhouse-range.mp4"; sourceTree = "<group>"; };
 		76FFB9E40F8CB9A6FBB9220F /* RondeRedesignTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RondeRedesignTests.swift; sourceTree = "<group>"; };
 		77D255E8BB9305A6CA1420B6 /* GolfBallTrackSelectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GolfBallTrackSelectorTests.swift; sourceTree = "<group>"; };
 		7BABA97F1C7092AC85462134 /* RondeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RondeApp.swift; sourceTree = "<group>"; };
@@ -142,6 +145,7 @@
 		E1072C5475F5815C64473653 /* BodyMotionPeakSelectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyMotionPeakSelectorTests.swift; sourceTree = "<group>"; };
 		E1CEFDCD1CDD3C0CF8ADCA04 /* VideoMetadataProbe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoMetadataProbe.swift; sourceTree = "<group>"; };
 		E21EEA2D449A612CFDDBC694 /* ImpactCandidateAnalysisService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImpactCandidateAnalysisService.swift; sourceTree = "<group>"; };
+		EEEE4B237859810D159772B8 /* clubhouse-course.mp4 */ = {isa = PBXFileReference; path = "clubhouse-course.mp4"; sourceTree = "<group>"; };
 		F54CE09121B68FC06184F17B /* ReviewClipService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewClipService.swift; sourceTree = "<group>"; };
 		F6A6A74928E9336CDF1F98E9 /* SessionCollectionViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionCollectionViews.swift; sourceTree = "<group>"; };
 		F786F02475ED4C46E0BDF22C /* Ronde.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Ronde.entitlements; sourceTree = "<group>"; };
@@ -192,6 +196,8 @@
 		4C758E92CE70EC9321E9A561 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				EEEE4B237859810D159772B8 /* clubhouse-course.mp4 */,
+				74EF1A5C8DC6DCB8C5240EDF /* clubhouse-range.mp4 */,
 				8B1EED15832E2802FF61DA14 /* README.md */,
 				8854875B5A3439C88A499387 /* studio-fixture.mp4 */,
 			);
@@ -485,6 +491,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				1E151E82AD3835CC7DD914C9 /* README.md in Resources */,
+				9C4DE0A2327C0487E21EB0B4 /* clubhouse-course.mp4 in Resources */,
+				C353EDF54FE06866AC3F2E0E /* clubhouse-range.mp4 in Resources */,
 				92027BBAAA0E374705AA2DC8 /* studio-fixture.mp4 in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

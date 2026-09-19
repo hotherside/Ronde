@@ -2,6 +2,8 @@
 
 **Reviewed:** 19 September 2026
 
+**Design correction:** the owner rejected the PR #12 native design after physical-iPhone UAT on 19 September: it diverged from the Clubhouse/Cutroom concepts and had unnecessary headings, subheadings and weak typography. The correction was prepared on `codex/concept-fidelity` from `7a6bd01`, isolated from separate tracer work. After the completed checks below, the owner explicitly authorised commit/push/merge and requested no further testing. [ADR 0016](decisions/0016-native-concept-fidelity-correction.md) records the correction. Git and the delivery PR record incorporation into `main`; a new signed-device design pass remains open.
+
 **Source delivery:** the Clubhouse/Cutroom native implementation, reviewed concepts and synthetic native captures are recorded at [`6fdb6a6`](https://github.com/hotherside/Ronde/commit/6fdb6a6dcd3858f0125f657aa42337c0e661926d), prepared on `codex/clubhouse-native-studio` from `d9b405c` and delivered through [PR #12](https://github.com/hotherside/Ronde/pull/12). Git and the PR record the current merge state; committed `main` remains the shared baseline. The Apple Watch product, source target and build relationship are removed. The implementation passed the Simulator checks below; signed-device and external-service evidence remain separate. Follow the [session-completion contract](DOCUMENTATION_CONTRACT.md#session-completion-across-tools).
 
 **Delivery scope:** iPhone/iPad-only product reset, Sessions library, Recording Studio, source-linked Shots, Shot Studio, local archive/import safety and deterministic tracker repairs. Git is authoritative for the current branch, commit and merge state.
@@ -30,6 +32,18 @@ Recording Studio plays the full source and generates a sparse thumbnail strip, c
 | Range/Live | Dormant automatic-capture foundations; manual camera recording is available through Add recording | No automatic hands-free capture loop is promised |
 
 ## Verification
+
+### Concept-fidelity correction
+
+The `codex/concept-fidelity` correction from `7a6bd01` responds to the owner's physical-iPhone rejection. The [native review board](../design/2026-09-19-shot-media/native-fidelity/index.html) and [validation record](../design/2026-09-19-shot-media/native-fidelity/README.md) contain the final screenshots and fixture provenance. All evidence in this subsection is Simulator evidence. Source delivery does not update the owner's phone installation.
+
+- All seven iPhone UI journeys passed during correction (`ronde-fidelity-ui.xcresult`). The populated review and Session/import journeys also passed across iPhone 17, iPad Pro 11-inch (M5) and Duo (`ronde-fidelity-adaptive.xcresult`).
+- Focused final runs passed for the real pushed Sessions → Recording → Shot flow on iPhone (`ronde-fidelity-final-phone.xcresult`) and on iPad and Duo (`ronde-fidelity-final-adaptive.xcresult`). Captures show the media, transport, trim timeline and four format choices together at ordinary text sizes. Duo evidence is for the available Simulator pose, not physical fold/hinge behaviour.
+- Largest-text iPad recording/bookmark/Shot/format selection, including rotation and retained playhead, passed after fixing off-screen lazy format choices (`ronde-fidelity-accessibility-v2.xcresult`). The text setting was restored afterwards.
+- The final square MP4 export/share-sheet journey passed (`ronde-fidelity-final-export.xcresult`). This supersedes the export failure in the final-phone bundle caused by a grid-level identifier overriding the child format identifiers. No recipient was selected or media posted. The report contains an AVFoundation internal QoS warning but no failure.
+- Built with Xcode 27.1 (27A9269); iPhone/iPad used iOS 27.0 and Duo iOS 27.1. Context-library and whitespace checks passed. The unchanged unit/media pipeline was not rerun for this visual correction. A final Details-menu rerun was stopped at the owner's instruction (`ronde-fidelity-final-details.xcresult`, interrupted); its build completed, but no additional test pass is claimed. No more app testing was started. Signed-device UAT remains a separate gate.
+
+### Earlier merged implementation
 
 The following results cover the 19 September native implementation recorded at `6fdb6a6`; subsequent delivery updates change documentation only. Xcode 27.1 (27A9269) generated/built the universal iOS 17+ app and its two test bundles. No Watch target or embedding relationship remains.
 

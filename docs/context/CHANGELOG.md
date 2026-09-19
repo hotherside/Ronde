@@ -2,6 +2,14 @@
 
 ## 19 September 2026
 
+### Native fidelity correction following rejected physical-device UAT
+
+- Recorded the owner's rejection of the PR #12 visual design on a physical iPhone. Functional Simulator results did not establish fidelity to the accepted concepts.
+- Corrected the local native hierarchy around compact Clubhouse typography, media-led Sessions, two-column iPhone shot grids, concise source rows, and focused Cutroom tools. Removed repeated marketing headers, large inspector cards and the generic action stack. Native navigation and control islands retain Liquid Glass, with accessible fallbacks.
+- Added isolated, Debug-only populated review data using the existing fictional concept imagery. The source-linked editing, local persistence and tracer contracts remain unchanged. Recorded [ADR 0016](decisions/0016-native-concept-fidelity-correction.md).
+- The complete seven-journey iPhone UI suite passed during correction. Final focused checks passed for populated iPhone/iPad/Duo screens, largest-text iPad format selection, and square MP4 export through the native share sheet. Fixed lazy off-screen format accessibility and grid identifier propagation found during these checks. Saved [the native review board and validation record](../design/2026-09-19-shot-media/native-fidelity/README.md); context and whitespace checks passed.
+- Prepared on `codex/concept-fidelity` from `7a6bd01`, in an isolated worktree preserving another task's tracer changes. The Notion follow-up was updated and read back. The owner then explicitly authorised commit/push/merge and requested no more testing; the additional Details rerun was interrupted and no further app tests were started. Git/PR state records source delivery; the installed phone app is unchanged and signed-device UAT remains open.
+
 ### Native Recording Studio and source-linked Shots
 
 - Implemented the Clubhouse foundation with Cutroom's focused editing vocabulary and native SwiftUI Liquid Glass controls across Sessions, Recordings, Bookmarks, source-linked Shots and Keepers.
