@@ -1,6 +1,6 @@
 # 0018: Choose clips first, then trace the ball
 
-**Status:** accepted; local implementation and validation in progress
+**Status:** accepted; implemented in PR #14, bounded physical supplied-seed check passed; automatic acquisition remains unverified
 
 **Date:** 19 September 2026
 

@@ -29,3 +29,7 @@ Ronde is a child of the main Notion Home page and is linked from its Startup sec
 
 
 **Design correction follow-up, 19 September 2026:** added and read back the owner's physical-iPhone design rejection and the isolated `codex/concept-fidelity` correction. At the initial review checkpoint, the mirror distinguished functional Simulator passes from design acceptance and labelled the correction as local and unmerged. The owner subsequently authorised source delivery; implementation `510fd36` and [PR #13](https://github.com/hotherside/Ronde/pull/13) are the delivery references. The separate tracer-research section was preserved. Git and the PR remain authoritative for merge state.
+
+### 19 September tracer flow and physical repeat
+
+Updated and read back the mapped Ronde page for ADR 0018, below-20-second direct routing, per-session bookmark windows, one Trace shot action and manual correction. Recorded implementation `1f95922`, integration `f2b62ec` and PR #14; the physical supplied-seed tracking/export/archive pass is separate from the still-unrun automatic-seed check. Preserved the independently merged design PR #13 section. No private media, coordinates, labels or credentials were copied.

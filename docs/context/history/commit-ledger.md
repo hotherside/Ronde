@@ -2,9 +2,9 @@
 
 > Generated from Git. Git remains authoritative. Context-only refresh commits are excluded.
 
-- Source commit: `1f95922d7dd368133aa873189af01c0f147adaf2`
+- Source commit: `f2b62ece537dad28efa45845701cef505b8cb57b`
 - Source commit date: 2026-09-19
-- Tracked commit count: 86
+- Tracked commit count: 91
 
 | Date | Commit | Subject |
 | --- | --- | --- |
@@ -77,4 +77,8 @@
 | 2026-09-19 | `6fdb6a6` | feat: build Clubhouse recording and shot studio |
 | 2026-09-19 | `dfe2e48` | docs: record native redesign delivery and validation |
 | 2026-09-19 | `bc05817` | Merge pull request #12 from hotherside/codex/clubhouse-native-studio |
+| 2026-09-19 | `510fd36` | Refine native Clubhouse and Cutroom design fidelity |
+| 2026-09-19 | `bbf4577` | docs: record native fidelity correction delivery |
+| 2026-09-19 | `4916366` | Merge pull request #13 from hotherside/codex/concept-fidelity |
 | 2026-09-19 | `1f95922` | feat: add local ball tracing with clip-first correction flow |
+| 2026-09-19 | `f2b62ec` | Merge main design updates with verified clip-first tracing flow |
