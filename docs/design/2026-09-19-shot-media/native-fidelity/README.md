@@ -8,6 +8,8 @@ Open [the native review board](index.html) for iPhone, iPad, Duo and the previou
 
 Prepared on `codex/concept-fidelity`, based on `7a6bd012484419faf3f23011cee7f4ae12b4a6b3`, in an isolated worktree. The original checkout's separate tracer work was preserved. The owner authorised commit/push/merge and requested no further testing; Git and the delivery PR record source incorporation. No physical-phone installation, TestFlight upload or new device design acceptance is claimed.
 
+Implementation and captures: [`510fd36`](https://github.com/hotherside/Ronde/commit/510fd3602977576a98aa2335b05135637ac1b549), [PR #13](https://github.com/hotherside/Ronde/pull/13).
+
 The correction removes repeated introductory headings and generic inspector cards; restores Clubhouse typography, photographic Sessions and a two-column iPhone collection; and keeps Cutroom's playback, trim timeline, editing tabs and format silhouettes together. Recording Studio keeps both bookmark window controls above its Create action at ordinary phone text sizes. Accessibility text reflows to stacked controls and scrollable format choices. Native navigation and control surfaces use Liquid Glass where supported, with readable fallbacks.
 
 ## Captures
